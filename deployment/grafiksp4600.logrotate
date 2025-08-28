@@ -1,0 +1,12 @@
+/var/log/grafiksp4600/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 grafiksp4600 grafiksp4600
+    postrotate
+        systemctl reload grafiksp4600 > /dev/null 2>&1 || true
+    endscript
+}

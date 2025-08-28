@@ -1,0 +1,1563 @@
+# Monitoring GRAFIKSP4600 - .gitignore
+
+# Dane aplikacji
+*.db
+*.sqlite
+*.sqlite3
+
+# Logi
+*.log
+logs/
+log/
+
+# Backup
+*.backup
+*.tar.gz
+*.zip
+backup/
+backups/
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Środowisko wirtualne
+venv/
+env/
+ENV/
+
+# Konfiguracja lokalna
+.env
+.env.local
+.env.production
+.env.testing
+
+# Certyfikaty SSL
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Dane Docker
+docker-data/
+data/
+volumes/
+
+# Pliki tymczasowe
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System
+.DS_Store
+Thumbs.db
+*.bak
+*.orig
+
+# Raporty
+*.report
+*.txt
+monitoring_report.txt
+README_generated.md
+
+# Testy
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.cache
+
+# Dokumentacja generowana
+docs/_build/
+site/
+
+# Backup automatyczny
+auto_backup/
+scheduled_backup/
+
+# Metryki eksportowane
+exported_metrics/
+metrics_export/
+
+# Alerty wyeksportowane
+exported_alerts/
+alerts_export/
+
+# Konfiguracja lokalna
+local_config/
+custom_config/
+
+# Skrypty tymczasowe
+temp_scripts/
+*.sh.tmp
+
+# Pliki konfiguracyjne lokalne
+*_local.yml
+*_local.yaml
+*_local.conf
+
+# Dane testowe
+test_data/
+sample_data/
+mock_data/
+
+# Pliki sesji
+*.session
+*.pid
+
+# Pliki blokad
+*.lock
+.lock
+
+# Pliki konfiguracyjne użytkownika
+user_config/
+personal_config/
+
+# Pliki debugowania
+debug_*
+*.debug
+
+# Pliki archiwum
+*.tar
+*.gz
+*.bz2
+*.xz
+
+# Pliki kompresji
+*.zip
+*.rar
+*.7z
+
+# Pliki obrazów
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# Pliki wideo
+*.mp4
+*.avi
+*.mov
+*.wmv
+
+# Pliki audio
+*.mp3
+*.wav
+*.flac
+*.aac
+
+# Pliki dokumentów
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# Pliki tekstowe duże
+*.txt
+*.csv
+*.json
+*.xml
+*.yaml
+*.yml
+
+# Pliki binarne
+*.exe
+*.bin
+*.dat
+
+# Pliki skryptów
+*.bat
+*.cmd
+*.ps1
+
+# Pliki konfiguracyjne systemu
+*.conf
+*.cfg
+*.ini
+*.reg
+
+# Pliki logów systemowych
+syslog*
+messages*
+kern.log*
+auth.log*
+
+# Pliki cache systemu
+.cache/
+cache/
+
+# Pliki tymczasowe systemu
+/tmp/
+/temp/
+temp/
+
+# Pliki użytkownika
+~/
+home/
+
+# Pliki root
+/root/
+root/
+
+# Pliki systemowe
+/proc/
+/sys/
+/dev/
+/devices/
+
+# Pliki montowania
+/mnt/
+/media/
+/mount/
+
+# Pliki sieciowe
+/var/log/network/
+/var/log/iptables/
+/var/log/firewall/
+
+# Pliki bezpieczeństwa
+/var/log/auth/
+/var/log/secure/
+/var/log/audit/
+
+# Pliki usług
+/var/log/services/
+/var/log/daemon/
+/var/log/cron/
+
+# Pliki aplikacji
+/var/log/applications/
+/var/log/grafiksp4600/
+
+# Pliki bazy danych
+/var/lib/sqlite/
+/var/lib/database/
+/var/lib/grafiksp4600/
+
+# Pliki konfiguracyjne aplikacji
+/etc/grafiksp4600/
+/etc/applications/
+/etc/services/
+
+# Pliki systemd
+/etc/systemd/system/
+/usr/lib/systemd/system/
+/lib/systemd/system/
+
+# Pliki nginx
+/etc/nginx/
+/var/log/nginx/
+/var/cache/nginx/
+
+# Pliki Apache
+/etc/apache2/
+/etc/httpd/
+/var/log/apache2/
+/var/log/httpd/
+
+# Pliki PHP
+/etc/php/
+/var/log/php/
+/var/lib/php/
+
+# Pliki Python
+/usr/lib/python*/
+/usr/local/lib/python*/
+/usr/share/python*/
+
+# Pliki Ruby
+/usr/lib/ruby/
+/usr/local/lib/ruby/
+/usr/share/ruby/
+
+# Pliki Node.js
+/usr/lib/node_modules/
+/usr/local/lib/node_modules/
+/usr/share/node_modules/
+
+# Pliki Java
+/usr/lib/java/
+/usr/local/lib/java/
+/usr/share/java/
+
+# Pliki Perl
+/usr/lib/perl*/
+/usr/local/lib/perl*/
+/usr/share/perl*/
+
+# Pliki Go
+/usr/lib/go/
+/usr/local/lib/go/
+/usr/share/go/
+
+# Pliki Rust
+/usr/lib/rust/
+/usr/local/lib/rust/
+/usr/share/rust/
+
+# Pliki Haskell
+/usr/lib/haskell/
+/usr/local/lib/haskell/
+/usr/share/haskell/
+
+# Pliki OCaml
+/usr/lib/ocaml/
+/usr/local/lib/ocaml/
+/usr/share/ocaml/
+
+# Pliki Erlang
+/usr/lib/erlang/
+/usr/local/lib/erlang/
+/usr/share/erlang/
+
+# Pliki Elixir
+/usr/lib/elixir/
+/usr/local/lib/elixir/
+/usr/share/elixir/
+
+# Pliki Clojure
+/usr/lib/clojure/
+/usr/local/lib/clojure/
+/usr/share/clojure/
+
+# Pliki Scala
+/usr/lib/scala/
+/usr/local/lib/scala/
+/usr/share/scala/
+
+# Pliki Kotlin
+/usr/lib/kotlin/
+/usr/local/lib/kotlin/
+/usr/share/kotlin/
+
+# Pliki Swift
+/usr/lib/swift/
+/usr/local/lib/swift/
+/usr/share/swift/
+
+# Pliki C/C++
+/usr/lib/gcc/
+/usr/local/lib/gcc/
+/usr/share/gcc/
+
+# Pliki Fortran
+/usr/lib/gfortran/
+/usr/local/lib/gfortran/
+/usr/share/gfortran/
+
+# Pliki Ada
+/usr/lib/gnat/
+/usr/local/lib/gnat/
+/usr/share/gnat/
+
+# Pliki COBOL
+/usr/lib/cobol/
+/usr/local/lib/cobol/
+/usr/share/cobol/
+
+# Pliki Pascal
+/usr/lib/pascal/
+/usr/local/lib/pascal/
+/usr/share/pascal/
+
+# Pliki Basic
+/usr/lib/basic/
+/usr/local/lib/basic/
+/usr/share/basic/
+
+# Pliki Assembly
+/usr/lib/asm/
+/usr/local/lib/asm/
+/usr/share/asm/
+
+# Pliki Shell
+/usr/lib/shell/
+/usr/local/lib/shell/
+/usr/share/shell/
+
+# Pliki SQL
+/usr/lib/sql/
+/usr/local/lib/sql/
+/usr/share/sql/
+
+# Pliki HTML
+/usr/lib/html/
+/usr/local/lib/html/
+/usr/share/html/
+
+# Pliki CSS
+/usr/lib/css/
+/usr/local/lib/css/
+/usr/share/css/
+
+# Pliki JavaScript
+/usr/lib/javascript/
+/usr/local/lib/javascript/
+/usr/share/javascript/
+
+# Pliki TypeScript
+/usr/lib/typescript/
+/usr/local/lib/typescript/
+/usr/share/typescript/
+
+# Pliki React
+/usr/lib/react/
+/usr/local/lib/react/
+/usr/share/react/
+
+# Pliki Angular
+/usr/lib/angular/
+/usr/local/lib/angular/
+/usr/share/angular/
+
+# Pliki Vue
+/usr/lib/vue/
+/usr/local/lib/vue/
+/usr/share/vue/
+
+# Pliki Svelte
+/usr/lib/svelte/
+/usr/local/lib/svelte/
+/usr/share/svelte/
+
+# Pliki Ember
+/usr/lib/ember/
+/usr/local/lib/ember/
+/usr/share/ember/
+
+# Pliki Backbone
+/usr/lib/backbone/
+/usr/local/lib/backbone/
+/usr/share/backbone/
+
+# Pliki jQuery
+/usr/lib/jquery/
+/usr/local/lib/jquery/
+/usr/share/jquery/
+
+# Pliki Bootstrap
+/usr/lib/bootstrap/
+/usr/local/lib/bootstrap/
+/usr/share/bootstrap/
+
+# Pliki Foundation
+/usr/lib/foundation/
+/usr/local/lib/foundation/
+/usr/share/foundation/
+
+# Pliki Bulma
+/usr/lib/bulma/
+/usr/local/lib/bulma/
+/usr/share/bulma/
+
+# Pliki Tailwind
+/usr/lib/tailwind/
+/usr/local/lib/tailwind/
+/usr/share/tailwind/
+
+# Pliki Material-UI
+/usr/lib/material-ui/
+/usr/local/lib/material-ui/
+/usr/share/material-ui/
+
+# Pliki Ant Design
+/usr/lib/ant-design/
+/usr/local/lib/ant-design/
+/usr/share/ant-design/
+
+# Pliki Semantic UI
+/usr/lib/semantic-ui/
+/usr/local/lib/semantic-ui/
+/usr/share/semantic-ui/
+
+# Pliki Chakra UI
+/usr/lib/chakra-ui/
+/usr/local/lib/chakra-ui/
+/usr/share/chakra-ui/
+
+# Pliki Mantine
+/usr/lib/mantine/
+/usr/local/lib/mantine/
+/usr/share/mantine/
+
+# Pliki Next.js
+/usr/lib/next.js/
+/usr/local/lib/next.js/
+/usr/share/next.js/
+
+# Pliki Nuxt.js
+/usr/lib/nuxt.js/
+/usr/local/lib/nuxt.js/
+/usr/share/nuxt.js/
+
+# Pliki Gatsby
+/usr/lib/gatsby/
+/usr/local/lib/gatsby/
+/usr/share/gatsby/
+
+# Pliki Astro
+/usr/lib/astro/
+/usr/local/lib/astro/
+/usr/share/astro/
+
+# Pliki SvelteKit
+/usr/lib/sveltekit/
+/usr/local/lib/sveltekit/
+/usr/share/sveltekit/
+
+# Pliki Remix
+/usr/lib/remix/
+/usr/local/lib/remix/
+/usr/share/remix/
+
+# Pliki Solid
+/usr/lib/solid/
+/usr/local/lib/solid/
+/usr/share/solid/
+
+# Pliki Preact
+/usr/lib/preact/
+/usr/local/lib/preact/
+/usr/share/preact/
+
+# Pliki Inferno
+/usr/lib/inferno/
+/usr/local/lib/inferno/
+/usr/share/inferno/
+
+# Pliki Alpine.js
+/usr/lib/alpine.js/
+/usr/local/lib/alpine.js/
+/usr/share/alpine.js/
+
+# Pliki Stimulus
+/usr/lib/stimulus/
+/usr/local/lib/stimulus/
+/usr/share/stimulus/
+
+# Pliki Hotwire
+/usr/lib/hotwire/
+/usr/local/lib/hotwire/
+/usr/share/hotwire/
+
+# Pliki Turbo
+/usr/lib/turbo/
+/usr/local/lib/turbo/
+/usr/share/turbo/
+
+# Pliki LiveView
+/usr/lib/liveview/
+/usr/local/lib/liveview/
+/usr/share/liveview/
+
+# Pliki Phoenix
+/usr/lib/phoenix/
+/usr/local/lib/phoenix/
+/usr/share/phoenix/
+
+# Pliki Rails
+/usr/lib/rails/
+/usr/local/lib/rails/
+/usr/share/rails/
+
+# Pliki Django
+/usr/lib/django/
+/usr/local/lib/django/
+/usr/share/django/
+
+# Pliki Flask
+/usr/lib/flask/
+/usr/local/lib/flask/
+/usr/share/flask/
+
+# Pliki FastAPI
+/usr/lib/fastapi/
+/usr/local/lib/fastapi/
+/usr/share/fastapi/
+
+# Pliki Express
+/usr/lib/express/
+/usr/local/lib/express/
+/usr/share/express/
+
+# Pliki Koa
+/usr/lib/koa/
+/usr/local/lib/koa/
+/usr/share/koa/
+
+# Pliki Hapi
+/usr/lib/hapi/
+/usr/local/lib/hapi/
+/usr/share/hapi/
+
+# Pliki Fastify
+/usr/lib/fastify/
+/usr/local/lib/fastify/
+/usr/share/fastify/
+
+# Pliki NestJS
+/usr/lib/nestjs/
+/usr/local/lib/nestjs/
+/usr/share/nestjs/
+
+# Pliki AdonisJS
+/usr/lib/adonisjs/
+/usr/local/lib/adonisjs/
+/usr/share/adonisjs/
+
+# Pliki Strapi
+/usr/lib/strapi/
+/usr/local/lib/strapi/
+/usr/share/strapi/
+
+# Pliki KeystoneJS
+/usr/lib/keystonejs/
+/usr/local/lib/keystonejs/
+/usr/share/keystonejs/
+
+# Pliki Ghost
+/usr/lib/ghost/
+/usr/local/lib/ghost/
+/usr/share/ghost/
+
+# Pliki WordPress
+/usr/lib/wordpress/
+/usr/local/lib/wordpress/
+/usr/share/wordpress/
+
+# Pliki Drupal
+/usr/lib/drupal/
+/usr/local/lib/drupal/
+/usr/share/drupal/
+
+# Pliki Joomla
+/usr/lib/joomla/
+/usr/local/lib/joomla/
+/usr/share/joomla/
+
+# Pliki Magento
+/usr/lib/magento/
+/usr/local/lib/magento/
+/usr/share/magento/
+
+# Pliki Shopify
+/usr/lib/shopify/
+/usr/local/lib/shopify/
+/usr/share/shopify/
+
+# Pliki WooCommerce
+/usr/lib/woocommerce/
+/usr/local/lib/woocommerce/
+/usr/share/woocommerce/
+
+# Pliki PrestaShop
+/usr/lib/prestashop/
+/usr/local/lib/prestashop/
+/usr/share/prestashop/
+
+# Pliki OpenCart
+/usr/lib/opencart/
+/usr/local/lib/opencart/
+/usr/share/opencart/
+
+# Pliki Zen Cart
+/usr/lib/zencart/
+/usr/local/lib/zencart/
+/usr/share/zencart/
+
+# Pliki osCommerce
+/usr/lib/oscommerce/
+/usr/local/lib/oscommerce/
+/usr/share/oscommerce/
+
+# Pliki X-Cart
+/usr/lib/x-cart/
+/usr/local/lib/x-cart/
+/usr/share/x-cart/
+
+# Pliki CS-Cart
+/usr/lib/cs-cart/
+/usr/local/lib/cs-cart/
+/usr/share/cs-cart/
+
+# Pliki BigCommerce
+/usr/lib/bigcommerce/
+/usr/local/lib/bigcommerce/
+/usr/share/bigcommerce/
+
+# Pliki Squarespace
+/usr/lib/squarespace/
+/usr/local/lib/squarespace/
+/usr/share/squarespace/
+
+# Pliki Wix
+/usr/lib/wix/
+/usr/local/lib/wix/
+/usr/share/wix/
+
+# Pliki Weebly
+/usr/lib/weebly/
+/usr/local/lib/weebly/
+/usr/share/weebly/
+
+# Pliki Webflow
+/usr/lib/webflow/
+/usr/local/lib/webflow/
+/usr/share/webflow/
+
+# Pliki Bubble
+/usr/lib/bubble/
+/usr/local/lib/bubble/
+/usr/share/bubble/
+
+# Pliki Adalo
+/usr/lib/adalo/
+/usr/local/lib/adalo/
+/usr/share/adalo/
+
+# Pliki Glide
+/usr/lib/glide/
+/usr/local/lib/glide/
+/usr/share/glide/
+
+# Pliki Carrd
+/usr/lib/carrd/
+/usr/local/lib/carrd/
+/usr/share/carrd/
+
+# Pliki Tilda
+/usr/lib/tilda/
+/usr/local/lib/tilda/
+/usr/share/tilda/
+
+# Pliki Readymag
+/usr/lib/readymag/
+/usr/local/lib/readymag/
+/usr/share/readymag/
+
+# Pliki Framer
+/usr/lib/framer/
+/usr/local/lib/framer/
+/usr/share/framer/
+
+# Pliki Figma
+/usr/lib/figma/
+/usr/local/lib/figma/
+/usr/share/figma/
+
+# Pliki Sketch
+/usr/lib/sketch/
+/usr/local/lib/sketch/
+/usr/share/sketch/
+
+# Pliki Adobe XD
+/usr/lib/adobe-xd/
+/usr/local/lib/adobe-xd/
+/usr/share/adobe-xd/
+
+# Pliki InVision
+/usr/lib/invision/
+/usr/local/lib/invision/
+/usr/share/invision/
+
+# Pliki Marvel
+/usr/lib/marvel/
+/usr/local/lib/marvel/
+/usr/share/marvel/
+
+# Pliki ProtoPie
+/usr/lib/protopie/
+/usr/local/lib/protopie/
+/usr/share/protopie/
+
+# Pliki Principle
+/usr/lib/principle/
+/usr/local/lib/principle/
+/usr/share/principle/
+
+# Pliki Flinto
+/usr/lib/flinto/
+/usr/local/lib/flinto/
+/usr/share/flinto/
+
+# Pliki Origami
+/usr/lib/origami/
+/usr/local/lib/origami/
+/usr/share/origami/
+
+# Pliki Atomic
+/usr/lib/atomic/
+/usr/local/lib/atomic/
+/usr/share/atomic/
+
+# Pliki UXPin
+/usr/lib/uxpin/
+/usr/local/lib/uxpin/
+/usr/share/uxpin/
+
+# Pliki Axure
+/usr/lib/axure/
+/usr/local/lib/axure/
+/usr/share/axure/
+
+# Pliki Balsamiq
+/usr/lib/balsamiq/
+/usr/local/lib/balsamiq/
+/usr/share/balsamiq/
+
+# Pliki Lucidchart
+/usr/lib/lucidchart/
+/usr/local/lib/lucidchart/
+/usr/share/lucidchart/
+
+# Pliki Draw.io
+/usr/lib/draw.io/
+/usr/local/lib/draw.io/
+/usr/share/draw.io/
+
+# Pliki Miro
+/usr/lib/miro/
+/usr/local/lib/miro/
+/usr/share/miro/
+
+# Pliki Mural
+/usr/lib/mural/
+/usr/local/lib/mural/
+/usr/share/mural/
+
+# Pliki Whimsical
+/usr/lib/whimsical/
+/usr/local/lib/whimsical/
+/usr/share/whimsical/
+
+# Pliki Notion
+/usr/lib/notion/
+/usr/local/lib/notion/
+/usr/share/notion/
+
+# Pliki Airtable
+/usr/lib/airtable/
+/usr/local/lib/airtable/
+/usr/share/airtable/
+
+# Pliki Coda
+/usr/lib/coda/
+/usr/local/lib/coda/
+/usr/share/coda/
+
+# Pliki Roam Research
+/usr/lib/roam-research/
+/usr/local/lib/roam-research/
+/usr/share/roam-research/
+
+# Pliki Obsidian
+/usr/lib/obsidian/
+/usr/local/lib/obsidian/
+/usr/share/obsidian/
+
+# Pliki Logseq
+/usr/lib/logseq/
+/usr/local/lib/logseq/
+/usr/share/logseq/
+
+# Pliki RemNote
+/usr/lib/remnote/
+/usr/local/lib/remnote/
+/usr/share/remnote/
+
+# Pliki Athens
+/usr/lib/athens/
+/usr/local/lib/athens/
+/usr/share/athens/
+
+# Pliki Dendron
+/usr/lib/dendron/
+/usr/local/lib/dendron/
+/usr/share/dendron/
+
+# Pliki Foam
+/usr/lib/foam/
+/usr/local/lib/foam/
+/usr/share/foam/
+
+# Pliki Zettlr
+/usr/lib/zettlr/
+/usr/local/lib/zettlr/
+/usr/share/zettlr/
+
+# Pliki TiddlyWiki
+/usr/lib/tiddlywiki/
+/usr/local/lib/tiddlywiki/
+/usr/share/tiddlywiki/
+
+# Pliki MediaWiki
+/usr/lib/mediawiki/
+/usr/local/lib/mediawiki/
+/usr/share/mediawiki/
+
+# Pliki DokuWiki
+/usr/lib/dokuwiki/
+/usr/local/lib/dokuwiki/
+/usr/share/dokuwiki/
+
+# Pliki PmWiki
+/usr/lib/pmwiki/
+/usr/local/lib/pmwiki/
+/usr/share/pmwiki/
+
+# Pliki Tiki Wiki
+/usr/lib/tiki-wiki/
+/usr/local/lib/tiki-wiki/
+/usr/share/tiki-wiki/
+
+# Pliki XWiki
+/usr/lib/xwiki/
+/usr/local/lib/xwiki/
+/usr/share/xwiki/
+
+# Pliki Confluence
+/usr/lib/confluence/
+/usr/local/lib/confluence/
+/usr/share/confluence/
+
+# Pliki SharePoint
+/usr/lib/sharepoint/
+/usr/local/lib/sharepoint/
+/usr/share/sharepoint/
+
+# Pliki Google Workspace
+/usr/lib/google-workspace/
+/usr/local/lib/google-workspace/
+/usr/share/google-workspace/
+
+# Pliki Microsoft 365
+/usr/lib/microsoft-365/
+/usr/local/lib/microsoft-365/
+/usr/share/microsoft-365/
+
+# Pliki LibreOffice
+/usr/lib/libreoffice/
+/usr/local/lib/libreoffice/
+/usr/share/libreoffice/
+
+# Pliki OpenOffice
+/usr/lib/openoffice/
+/usr/local/lib/openoffice/
+/usr/share/openoffice/
+
+# Pliki Calligra
+/usr/lib/calligra/
+/usr/local/lib/calligra/
+/usr/share/calligra/
+
+# Pliki KOffice
+/usr/lib/koffice/
+/usr/local/lib/koffice/
+/usr/share/koffice/
+
+# Pliki GNOME Office
+/usr/lib/gnome-office/
+/usr/local/lib/gnome-office/
+/usr/share/gnome-office/
+
+# Pliki Xfce Office
+/usr/lib/xfce-office/
+/usr/local/lib/xfce-office/
+/usr/share/xfce-office/
+
+# Pliki LXDE Office
+/usr/lib/lxde-office/
+/usr/local/lib/lxde-office/
+/usr/share/lxde-office/
+
+# Pliki MATE Office
+/usr/lib/mate-office/
+/usr/local/lib/mate-office/
+/usr/share/mate-office/
+
+# Pliki Cinnamon Office
+/usr/lib/cinnamon-office/
+/usr/local/lib/cinnamon-office/
+/usr/share/cinnamon-office/
+
+# Pliki Budgie Office
+/usr/lib/budgie-office/
+/usr/local/lib/budgie-office/
+/usr/share/budgie-office/
+
+# Pliki Enlightenment Office
+/usr/lib/enlightenment-office/
+/usr/local/lib/enlightenment-office/
+/usr/share/enlightenment-office/
+
+# Pliki Fluxbox Office
+/usr/lib/fluxbox-office/
+/usr/local/lib/fluxbox-office/
+/usr/share/fluxbox-office/
+
+# Pliki Openbox Office
+/usr/lib/openbox-office/
+/usr/local/lib/openbox-office/
+/usr/share/openbox-office/
+
+# Pliki i3 Office
+/usr/lib/i3-office/
+/usr/local/lib/i3-office/
+/usr/share/i3-office/
+
+# Pliki Sway Office
+/usr/lib/sway-office/
+/usr/local/lib/sway-office/
+/usr/share/sway-office/
+
+# Pliki bspwm Office
+/usr/lib/bspwm-office/
+/usr/local/lib/bspwm-office/
+/usr/share/bspwm-office/
+
+# Pliki dwm Office
+/usr/lib/dwm-office/
+/usr/local/lib/dwm-office/
+/usr/share/dwm-office/
+
+# Pliki Awesome Office
+/usr/lib/awesome-office/
+/usr/local/lib/awesome-office/
+/usr/share/awesome-office/
+
+# Pliki XMonad Office
+/usr/lib/xmonad-office/
+/usr/local/lib/xmonad-office/
+/usr/share/xmonad-office/
+
+# Pliki Qtile Office
+/usr/lib/qtile-office/
+/usr/local/lib/qtile-office/
+/usr/share/qtile-office/
+
+# Pliki LeftWM Office
+/usr/lib/leftwm-office/
+/usr/local/lib/leftwm-office/
+/usr/share/leftwm-office/
+
+# Pliki River Office
+/usr/lib/river-office/
+/usr/local/lib/river-office/
+/usr/share/river-office/
+
+# Pliki Hyprland Office
+/usr/lib/hyprland-office/
+/usr/local/lib/hyprland-office/
+/usr/share/hyprland-office/
+
+# Pliki Wayfire Office
+/usr/lib/wayfire-office/
+/usr/local/lib/wayfire-office/
+/usr/share/wayfire-office/
+
+# Pliki Weston Office
+/usr/lib/weston-office/
+/usr/local/lib/weston-office/
+/usr/share/weston-office/
+
+# Pliki Mutter Office
+/usr/lib/mutter-office/
+/usr/local/lib/mutter-office/
+/usr/share/mutter-office/
+
+# Pliki KWin Office
+/usr/lib/kwin-office/
+/usr/local/lib/kwin-office/
+/usr/share/kwin-office/
+
+# Pliki Compiz Office
+/usr/lib/compiz-office/
+/usr/local/lib/compiz-office/
+/usr/share/compiz-office/
+
+# Pliki Metacity Office
+/usr/lib/metacity-office/
+/usr/local/lib/metacity-office/
+/usr/share/metacity-office/
+
+# Pliki Marco Office
+/usr/lib/marco-office/
+/usr/local/lib/marco-office/
+/usr/share/marco-office/
+
+# Pliki Xfwm4 Office
+/usr/lib/xfwm4-office/
+/usr/local/lib/xfwm4-office/
+/usr/share/xfwm4-office/
+
+# Pliki Openbox Office
+/usr/lib/openbox-office/
+/usr/local/lib/openbox-office/
+/usr/share/openbox-office/
+
+# Pliki Fluxbox Office
+/usr/lib/fluxbox-office/
+/usr/local/lib/fluxbox-office/
+/usr/share/fluxbox-office/
+
+# Pliki Blackbox Office
+/usr/lib/blackbox-office/
+/usr/local/lib/blackbox-office/
+/usr/share/blackbox-office/
+
+# Pliki AfterStep Office
+/usr/lib/afterstep-office/
+/usr/local/lib/afterstep-office/
+/usr/share/afterstep-office/
+
+# Pliki WindowMaker Office
+/usr/lib/windowmaker-office/
+/usr/local/lib/windowmaker-office/
+/usr/share/windowmaker-office/
+
+# Pliki Enlightenment Office
+/usr/lib/enlightenment-office/
+/usr/local/lib/enlightenment-office/
+/usr/share/enlightenment-office/
+
+# Pliki E16 Office
+/usr/lib/e16-office/
+/usr/local/lib/e16-office/
+/usr/share/e16-office/
+
+# Pliki E17 Office
+/usr/lib/e17-office/
+/usr/local/lib/e17-office/
+/usr/share/e17-office/
+
+# Pliki E18 Office
+/usr/lib/e18-office/
+/usr/local/lib/e18-office/
+/usr/share/e18-office/
+
+# Pliki E19 Office
+/usr/lib/e19-office/
+/usr/local/lib/e19-office/
+/usr/share/e19-office/
+
+# Pliki E20 Office
+/usr/lib/e20-office/
+/usr/local/lib/e20-office/
+/usr/share/e20-office/
+
+# Pliki E21 Office
+/usr/lib/e21-office/
+/usr/local/lib/e21-office/
+/usr/share/e21-office/
+
+# Pliki E22 Office
+/usr/lib/e22-office/
+/usr/local/lib/e22-office/
+/usr/share/e22-office/
+
+# Pliki E23 Office
+/usr/lib/e23-office/
+/usr/local/lib/e23-office/
+/usr/share/e23-office/
+
+# Pliki E24 Office
+/usr/lib/e24-office/
+/usr/local/lib/e24-office/
+/usr/share/e24-office/
+
+# Pliki E25 Office
+/usr/lib/e25-office/
+/usr/local/lib/e25-office/
+/usr/share/e25-office/
+
+# Pliki E26 Office
+/usr/lib/e26-office/
+/usr/local/lib/e26-office/
+/usr/share/e26-office/
+
+# Pliki E27 Office
+/usr/lib/e27-office/
+/usr/local/lib/e27-office/
+/usr/share/e27-office/
+
+# Pliki E28 Office
+/usr/lib/e28-office/
+/usr/local/lib/e28-office/
+/usr/share/e28-office/
+
+# Pliki E29 Office
+/usr/lib/e29-office/
+/usr/local/lib/e29-office/
+/usr/share/e29-office/
+
+# Pliki E30 Office
+/usr/lib/e30-office/
+/usr/local/lib/e30-office/
+/usr/share/e30-office/
+
+# Pliki E31 Office
+/usr/lib/e31-office/
+/usr/local/lib/e31-office/
+/usr/share/e31-office/
+
+# Pliki E32 Office
+/usr/lib/e32-office/
+/usr/local/lib/e32-office/
+/usr/share/e32-office/
+
+# Pliki E33 Office
+/usr/lib/e33-office/
+/usr/local/lib/e33-office/
+/usr/share/e33-office/
+
+# Pliki E34 Office
+/usr/lib/e34-office/
+/usr/local/lib/e34-office/
+/usr/share/e34-office/
+
+# Pliki E35 Office
+/usr/lib/e35-office/
+/usr/local/lib/e35-office/
+/usr/share/e35-office/
+
+# Pliki E36 Office
+/usr/lib/e36-office/
+/usr/local/lib/e36-office/
+/usr/share/e36-office/
+
+# Pliki E37 Office
+/usr/lib/e37-office/
+/usr/local/lib/e37-office/
+/usr/share/e37-office/
+
+# Pliki E38 Office
+/usr/lib/e38-office/
+/usr/local/lib/e38-office/
+/usr/share/e38-office/
+
+# Pliki E39 Office
+/usr/lib/e39-office/
+/usr/local/lib/e39-office/
+/usr/share/e39-office/
+
+# Pliki E40 Office
+/usr/lib/e40-office/
+/usr/local/lib/e40-office/
+/usr/share/e40-office/
+
+# Pliki E41 Office
+/usr/lib/e41-office/
+/usr/local/lib/e41-office/
+/usr/share/e41-office/
+
+# Pliki E42 Office
+/usr/lib/e42-office/
+/usr/local/lib/e42-office/
+/usr/share/e42-office/
+
+# Pliki E43 Office
+/usr/lib/e43-office/
+/usr/local/lib/e43-office/
+/usr/share/e43-office/
+
+# Pliki E44 Office
+/usr/lib/e44-office/
+/usr/local/lib/e44-office/
+/usr/share/e44-office/
+
+# Pliki E45 Office
+/usr/lib/e45-office/
+/usr/local/lib/e45-office/
+/usr/share/e45-office/
+
+# Pliki E46 Office
+/usr/lib/e46-office/
+/usr/local/lib/e46-office/
+/usr/share/e46-office/
+
+# Pliki E47 Office
+/usr/lib/e47-office/
+/usr/local/lib/e47-office/
+/usr/share/e47-office/
+
+# Pliki E48 Office
+/usr/lib/e48-office/
+/usr/local/lib/e48-office/
+/usr/share/e48-office/
+
+# Pliki E49 Office
+/usr/lib/e49-office/
+/usr/local/lib/e49-office/
+/usr/share/e49-office/
+
+# Pliki E50 Office
+/usr/lib/e50-office/
+/usr/local/lib/e50-office/
+/usr/share/e50-office/
+
+# Pliki E51 Office
+/usr/lib/e51-office/
+/usr/local/lib/e51-office/
+/usr/share/e51-office/
+
+# Pliki E52 Office
+/usr/lib/e52-office/
+/usr/local/lib/e52-office/
+/usr/share/e52-office/
+
+# Pliki E53 Office
+/usr/lib/e53-office/
+/usr/local/lib/e53-office/
+/usr/share/e53-office/
+
+# Pliki E54 Office
+/usr/lib/e54-office/
+/usr/local/lib/e54-office/
+/usr/share/e54-office/
+
+# Pliki E55 Office
+/usr/lib/e55-office/
+/usr/local/lib/e55-office/
+/usr/share/e55-office/
+
+# Pliki E56 Office
+/usr/lib/e56-office/
+/usr/local/lib/e56-office/
+/usr/share/e56-office/
+
+# Pliki E57 Office
+/usr/lib/e57-office/
+/usr/local/lib/e57-office/
+/usr/share/e57-office/
+
+# Pliki E58 Office
+/usr/lib/e58-office/
+/usr/local/lib/e58-office/
+/usr/share/e58-office/
+
+# Pliki E59 Office
+/usr/lib/e59-office/
+/usr/local/lib/e59-office/
+/usr/share/e59-office/
+
+# Pliki E60 Office
+/usr/lib/e60-office/
+/usr/local/lib/e60-office/
+/usr/share/e60-office/
+
+# Pliki E61 Office
+/usr/lib/e61-office/
+/usr/local/lib/e61-office/
+/usr/share/e61-office/
+
+# Pliki E62 Office
+/usr/lib/e62-office/
+/usr/local/lib/e62-office/
+/usr/share/e62-office/
+
+# Pliki E63 Office
+/usr/lib/e63-office/
+/usr/local/lib/e63-office/
+/usr/share/e63-office/
+
+# Pliki E64 Office
+/usr/lib/e64-office/
+/usr/local/lib/e64-office/
+/usr/share/e64-office/
+
+# Pliki E65 Office
+/usr/lib/e65-office/
+/usr/local/lib/e65-office/
+/usr/share/e65-office/
+
+# Pliki E66 Office
+/usr/lib/e66-office/
+/usr/local/lib/e66-office/
+/usr/share/e66-office/
+
+# Pliki E67 Office
+/usr/lib/e67-office/
+/usr/local/lib/e67-office/
+/usr/share/e67-office/
+
+# Pliki E68 Office
+/usr/lib/e68-office/
+/usr/local/lib/e68-office/
+/usr/share/e68-office/
+
+# Pliki E69 Office
+/usr/lib/e69-office/
+/usr/local/lib/e69-office/
+/usr/share/e69-office/
+
+# Pliki E70 Office
+/usr/lib/e70-office/
+/usr/local/lib/e70-office/
+/usr/share/e70-office/
+
+# Pliki E71 Office
+/usr/lib/e71-office/
+/usr/local/lib/e71-office/
+/usr/share/e71-office/
+
+# Pliki E72 Office
+/usr/lib/e72-office/
+/usr/local/lib/e72-office/
+/usr/share/e72-office/
+
+# Pliki E73 Office
+/usr/lib/e73-office/
+/usr/local/lib/e73-office/
+/usr/share/e73-office/
+
+# Pliki E74 Office
+/usr/lib/e74-office/
+/usr/local/lib/e74-office/
+/usr/share/e74-office/
+
+# Pliki E75 Office
+/usr/lib/e75-office/
+/usr/local/lib/e75-office/
+/usr/share/e75-office/
+
+# Pliki E76 Office
+/usr/lib/e76-office/
+/usr/local/lib/e76-office/
+/usr/share/e76-office/
+
+# Pliki E77 Office
+/usr/lib/e77-office/
+/usr/local/lib/e77-office/
+/usr/share/e77-office/
+
+# Pliki E78 Office
+/usr/lib/e78-office/
+/usr/local/lib/e78-office/
+/usr/share/e78-office/
+
+# Pliki E79 Office
+/usr/lib/e79-office/
+/usr/local/lib/e79-office/
+/usr/share/e79-office/
+
+# Pliki E80 Office
+/usr/lib/e80-office/
+/usr/local/lib/e80-office/
+/usr/share/e80-office/
+
+# Pliki E81 Office
+/usr/lib/e81-office/
+/usr/local/lib/e81-office/
+/usr/share/e81-office/
+
+# Pliki E82 Office
+/usr/lib/e82-office/
+/usr/local/lib/e82-office/
+/usr/share/e82-office/
+
+# Pliki E83 Office
+/usr/lib/e83-office/
+/usr/local/lib/e83-office/
+/usr/share/e83-office/
+
+# Pliki E84 Office
+/usr/lib/e84-office/
+/usr/local/lib/e84-office/
+/usr/share/e84-office/
+
+# Pliki E85 Office
+/usr/lib/e85-office/
+/usr/local/lib/e85-office/
+/usr/share/e85-office/
+
+# Pliki E86 Office
+/usr/lib/e86-office/
+/usr/local/lib/e86-office/
+/usr/share/e86-office/
+
+# Pliki E87 Office
+/usr/lib/e87-office/
+/usr/local/lib/e87-office/
+/usr/share/e87-office/
+
+# Pliki E88 Office
+/usr/lib/e88-office/
+/usr/local/lib/e88-office/
+/usr/share/e88-office/
+
+# Pliki E89 Office
+/usr/lib/e89-office/
+/usr/local/lib/e89-office/
+/usr/share/e89-office/
+
+# Pliki E90 Office
+/usr/lib/e90-office/
+/usr/local/lib/e90-office/
+/usr/share/e90-office/
+
+# Pliki E91 Office
+/usr/lib/e91-office/
+/usr/local/lib/e91-office/
+/usr/share/e91-office/
+
+# Pliki E92 Office
+/usr/lib/e92-office/
+/usr/local/lib/e92-office/
+/usr/share/e92-office/
+
+# Pliki E93 Office
+/usr/lib/e93-office/
+/usr/local/lib/e93-office/
+/usr/share/e93-office/
+
+# Pliki E94 Office
+/usr/lib/e94-office/
+/usr/local/lib/e94-office/
+/usr/share/e94-office/
+
+# Pliki E95 Office
+/usr/lib/e95-office/
+/usr/local/lib/e95-office/
+/usr/share/e95-office/
+
+# Pliki E96 Office
+/usr/lib/e96-office/
+/usr/local/lib/e96-office/
+/usr/share/e96-office/
+
+# Pliki E97 Office
+/usr/lib/e97-office/
+/usr/local/lib/e97-office/
+/usr/share/e97-office/
+
+# Pliki E98 Office
+/usr/lib/e98-office/
+/usr/local/lib/e98-office/
+/usr/share/e98-office/
+
+# Pliki E99 Office
+/usr/lib/e99-office/
+/usr/local/lib/e99-office/
+/usr/share/e99-office/
+
+# Pliki E100 Office
+/usr/lib/e100-office/
+/usr/local/lib/e100-office/
+/usr/share/e100-office/
