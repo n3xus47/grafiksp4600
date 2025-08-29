@@ -2,12 +2,12 @@
   "name": "Grafik Zmian Pracowników",
   "short_name": "Grafik SP4600",
   "description": "Aplikacja do zarządzania grafikiem zmian pracowników z systemem uwierzytelniania Google OAuth2",
-  "start_url": "/",
+  "start_url": "https://grafik4600.com/",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#d32f2f",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "https://grafik4600.com/",
   "lang": "pl",
   "categories": ["productivity", "business"],
   "icons": [
@@ -65,14 +65,14 @@
       "name": "Dzisiejsze zmiany",
       "short_name": "Dziś",
       "description": "Zobacz dzisiejsze zmiany",
-      "url": "/?today=1",
+      "url": "https://grafik4600.com/?today=1",
       "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Skrzynka próśb",
       "short_name": "Prośby",
       "description": "Sprawdź prośby o zamianę",
-      "url": "/?swaps=1",
+      "url": "https://grafik4600.com/?swaps=1",
       "icons": [{ "src": "/static/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],
