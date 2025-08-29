@@ -17,8 +17,8 @@ urllib3>=2.0,<3
 # alembic>=1.12,<2  # Uncomment when adding database migrations
 
 # Development and testing (optional)
-# pytest>=7.0,<8
-# pytest-flask>=1.2,<2
+pytest>=7.0,<8
+pytest-flask>=1.2,<2
 # black>=23.0,<24  # Code formatting
 # flake8>=6.0,<7   # Linting
 

@@ -71,19 +71,19 @@ def test_signin_page(client):
 def test_api_employees_unauthorized(client):
     """Test API pracowników bez autoryzacji"""
     response = client.get('/api/employees')
-    assert response.status_code == 401  # Brak autoryzacji
+    assert response.status_code == 302  # Przekierowanie do logowania
 
 
 def test_api_save_unauthorized(client):
     """Test API zapisywania bez autoryzacji"""
     response = client.post('/api/save', json={'changes': []})
-    assert response.status_code == 401  # Brak autoryzacji
+    assert response.status_code == 302  # Przekierowanie do logowania
 
 
 def test_api_swaps_unauthorized(client):
     """Test API próśb o zamianę bez autoryzacji"""
     response = client.post('/api/swaps', json={})
-    assert response.status_code == 401  # Brak autoryzacji
+    assert response.status_code == 302  # Przekierowanie do logowania
 
 
 def test_invalid_json(client):

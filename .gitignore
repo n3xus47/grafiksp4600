@@ -33,6 +33,7 @@ venv.bak/
 .env.local
 .env.production
 .env.testing
+.env.backup
 
 # Database
 *.db
@@ -82,3 +83,4 @@ coverage.xml
 *.tmp
 *.temp
 .cache/
+.venv/

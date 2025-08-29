@@ -1,30 +1,85 @@
 :root{
-  --bg:#000; --fg:#fff; --muted:#9ca3af;
-  --card:#0b0b0b; --border:#262626;
-  --gap:.5rem; --radius:12px; --maxw:100%; /* bez 100vw, żeby nie ucinało */
+  /* Elegancka paleta 4 kolorów - wyrafinowana i stonowana */
+  --black: #1a1a1a;          /* Delikatny czarny - ciemny antracyt */
+  --gray: #2c2f33;           /* Discord Pro - ciemny, elegancki szary */
+  --red: #d32f2f;            /* Orlen czerwony - ciemniejszy, stonowany */
+  --white: #ffffff;          /* Czysty biały dla czytelności */
+  
+  /* Kolory tła i tekstu */
+  --bg: var(--black);
+  --fg: var(--white);
+  --muted: var(--red);
+  --card: #242424;           /* Ciemny szary dla kart */
+  --border: #404040;         /* Jaśniejszy szary dla ramek */
+  
+  /* Pozostałe zmienne */
+  --gap:.5rem; --radius:12px; --maxw:100%;
   --font: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial,sans-serif;
 
   /* header i layout */
-  --header-h: 44px;          /* mniejszy nagłówek z zegarem */
+  --header-h: 44px;
   --wrap-vmargin: 1rem;
 
-  /* tabela – czytelna i na cały ekran */
-  --cell-fs: 13px;           /* lekko mniejsza czcionka, żeby zmieścić dni */
+  /* tabela */
+  --cell-fs: 13px;
   --cell-pad-v: 3px;
   --cell-pad-h: 3px;
-  --thead-h: 34px;           /* wyższy thead na dłuższe imiona */
-  --section-title-h: 24px;   /* niższy tytuł sekcji */
-  --row-border: 1px;         /* grubość dolnego borderu wiersza */
-  --thead-borders: 2px;      /* top+bottom border thead razem */
+  --thead-h: 34px;
+  --section-title-h: 24px;
+  --row-border: 1px;
+  --thead-borders: 2px;
   --card-pad: 12px;
 
   /* kolumny */
-  --emp-col-w: 48px;         /* ciut szerzej dla ukośnych podpisów */
+  --emp-col-w: 48px;
   --date-col-w: 40px;
   --day-col-w:  40px;
 }
 
-*{box-sizing:border-box}
+/* Globalne wyłączenie zaznaczania tekstu dla całej aplikacji */
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Wyjątki - tylko pola input, textarea i edytowalne elementy mogą mieć zaznaczanie tekstu */
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+[contenteditable="true"],
+.slot[contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text;
+  color: var(--white);
+}
+
+/* Domyślny kursor dla wszystkich elementów */
+* {
+  cursor: default;
+  color: var(--white);
+}
+
+/* Elementy .muted w delikatnym czerwonym */
+.muted {
+  color: var(--muted) !important;
+}
+
+/* Kursor pointer dla przycisków i linków */
+button, .btn, .nav-btn, a, [role="button"] {
+  cursor: pointer;
+}
+
 html,body{margin:0;padding:0; overflow:hidden}
 body{
   background:var(--bg);color:var(--fg);font-family:var(--font);
@@ -43,8 +98,9 @@ body{
 .header-center{justify-self:center;display:flex;align-items:center;gap:.5rem}
 .header-right{justify-self:end}
 .logo{max-height:36px;height:auto;width:auto;display:block;margin-left:6px}
-.month-label{font-weight:700}
-.nav-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;color:#fff;text-decoration:none;background:#151515}
+.month-label{font-weight:700; color: var(--white)}
+.nav-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;color:var(--white);text-decoration:none;background:var(--card);transition:all 0.2s}
+.nav-btn:hover{background:rgba(211, 47, 47, 0.8); border-color:var(--red)}
 .nav-btn:active{transform:translateY(1px)}
 
 /* kontener na treść */
@@ -77,11 +133,130 @@ h2{margin:0 0 .25rem 0;font-size:1.05rem;line-height:1}
 h2.center{text-align:center}
 h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
-/* lewy panel: wyśrodkowanie nagłówków i odstęp pod tytułem */
-.grid3 > .card:first-child h3{ text-align:center }
-.grid3 > .card:first-child .stack{ margin-top:.5rem }
-.grid3 > .card:first-child .muted{ text-align:center }
-.logout-area{display:flex; justify-content:center; margin-top:.75rem}
+/* lewy panel: podobny layout do prawego panelu */
+.grid3 > .card:first-child {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem var(--card-pad);
+}
+
+.grid3 > .card:first-child h2 {
+  margin-bottom: 1rem;
+}
+
+.grid3 > .card:first-child .stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1.5rem;
+}
+
+.grid3 > .card:first-child h3 { 
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.grid3 > .card:first-child .muted { 
+  text-align: center;
+}
+
+.logout-area {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+/* prawy panel: podział 70% funkcje, 30% akcje */
+.grid3 > .card:last-child {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem var(--card-pad);
+  position: relative;
+}
+
+.grid3 > .card:last-child h2 {
+  margin-bottom: 1rem;
+}
+
+.grid3 > .card:last-child .stack {
+  height: calc(100% - 2rem - 110px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.grid3 > .card:last-child .stack .btn {
+  width: 100%;
+  height: 70px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Wymuszenie stylów dla przycisków w stack */
+.stack .btn {
+  width: 100% !important;
+  height: 70px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-width: 2px !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+}
+
+.grid3 > .card:last-child .actions {
+  height: 110px;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
+  position: absolute;
+  bottom: 1.5rem;
+  left: var(--card-pad);
+  right: var(--card-pad);
+}
+
+.grid3 > .card:last-child .actions .btn {
+  width: 100%;
+  height: 38px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+/* Wymuszenie stylów dla przycisków actions */
+.actions .btn {
+  width: 100% !important;
+  height: 38px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-width: 2px !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+}
 
 /* środkowy panel: tabela musi idealnie się zmieścić */
 .center-panel{display:flex;flex-direction:column}
@@ -97,7 +272,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   border-spacing:0;
 }
 .table thead th{
-  background:#111;
+  background:var(--black);
   height: var(--thead-h);
   border-top:1px solid var(--border);
   border-bottom:1px solid var(--border);
@@ -118,13 +293,15 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+  background: var(--black);
 }
 
 /* weekendy i święta */
 .table tbody tr.off-day td,
 .table tbody tr.off-day th{
-  background: #1a1a1a;
-  color: var(--fg);
+  background: var(--gray);
+  color: var(--white) !important;
+  border: 1px solid var(--border);
 }
 
 /* WYSOKOŚĆ WIERSZY:
@@ -167,20 +344,21 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 /* wyrównanie zawartości nagłówków kolumn pracowników */
 .table thead th.col-emp{vertical-align: middle; padding-bottom: 0}
 
-/* Dodatkowe style dla nagłówków pracowników */
+/* Dodatkowe style dla ukośnych nagłówków */
 .table thead th.col-emp .rot {
-  font-size: 11px; /* Mniejsza czcionka dla lepszego dopasowania */
-  line-height: 1.3; /* Większy line-height dla wieloliniowego tekstu */
-  padding: 4px 2px; /* Większy padding dla wyższych nagłówków */
-  min-height: 2.6em; /* Minimalna wysokość dla 2 linii tekstu */
+  font-size: 11px; /* Jeszcze mniejsza czcionka dla ukośnych nagłówków */
+  line-height: 1.0;
+  padding: 0 2px; /* Dodatkowy padding */
+  transform-origin: bottom left; /* Lepsze pozycjonowanie ukośnego tekstu */
 }
 
 /* przyciski */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;
   padding:.55rem .8rem;border-radius:10px;border:1px solid var(--border);
-  background:#151515;color:#fff;cursor:pointer
+  background:var(--card);color:var(--white);cursor:pointer;transition:all 0.2s
 }
+.btn:hover{background:rgba(211, 47, 47, 0.8); border-color:var(--red)}
 .btn:active{transform:translateY(1px)}
 .w100{width:100%}
 
@@ -191,19 +369,20 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 /* --- slot editor (inline overlay) --- */
 .slot-editor{
-  position:absolute; z-index:10; background:#0f0f0f; border:1px solid var(--border);
+  position:absolute; z-index:10; background:var(--card); border:1px solid var(--border);
   border-radius:10px; padding:6px; width:88px; display:none;
   box-shadow:0 6px 24px rgba(0,0,0,.35)
 }
 .slot-editor .row{display:flex; gap:6px; margin-bottom:6px}
 .slot-editor .row:last-child{margin-bottom:0}
-.slot-editor .opt{flex:1; padding:.35rem 0; border-radius:8px; border:1px solid var(--border); background:#151515; color:#fff; cursor:pointer}
-.slot-editor input{width:100%; padding:.3rem .4rem; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff}
+.slot-editor .opt{flex:1; padding:.35rem 0; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--white); cursor:pointer;transition:all 0.2s}
+.slot-editor .opt:hover{background:rgba(211, 47, 47, 0.8); border-color:var(--red)}
+.slot-editor input{width:100%; padding:.3rem .4rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--white)}
 .slot-editor.show{display:block}
 /* swap compose inline under table */
 .swap-compose{display:none; margin-top:.5rem; gap:.5rem}
 .swap-compose.show{display:flex}
-.swap-compose input{flex:1; min-width:0; border:1px solid var(--border); border-radius:8px; background:#111; color:#fff; padding:.35rem .5rem}
+.swap-compose input{flex:1; min-width:0; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--white); padding:.35rem .5rem}
 
 /* --- Login Screen Styles --- */
 .login-container {
@@ -241,21 +420,21 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   gap: 0.75rem;
   width: 100%;
   padding: 1rem 1.5rem;
-  background: #fff;
-  color: #333;
+  background: var(--red);
+  color: var(--white);
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
 }
 
 .login-btn:hover {
-  background: #f8f9fa;
+  background: rgba(211, 47, 47, 0.8);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
 }
 
 .login-btn:active {
@@ -267,29 +446,8 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 }
 
 /* --- Ukrycie kursora tekstowego w grafiku --- */
-.table .slot {
-  user-select: none;  /* Nie można zaznaczyć tekstu */
-  cursor: default;     /* Domyślny kursor */
-}
-
 .table .slot:focus {
   outline: none;       /* Brak outline przy focus */
-}
-
-.table .slot[contenteditable="true"] {
-  user-select: text;   /* Można zaznaczyć tekst tylko gdy edytowalne */
-  cursor: text;        /* Kursor tekstowy tylko gdy edytowalne */
-}
-
-/* Ukrycie kursora tekstowego we wszystkich elementach tabeli */
-.table th,
-.table td,
-.table .rot,
-.table .col-date,
-.table .col-day,
-.table .col-emp {
-  user-select: none;   /* Nie można zaznaczyć tekstu */
-  cursor: default;     /* Domyślny kursor */
 }
 
 .table th:focus,
@@ -301,100 +459,42 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   outline: none;       /* Brak outline przy focus */
 }
 
-/* Wyjątek - tylko komórki edytowalne mogą mieć kursor tekstowy */
-.table .slot[contenteditable="true"] {
-  user-select: text;
-  cursor: text;
-}
-
 /* --- Ukrycie kursora tekstowego na całej stronie --- */
-/* Nagłówek strony */
-.site-header,
-.header-bar,
-.header-left,
-.header-center,
-.header-right,
-.logo,
-.month-label,
-.nav-btn,
-#clock {
-  user-select: none;
-  cursor: default;
-}
-
-/* Lewa kolumna */
-.card h2,
-.card h3,
-.card p,
-.card ul,
-.card li,
-#list-d,
-#list-n,
-.logout-area,
-.btn {
-  user-select: none;
-  cursor: default;
-}
-
-/* Dynamiczne elementy generowane przez JavaScript */
-.muted,
-.stack h3,
-.stack div,
-.stack p,
-.stack ul,
-.stack li,
-#list-d *,
-#list-n *,
-#list-d p,
-#list-n p {
-  user-select: none !important;
-  cursor: default !important;
-}
-
 /* Przyciski i elementy interaktywne */
 .btn:hover,
 .nav-btn:hover {
   cursor: pointer;  /* Kursor pointer dla przycisków */
 }
 
-/* Wyjątek - tylko pola input mogą mieć kursor tekstowy */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-textarea {
-  user-select: text;
-  cursor: text;
-}
-
 /* --- Animacje edycji grafiku --- */
-/* Pomarańczowe pulsowanie podczas edycji */
+/* Czerwone pulsowanie podczas edycji */
 .slot.editing {
-  animation: pulse-orange 1.5s ease-in-out infinite;
+  animation: pulse-red 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse-orange {
+@keyframes pulse-red {
   0% {
-    background-color: rgba(255, 165, 0, 0.1);
+    background-color: rgba(211, 47, 47, 0.05);
   }
   50% {
-    background-color: rgba(255, 165, 0, 0.2);
+    background-color: rgba(211, 47, 47, 0.1);
   }
   100% {
-    background-color: rgba(255, 165, 0, 0.1);
+    background-color: rgba(211, 47, 47, 0.05);
   }
 }
 
-/* Zielone mryganie po zapisaniu */
+/* Białe mryganie po zapisaniu */
 .slot.saved {
-  animation: flash-green 0.8s ease-in-out;
+  animation: flash-white 0.8s ease-in-out;
 }
 
-@keyframes flash-green {
+@keyframes flash-white {
   0% {
-    background-color: rgba(34, 197, 94, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
   }
   50% {
-    background-color: rgba(34, 197, 94, 0.3);
+    background-color: rgba(255, 255, 255, 0.3);
   }
   100% {
     background-color: transparent;
@@ -408,10 +508,10 @@ textarea {
 
 @keyframes flash-red {
   0% {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: rgba(255, 0, 0, 0.1);
   }
   50% {
-    background-color: rgba(239, 68, 68, 0.3);
+    background-color: rgba(255, 0, 0, 0.3);
   }
   100% {
     background-color: transparent;
@@ -420,13 +520,13 @@ textarea {
 
 /* --- Styl dla zaznaczonych komórek w wielokrotnym wyborze --- */
 .slot.selected {
-  background-color: rgba(59, 130, 246, 0.2) !important;  /* Niebieskie tło */
-  border: 2px solid rgba(59, 130, 246, 0.6) !important;  /* Niebieska ramka */
+  background-color: rgba(211, 47, 47, 0.1) !important;  /* Czerwone tło */
+  border: 2px solid rgba(211, 47, 47, 0.4) !important;  /* Czerwona ramka */
 }
 
 .slot.selected.editing {
-  background-color: rgba(255, 165, 0, 0.3) !important;  /* Pomarańczowe tło dla edytowanych */
-  border: 2px solid rgba(255, 165, 0, 0.8) !important;  /* Pomarańczowa ramka */
+  background-color: rgba(211, 47, 47, 0.15) !important;  /* Czerwone tło dla edytowanych */
+  border: 2px solid rgba(211, 47, 47, 0.6) !important;  /* Czerwona ramka */
 }
 
 /* Responsive adjustments */
@@ -446,8 +546,9 @@ textarea {
 }
 
 /* actions (save/cancel) w prawym panelu */
-.actions{display:none; margin-top: .75rem; display:none;}
-.actions.show{display:flex; justify-content:center; gap:.5rem}
+.actions.show{
+  display: flex !important;
+}
 
 /* employees mini editor */
 .emp-editor{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1000}
@@ -455,28 +556,28 @@ textarea {
 .emp-editor::before{content:""; position:absolute; inset:0; background:rgba(0,0,0,.6)}
 .emp-editor > *{position:relative}
 .emp-editor .emp-head, .emp-editor .emp-list, .emp-editor .emp-add{ width: 360px }
-.emp-editor .emp-head{font-weight:700; margin-bottom:.5rem; text-align:center}
-.emp-editor .emp-list{display:flex; flex-direction:column; gap:.25rem; max-height:50vh; overflow:auto; background:#0f0f0f; border:1px solid var(--border); border-radius:10px; padding:.5rem}
+.emp-editor .emp-head{font-weight:700; margin-bottom:.5rem; text-align:center; color: var(--white)}
+.emp-editor .emp-list{display:flex; flex-direction:column; gap:.25rem; max-height:50vh; overflow:auto; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:.5rem}
 .emp-editor .emp-add{display:flex; gap:.5rem; margin-top:.5rem}
-.emp-editor .emp-add input, .emp-editor .emp-add select, .emp-editor .emp-add textarea{flex:1; min-width:0; border:1px solid var(--border); border-radius:8px; background:#111; color:#fff; padding:.35rem .5rem}
-.emp-editor .emp-close{position:absolute; top:12px; right:12px; background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer}
-.emp-editor .emp-container{position:relative; background:#0b0b0b; border:1px solid var(--border); border-radius:12px; padding:1rem}
+.emp-editor .emp-add input, .emp-editor .emp-add select, .emp-editor .emp-add textarea{flex:1; min-width:0; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--white); padding:.35rem .5rem}
+.emp-editor .emp-close{position:absolute; top:12px; right:12px; background:transparent; border:none; color:var(--white); font-size:18px; cursor:pointer}
+.emp-editor .emp-container{position:relative; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem}
 .emp-row{display:flex; align-items:center; justify-content:space-between; gap:.5rem; border:1px solid var(--border); border-radius:8px; padding:.35rem .5rem}
 .emp-row .meta{color:var(--muted); font-size:.85em}
 
 /* Style dla akcji pracowników */
 .emp-actions{display:flex; gap:.25rem}
-.btn-edit{background:#3b82f6; border-color:#3b82f6}
-.btn-edit:hover{background:#2563eb; border-color:#2563eb}
+.btn-edit{background:var(--red); border-color:var(--red); transition:all 0.2s}
+.btn-edit:hover{background:rgba(211, 47, 47, 0.8); border-color:var(--red)}
 
 /* Style dla formularza edycji */
 .emp-edit-form{margin-top:.5rem}
 .emp-edit-actions{display:flex; gap:.5rem; margin-top:.5rem; justify-content:center}
 
 /* Status indicators for swap requests */
-.status-approved{color:#22c55e; font-weight:600}
-.status-rejected{color:#ef4444; font-weight:600}
-.status-pending{color:#f59e0b; font-weight:600}
+.status-approved{color:var(--white); font-weight:600}
+.status-rejected{color:var(--red); font-weight:600}
+.status-pending{color:var(--gray); font-weight:600}
 
 /* Comment styling for swap requests */
 .swap-comment{
@@ -512,14 +613,15 @@ textarea {
   text-align: center;
 }
 .btn-primary{
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--red);
+  border-color: var(--red);
   font-weight: 600;
   padding: 0.75rem 1.5rem;
+  transition: all 0.2s;
 }
 .btn-primary:hover{
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: rgba(211, 47, 47, 0.8);
+  border-color: var(--red);
 }
 textarea{
   resize: vertical;
@@ -535,8 +637,8 @@ select option {
 
 select:focus, input:focus, textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
 }
 
 /* Usuń domyślne strzałki w select na WebKit */
@@ -560,51 +662,4 @@ select {
 .compose-section select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Style dla osób specjalnych */
-.col-separator {
-  border-left: 2px solid #666 !important;
-  background: #f5f5f5 !important;
-  width: 20px !important;
-  min-width: 20px !important;
-  max-width: 20px !important;
-}
-
-.col-separator span {
-  color: #666 !important;
-  font-size: 0.8em !important;
-  font-weight: 600 !important;
-}
-
-.col-special {
-  background: rgba(59, 130, 246, 0.1) !important;
-  border-left: 1px solid rgba(59, 130, 246, 0.3) !important;
-}
-
-.col-special:hover {
-  background: rgba(59, 130, 246, 0.2) !important;
-}
-
-
-
-/* Wizualne rozróżnienie osób specjalnych w liście */
-.emp-special-item {
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid #3b82f6;
-  padding-left: 0.75rem;
-  margin-left: -0.5rem;
-}
-
-.emp-special-badge {
-  display: inline-block;
-  background: #3b82f6;
-  color: white;
-  font-size: 0.7em;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  margin-left: 0.5rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
