@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "5000:5000"
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
@@ -16,7 +16,7 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
       timeout: 10s
       retries: 3
