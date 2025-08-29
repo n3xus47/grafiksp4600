@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brak połączenia - Grafik SP4600</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#d32f2f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Grafik SP4600" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.ico" />
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png" />
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .offline-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            background: var(--bg);
+        }
+        
+        .offline-icon {
+            font-size: 4rem;
+            color: var(--red);
+            margin-bottom: 1rem;
+        }
+        
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--white);
+        }
+        
+        .offline-message {
+            font-size: 1.1rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            max-width: 500px;
+        }
+        
+        .retry-btn {
+            background: var(--red);
+            color: var(--white);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+        
+        .retry-btn:hover {
+            background: rgba(211, 47, 47, 0.8);
+            transform: translateY(-1px);
+        }
+        
+        .status-indicator {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .status-offline {
+            background: rgba(211, 47, 47, 0.1);
+            color: var(--red);
+            border: 1px solid rgba(211, 47, 47, 0.3);
+        }
+        
+        .status-online {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        <h1 class="offline-title">Brak połączenia</h1>
+        <p class="offline-message">
+            Nie można połączyć się z serwerem. Sprawdź połączenie internetowe i spróbuj ponownie.
+        </p>
+        
+        <button class="retry-btn" onclick="retryConnection()">
+            Spróbuj ponownie
+        </button>
+        
+        <div id="connection-status" class="status-indicator status-offline">
+            Status: Offline
+        </div>
+    </div>
+
+    <script>
+        // Sprawdź status połączenia
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connection-status');
+            if (navigator.onLine) {
+                statusDiv.textContent = 'Status: Online';
+                statusDiv.className = 'status-indicator status-online';
+            } else {
+                statusDiv.textContent = 'Status: Offline';
+                statusDiv.className = 'status-indicator status-offline';
+            }
+        }
+        
+        // Spróbuj ponownie połączyć
+        function retryConnection() {
+            if (navigator.onLine) {
+                // Spróbuj załadować główną stronę
+                window.location.href = '/';
+            } else {
+                alert('Brak połączenia internetowego. Sprawdź ustawienia sieci.');
+            }
+        }
+        
+        // Nasłuchuj zmian w statusie połączenia
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Automatyczne przekierowanie gdy połączenie wróci
+        window.addEventListener('online', function() {
+            setTimeout(function() {
+                if (navigator.onLine) {
+                    window.location.href = '/';
+                }
+            }, 1000);
+        });
+        
+        // Inicjalne sprawdzenie statusu
+        updateConnectionStatus();
+        
+        // Sprawdzaj połączenie co 5 sekund
+        setInterval(function() {
+            if (navigator.onLine) {
+                // Spróbuj wykonać test połączenia z serwerem
+                fetch('/healthz', { 
+                    method: 'GET',
+                    cache: 'no-cache'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(() => {
+                    // Server still not reachable
+                });
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

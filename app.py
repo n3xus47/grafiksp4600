@@ -1354,6 +1354,27 @@ def index():
         logger.error(f"Błąd podczas ładowania głównej strony: {e}")
         abort(500, "Błąd podczas ładowania strony")
 
+# --- PWA Routes ---------------------------------------------------------------
+@app.route('/manifest.json')
+def manifest():
+    """PWA Manifest endpoint"""
+    return app.send_static_file('manifest.json')
+
+@app.route('/sw.js')
+def service_worker():
+    """Service Worker endpoint"""
+    response = make_response(app.send_static_file('sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/offline')
+def offline():
+    """Offline page for PWA"""
+    return render_template("offline.html")
+
 # --- Health check i debug -----------------------------------------------------
 @app.get("/healthz")
 def healthz():
