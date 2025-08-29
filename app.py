@@ -1073,6 +1073,7 @@ def signin():
 def login():
     """Przekierowanie do Google OAuth"""
     redirect_uri = url_for('auth_callback', _external=True)
+    app.logger.info(f"🔍 DEBUG: Generated redirect_uri = {redirect_uri}")
     return google.authorize_redirect(redirect_uri)
 
 @app.get("/auth/callback")
