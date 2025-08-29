@@ -1261,8 +1261,8 @@ def index():
         current_emp_name = me_emp["name"] if me_emp else session.get("user_name", "")
         
         # Check if user is admin
-        user_role_row = db.execute("SELECT role FROM users WHERE id=?", (session.get("user_id"),)).fetchone()
-        is_admin = user_role_row and user_role_row["role"] == "ADMIN"
+        user_role_row = db.execute("SELECT is_special FROM employees WHERE user_id=?", (session.get("user_id"),)).fetchone()
+        is_admin = user_role_row and user_role_row["is_special"] == 1
         
         # Debug: sprawdź dane przed renderowaniem
         logger.info(f"Renderowanie strony - użytkownik: {session.get('user_name')}")
