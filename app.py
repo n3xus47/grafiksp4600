@@ -28,31 +28,26 @@ logger = logging.getLogger(__name__)
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
 
-# Konfiguracja aplikacji
-class Config:
-    """Konfiguracja aplikacji Flask"""
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)  # Zmniejszone z 30 do 7 dni
-    
-    # Ustawienia bezpieczeństwa sesji
-    SESSION_COOKIE_SECURE = os.environ.get("FLASK_ENV") == "production"  # True tylko w produkcji
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    
-    # Konfiguracja bazy danych
-    DATABASE_PATH = os.path.join(os.path.dirname(__file__), "app.db")
-    
-    # Rate limiting
-    RATELIMIT_DEFAULT = "100 per minute"
-    RATELIMIT_STORAGE_URL = "memory://"
-
 # Inicjalizacja aplikacji
 app = Flask(__name__)
-app.config.from_object(Config)
+
+# Wybierz odpowiednią konfigurację na podstawie środowiska
+from config import get_config
+app.config.from_object(get_config())
 
 # Obsługa proxy headers (HTTPS przez nginx)
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Middleware do wymuszenia HTTPS w produkcji
+@app.before_request
+def before_request():
+    """Middleware wykonywany przed każdym żądaniem"""
+    if app.config.get('PREFERRED_URL_SCHEME') == 'https':
+        # W produkcji wymuś HTTPS
+        if request.headers.get('X-Forwarded-Proto') == 'http':
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
 
 # Initialize OAuth
 oauth = OAuth(app)
@@ -69,7 +64,7 @@ google = oauth.register(
 )
 
 # Inicjalizacja bazy danych
-db_path = Config.DATABASE_PATH
+db_path = app.config.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), "app.db"))
 
 def get_db():
     """Pobiera połączenie z bazą danych"""
@@ -1072,7 +1067,12 @@ def signin():
 @app.get("/login")
 def login():
     """Przekierowanie do Google OAuth"""
-    redirect_uri = url_for('auth_callback', _external=True)
+    # W produkcji używaj HTTPS, w development HTTP
+    if app.config.get('PREFERRED_URL_SCHEME') == 'https':
+        redirect_uri = url_for('auth_callback', _external=True, _scheme='https')
+    else:
+        redirect_uri = url_for('auth_callback', _external=True)
+    
     app.logger.info(f"🔍 DEBUG: Generated redirect_uri = {redirect_uri}")
     return google.authorize_redirect(redirect_uri)
 
