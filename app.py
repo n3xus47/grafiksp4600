@@ -44,10 +44,35 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 def before_request():
     """Middleware wykonywany przed każdym żądaniem"""
     if app.config.get('PREFERRED_URL_SCHEME') == 'https':
-        # W produkcji wymuś HTTPS
-        if request.headers.get('X-Forwarded-Proto') == 'http':
+        # W produkcji wymuś HTTPS - sprawdź różne nagłówki
+        is_https = (
+            request.headers.get('X-Forwarded-Proto') == 'https' or
+            request.headers.get('X-Forwarded-Scheme') == 'https' or
+            request.headers.get('X-Forwarded-Protocol') == 'https' or
+            request.is_secure
+        )
+        
+        if not is_https:
+            # Przekieruj na HTTPS
             url = request.url.replace('http://', 'https://', 1)
             return redirect(url, code=301)
+
+# Dodatkowe nagłówki bezpieczeństwa
+@app.after_request
+def add_security_headers(response):
+    """Dodaje nagłówki bezpieczeństwa do odpowiedzi"""
+    if app.config.get('PREFERRED_URL_SCHEME') == 'https':
+        # Wymuś HTTPS
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Przekieruj na HTTPS jeśli to HTTP
+        if request.scheme == 'http':
+            response.headers['Location'] = request.url.replace('http://', 'https://', 1)
+    
+    return response
 
 # Initialize OAuth
 oauth = OAuth(app)
@@ -1067,19 +1092,34 @@ def signin():
 @app.get("/login")
 def login():
     """Przekierowanie do Google OAuth"""
-    # W produkcji używaj HTTPS, w development HTTP
+    # W produkcji zawsze używaj HTTPS
     if app.config.get('PREFERRED_URL_SCHEME') == 'https':
+        # Wymuś HTTPS dla callback URL
         redirect_uri = url_for('auth_callback', _external=True, _scheme='https')
+        app.logger.info(f"🔒 HTTPS: Generated redirect_uri = {redirect_uri}")
     else:
         redirect_uri = url_for('auth_callback', _external=True)
+        app.logger.info(f"🔓 HTTP: Generated redirect_uri = {redirect_uri}")
     
-    app.logger.info(f"🔍 DEBUG: Generated redirect_uri = {redirect_uri}")
     return google.authorize_redirect(redirect_uri)
 
 @app.get("/auth/callback")
 @app.get("/authorize")  # Alternative route for compatibility
 def auth_callback():
     """Callback po autoryzacji Google"""
+    # Sprawdź czy używamy HTTPS w produkcji
+    if app.config.get('PREFERRED_URL_SCHEME') == 'https':
+        is_https = (
+            request.headers.get('X-Forwarded-Proto') == 'https' or
+            request.headers.get('X-Forwarded-Scheme') == 'https' or
+            request.is_secure
+        )
+        if not is_https:
+            app.logger.warning(f"⚠️ Próba dostępu do callback przez HTTP w produkcji")
+            # Przekieruj na HTTPS
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+    
     try:
         token = google.authorize_access_token()
         user_info = token.get('userinfo')
