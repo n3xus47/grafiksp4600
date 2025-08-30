@@ -11,7 +11,7 @@ import logging
 from typing import Optional, Dict, Any, List
 from zoneinfo import ZoneInfo
 from datetime import timedelta
-from functools import wraps
+# from functools import wraps  # Nie jest już potrzebny
 
 from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response
 from dotenv import load_dotenv
@@ -39,38 +39,19 @@ app.config.from_object(get_config())
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-# Middleware do wymuszenia HTTPS w produkcji
-@app.before_request
-def before_request():
-    """Middleware wykonywany przed każdym żądaniem"""
-    if app.config.get('PREFERRED_URL_SCHEME') == 'https':
-        # W produkcji wymuś HTTPS - sprawdź różne nagłówki
-        is_https = (
-            request.headers.get('X-Forwarded-Proto') == 'https' or
-            request.headers.get('X-Forwarded-Scheme') == 'https' or
-            request.headers.get('X-Forwarded-Protocol') == 'https' or
-            request.is_secure
-        )
-        
-        if not is_https:
-            # Przekieruj na HTTPS
-            url = request.url.replace('http://', 'https://', 1)
-            return redirect(url, code=301)
-
 # Dodatkowe nagłówki bezpieczeństwa
 @app.after_request
 def add_security_headers(response):
     """Dodaje nagłówki bezpieczeństwa do odpowiedzi"""
     if app.config.get('PREFERRED_URL_SCHEME') == 'https':
-        # Wymuś HTTPS
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        # Bardzo agresywne HSTS - wymuś HTTPS
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # Przekieruj na HTTPS jeśli to HTTP
-        if request.scheme == 'http':
-            response.headers['Location'] = request.url.replace('http://', 'https://', 1)
+        # Dodaj nagłówek Content-Security-Policy
+        response.headers['Content-Security-Policy'] = "upgrade-insecure-requests; block-all-mixed-content"
     
     return response
 
