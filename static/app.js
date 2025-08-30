@@ -59,9 +59,93 @@ function forcePageRefresh() {
 // Funkcja do odświeżania danych w czasie rzeczywistym została usunięta
 // Używamy prostszej metody - forcePageRefresh()
 
+// Funkcja do wykrywania rozmiaru ekranu i dostosowywania interfejsu
+function handleResponsiveDesign() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const isMobile = width <= 768;
+  const isTablet = width <= 1024 && width > 768;
+  const isLandscape = width > height;
+  
+  console.log(`Ekran: ${width}x${height}, Mobile: ${isMobile}, Tablet: ${isTablet}, Landscape: ${isLandscape}`);
+  
+  // Dostosuj interfejs dla urządzeń mobilnych
+  if (isMobile) {
+    document.body.classList.add('mobile-view');
+    
+    // Ukryj niepotrzebne elementy na małych ekranach
+    const headerLeft = document.querySelector('.header-left');
+    const headerRight = document.querySelector('.header-right');
+    
+    if (headerLeft) headerLeft.style.display = 'none';
+    if (headerRight) headerRight.style.display = 'none';
+    
+    // Dostosuj rozmiar przycisków dla dotyku
+    const buttons = document.querySelectorAll('.btn, .nav-btn');
+    buttons.forEach(btn => {
+      btn.style.minHeight = '44px';
+      btn.style.minWidth = '44px';
+    });
+    
+    // Dostosuj tabelę dla małych ekranów
+    const table = document.getElementById('grafik');
+    if (table) {
+      table.style.fontSize = '11px';
+    }
+    
+  } else if (isTablet) {
+    document.body.classList.add('tablet-view');
+    document.body.classList.remove('mobile-view');
+    
+    // Przywróć elementy na tabletach
+    const headerLeft = document.querySelector('.header-left');
+    const headerRight = document.querySelector('.header-right');
+    
+    if (headerLeft) headerLeft.style.display = 'flex';
+    if (headerRight) headerRight.style.display = 'flex';
+    
+  } else {
+    document.body.classList.remove('mobile-view', 'tablet-view');
+    
+    // Przywróć wszystkie elementy na desktop
+    const headerLeft = document.querySelector('.header-left');
+    const headerRight = document.querySelector('.header-right');
+    
+    if (headerLeft) headerLeft.style.display = 'flex';
+    if (headerRight) headerRight.style.display = 'flex';
+  }
+  
+  // Dostosuj orientację landscape
+  if (isLandscape && isMobile) {
+    document.body.classList.add('landscape-mode');
+  } else {
+    document.body.classList.remove('landscape-mode');
+  }
+}
+
+// Nasłuchuj zmian rozmiaru okna
+window.addEventListener('resize', handleResponsiveDesign);
+window.addEventListener('orientationchange', handleResponsiveDesign);
+
+// Rejestracja Service Worker dla PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(registration => {
+        console.log('Service Worker zarejestrowany:', registration);
+      })
+      .catch(error => {
+        console.log('Błąd rejestracji Service Worker:', error);
+      });
+  });
+}
+
 // Główna funkcja aplikacji
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została załadowana');
+  
+  // Inicjalizuj responsywny design
+  handleResponsiveDesign();
   
   // Pobierz wszystkie potrzebne elementy DOM
   const table = document.getElementById('grafik');

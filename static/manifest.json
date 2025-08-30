@@ -1,0 +1,27 @@
+{
+  "name": "Grafik SP4600",
+  "short_name": "Grafik",
+  "description": "System zarządzania grafikiem zmian pracowników",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#d32f2f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/PKN.WA.D.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/PKN.WA.D.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pl",
+  "dir": "ltr"
+}

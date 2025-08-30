@@ -362,9 +362,452 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .btn:active{transform:translateY(1px)}
 .w100{width:100%}
 
-/* mobilnie: panele pod sobą */
-@media (max-width: 900px){
-  .grid3{grid-template-columns:1fr}
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Tablet - średnie ekrany */
+@media (max-width: 1024px) {
+  .grid3 {
+    grid-template-columns: minmax(0, 15%) minmax(0, 70%) minmax(0, 15%);
+    gap: 0.75rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .table th, .table td {
+    font-size: 12px;
+    padding: 2px 3px;
+  }
+  
+  .rot {
+    font-size: 10px;
+  }
+}
+
+/* Tablet - małe ekrany */
+@media (max-width: 900px) {
+  .grid3 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    height: auto;
+    min-height: calc(100vh - var(--header-h) - 2 * var(--wrap-vmargin) - 1px);
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .center-panel {
+    order: 1;
+  }
+  
+  .grid3 > .card:first-child {
+    order: 2;
+    padding: 1rem;
+  }
+  
+  .grid3 > .card:last-child {
+    order: 3;
+    padding: 1rem;
+  }
+  
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table {
+    min-width: 800px;
+  }
+  
+  .header-bar {
+    grid-template-columns: auto 1fr auto;
+    gap: 0.5rem;
+  }
+  
+  .logo {
+    max-height: 32px;
+  }
+  
+  .month-label {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile - duże telefony */
+@media (max-width: 768px) {
+  .wrap {
+    padding: 0 0.75rem;
+    margin: 0.75rem auto;
+  }
+  
+  .site-header {
+    height: 50px;
+  }
+  
+  .header-bar {
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+  }
+  
+  .header-left {
+    display: none;
+  }
+  
+  .month-label {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .nav-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+  
+  .card {
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+  
+  .table-wrap {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .table {
+    min-width: 700px;
+  }
+  
+  .table th, .table td {
+    font-size: 11px;
+    padding: 1px 2px;
+  }
+  
+  .rot {
+    font-size: 9px;
+    line-height: 1.1;
+  }
+  
+  .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .stack .btn {
+    height: 60px;
+    font-size: 0.8rem;
+  }
+  
+  .actions .btn {
+    height: 35px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Mobile - małe telefony */
+@media (max-width: 480px) {
+  .wrap {
+    padding: 0 0.5rem;
+    margin: 0.5rem auto;
+  }
+  
+  .site-header {
+    height: 45px;
+  }
+  
+  .header-bar {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+  
+  .header-right {
+    display: none;
+  }
+  
+  .month-label {
+    font-size: 1.1rem;
+  }
+  
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+  
+  .card {
+    padding: 0.5rem;
+    border-radius: 6px;
+  }
+  
+  .table {
+    min-width: 600px;
+  }
+  
+  .table th, .table td {
+    font-size: 10px;
+    padding: 1px;
+  }
+  
+  .rot {
+    font-size: 8px;
+    line-height: 1.0;
+  }
+  
+  .btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+  
+  .stack .btn {
+    height: 55px;
+    font-size: 0.75rem;
+  }
+  
+  .actions .btn {
+    height: 32px;
+    font-size: 0.7rem;
+  }
+  
+  h2 {
+    font-size: 0.95rem;
+  }
+  
+  h3 {
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile - bardzo małe telefony */
+@media (max-width: 360px) {
+  .wrap {
+    padding: 0 0.25rem;
+    margin: 0.25rem auto;
+  }
+  
+  .site-header {
+    height: 40px;
+  }
+  
+  .month-label {
+    font-size: 1rem;
+  }
+  
+  .nav-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .card {
+    padding: 0.4rem;
+    border-radius: 4px;
+  }
+  
+  .table {
+    min-width: 550px;
+  }
+  
+  .table th, .table td {
+    font-size: 9px;
+    padding: 0.5px;
+  }
+  
+  .rot {
+    font-size: 7px;
+    line-height: 0.9;
+  }
+  
+  .btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
+  
+  .stack .btn {
+    height: 50px;
+    font-size: 0.7rem;
+  }
+  
+  .actions .btn {
+    height: 30px;
+    font-size: 0.65rem;
+  }
+}
+
+/* Landscape orientation dla telefonów */
+@media (max-width: 768px) and (orientation: landscape) {
+  .grid3 {
+    grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
+    gap: 0.5rem;
+  }
+  
+  .site-header {
+    height: 40px;
+  }
+  
+  .wrap {
+    margin: 0.5rem auto;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .btn, .nav-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .table .slot {
+    min-height: 44px;
+  }
+  
+  .nav-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .table th, .table td {
+    border-width: 0.5px;
+  }
+  
+  .card {
+    border-width: 0.5px;
+  }
+}
+
+/* ===== JAVASCRIPT RESPONSIVE CLASSES ===== */
+
+/* Klasa dla widoku mobilnego */
+body.mobile-view .grid3 {
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+body.mobile-view .card {
+  padding: 0.75rem;
+}
+
+body.mobile-view .table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.mobile-view .table {
+  min-width: 700px;
+}
+
+body.mobile-view .header-bar {
+  grid-template-columns: 1fr auto;
+}
+
+body.mobile-view .header-left,
+body.mobile-view .header-right {
+  display: none;
+}
+
+/* Klasa dla widoku tablet */
+body.tablet-view .grid3 {
+  grid-template-columns: minmax(0, 15%) minmax(0, 70%) minmax(0, 15%);
+  gap: 0.75rem;
+}
+
+body.tablet-view .card {
+  padding: 1rem;
+}
+
+/* Klasa dla orientacji landscape na mobile */
+body.landscape-mode .grid3 {
+  grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
+  gap: 0.5rem;
+}
+
+body.landscape-mode .site-header {
+  height: 40px;
+}
+
+body.landscape-mode .wrap {
+  margin: 0.5rem auto;
+}
+
+/* Animacje dla responsywności */
+.grid3, .card, .table-wrap {
+  transition: all 0.3s ease;
+}
+
+/* Touch-friendly improvements dla JavaScript */
+body.mobile-view .btn,
+body.mobile-view .nav-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+body.mobile-view .table .slot {
+  min-height: 44px;
+}
+
+/* Dodatkowe style dla responsywności tabeli */
+@media (max-width: 768px) {
+  .table-wrap {
+    position: relative;
+  }
+  
+  .table-wrap::after {
+    content: "← Przesuń w prawo →";
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: rgba(211, 47, 47, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0.8;
+    animation: slide-hint 2s ease-in-out infinite;
+  }
+  
+  @keyframes slide-hint {
+    0%, 100% { opacity: 0.8; transform: translateY(-50%) translateX(0); }
+    50% { opacity: 1; transform: translateY(-50%) translateX(-5px); }
+  }
+}
+
+/* Poprawki dla bardzo małych ekranów */
+@media (max-width: 360px) {
+  .table-wrap::after {
+    font-size: 10px;
+    padding: 6px 10px;
+    right: 5px;
+  }
+  
+  .table th, .table td {
+    font-size: 8px;
+    padding: 0.5px;
+  }
+  
+  .rot {
+    font-size: 6px;
+    line-height: 0.8;
+  }
+}
+
+/* Ukryj elementy na bardzo małych ekranach */
+@media (max-width: 360px) {
+  body.mobile-view .header-center {
+    font-size: 0.9rem;
+  }
+  
+  body.mobile-view .month-label {
+    font-size: 0.95rem;
+  }
 }
 
 /* --- slot editor (inline overlay) --- */
@@ -379,70 +822,233 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .slot-editor .opt:hover{background:rgba(211, 47, 47, 0.8); border-color:var(--red)}
 .slot-editor input{width:100%; padding:.3rem .4rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--white)}
 .slot-editor.show{display:block}
+
+/* Responsywność slot editor */
+@media (max-width: 768px) {
+  .slot-editor {
+    width: 120px;
+    padding: 8px;
+  }
+  
+  .slot-editor .opt {
+    padding: 0.5rem 0;
+    font-size: 14px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .slot-editor input {
+    padding: 0.5rem;
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .slot-editor {
+    width: 100px;
+    padding: 6px;
+  }
+  
+  .slot-editor .opt {
+    padding: 0.4rem 0;
+    font-size: 13px;
+    min-height: 40px;
+  }
+  
+  .slot-editor input {
+    padding: 0.4rem;
+    font-size: 16px;
+    min-height: 40px;
+  }
+}
 /* swap compose inline under table */
 .swap-compose{display:none; margin-top:.5rem; gap:.5rem}
 .swap-compose.show{display:flex}
 .swap-compose input{flex:1; min-width:0; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--white); padding:.35rem .5rem}
 
 /* --- Login Screen Styles --- */
-.login-container {
+.signin-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  padding: 2rem;
   background: var(--bg);
-  padding: 1rem;
 }
 
-.login-card {
+.signin-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 3rem 2rem;
-  text-align: center;
-  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 450px;
   width: 100%;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  text-align: center;
 }
 
-.login-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0 0 2rem 0;
-  color: var(--fg);
-  letter-spacing: 0.05em;
-}
-
-.login-btn {
+.signin-logo {
+  margin: 0 auto 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 1rem 1.5rem;
+}
+
+.signin-logo img {
+  max-width: 200px;
+  height: auto;
+  display: block;
+}
+
+.signin-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--fg);
+}
+
+.signin-subtitle {
+  color: var(--fg);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.google-signin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
   background: var(--red);
   color: var(--white);
-  border: none;
+  text-decoration: none;
   border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
+  font-size: 16px;
+  width: 100%;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
 }
 
-.login-btn:hover {
+.google-signin-btn:hover {
   background: rgba(211, 47, 47, 0.8);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
+  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
 }
 
-.login-btn:active {
-  transform: translateY(0);
+.google-signin-btn svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
 }
 
-.google-icon {
-  flex-shrink: 0;
+.error-message {
+  background: rgba(211, 47, 47, 0.05);
+  color: var(--red);
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  border: 1px solid rgba(211, 47, 47, 0.2);
+}
+
+.info-message {
+  color: var(--fg);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive dla strony logowania */
+@media (max-width: 768px) {
+  .signin-container {
+    padding: 1rem;
+  }
+  
+  .signin-card {
+    padding: 2rem 1.5rem;
+    max-width: 400px;
+  }
+  
+  .signin-logo img {
+    max-width: 180px;
+  }
+  
+  .signin-title {
+    font-size: 1.6rem;
+  }
+  
+  .signin-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .google-signin-btn {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signin-container {
+    padding: 0.75rem;
+  }
+  
+  .signin-card {
+    padding: 1.5rem 1rem;
+    max-width: 350px;
+  }
+  
+  .signin-logo img {
+    max-width: 160px;
+  }
+  
+  .signin-title {
+    font-size: 1.4rem;
+  }
+  
+  .signin-subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .google-signin-btn {
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+  
+  .google-signin-btn svg {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .signin-card {
+    padding: 1.25rem 0.75rem;
+    max-width: 320px;
+  }
+  
+  .signin-logo img {
+    max-width: 140px;
+  }
+  
+  .signin-title {
+    font-size: 1.3rem;
+  }
+  
+  .google-signin-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
 }
 
 /* --- Ukrycie kursora tekstowego w grafiku --- */
@@ -564,6 +1170,69 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .emp-editor .emp-container{position:relative; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem}
 .emp-row{display:flex; align-items:center; justify-content:space-between; gap:.5rem; border:1px solid var(--border); border-radius:8px; padding:.35rem .5rem}
 .emp-row .meta{color:var(--muted); font-size:.85em}
+
+/* Responsywność edytorów */
+@media (max-width: 768px) {
+  .emp-editor .emp-head, 
+  .emp-editor .emp-list, 
+  .emp-editor .emp-add {
+    width: 90vw;
+    max-width: 400px;
+  }
+  
+  .emp-editor .emp-container {
+    padding: 0.75rem;
+    margin: 1rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .emp-editor .emp-add {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .emp-editor .emp-add input,
+  .emp-editor .emp-add select,
+  .emp-editor .emp-add textarea {
+    padding: 0.5rem;
+    font-size: 16px; /* Zapobiega zoom na iOS */
+  }
+  
+  .emp-editor .emp-close {
+    top: 8px;
+    right: 8px;
+    font-size: 20px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+  }
+}
+
+@media (max-width: 480px) {
+  .emp-editor .emp-head, 
+  .emp-editor .emp-list, 
+  .emp-editor .emp-add {
+    width: 95vw;
+    max-width: 350px;
+  }
+  
+  .emp-editor .emp-container {
+    padding: 0.5rem;
+    margin: 0.5rem;
+  }
+  
+  .emp-editor .emp-add input,
+  .emp-editor .emp-add select,
+  .emp-editor .emp-add textarea {
+    padding: 0.4rem;
+    font-size: 16px;
+  }
+}
 
 /* Style dla akcji pracowników */
 .emp-actions{display:flex; gap:.25rem}

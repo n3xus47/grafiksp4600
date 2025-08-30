@@ -1052,6 +1052,11 @@ def signin():
     """Strona logowania"""
     return render_template("signin.html")
 
+@app.get("/offline")
+def offline():
+    """Strona offline dla PWA"""
+    return render_template("offline.html")
+
 @app.get("/login")
 def login():
     """Przekierowanie do Google OAuth"""

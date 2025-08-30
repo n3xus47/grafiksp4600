@@ -10,6 +10,7 @@ Aplikacja webowa do zarządzania grafikiem zmian pracowników z systemem uwierzy
 - **Zarządzanie pracownikami** - dodawanie, edycja i usuwanie pracowników
 - **Role użytkowników** - administratorzy i zwykli użytkownicy
 - **Responsywny interfejs** - działa na urządzeniach mobilnych i desktopowych
+- **PWA Support** - Progressive Web App z offline caching
 
 ## 📋 Wymagania
 
@@ -137,6 +138,30 @@ Aplikacja będzie dostępna pod adresem: http://localhost:5000
 - **Rate limiting** - ochrona przed nadużyciami
 - **Bezpieczne sesje** - HTTPOnly cookies, SameSite protection
 - **Whitelist emaili** - kontrola dostępu przez email
+
+## 📱 Responsywny Design & PWA
+
+Aplikacja została zoptymalizowana pod różne rozmiary ekranów i urządzenia:
+
+### **Breakpointy**
+- **Desktop** (1024px+): 3-kolumnowy layout z pełną funkcjonalnością
+- **Tablet** (768-1024px): Zachowane proporcje, zoptymalizowane padding
+- **Mobile** (≤768px): 1-kolumnowy layout, poziomy scroll tabeli
+- **Small Mobile** (≤480px): Kompaktowy design, minimalne marginesy
+
+### **PWA Features**
+- **Manifest**: Aplikacja może być zainstalowana na urządzeniach
+- **Service Worker**: Offline caching i network resilience
+- **Offline Page**: Strona błędu połączenia z retry button
+- **Touch Optimized**: Przyciski 44px+, gesty dotykowe
+
+### **Responsywność**
+- CSS Grid z automatycznym przełączaniem layoutu
+- Tabela z poziomym scrollem na małych ekranach
+- Edytory dostosowane do rozmiaru ekranu
+- Automatyczne ukrywanie niepotrzebnych elementów
+
+Szczegółowa dokumentacja w [RESPONSIVE_DESIGN.md](RESPONSIVE_DESIGN.md)
 
 ## 🚀 Wdrażanie produkcyjne
 
