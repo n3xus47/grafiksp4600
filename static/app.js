@@ -56,6 +56,9 @@ function forcePageRefresh() {
   }
 }
 
+// Funkcja do odświeżania danych w czasie rzeczywistym została usunięta
+// Używamy prostszej metody - forcePageRefresh()
+
 // Główna funkcja aplikacji
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została załadowana');

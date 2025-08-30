@@ -11,7 +11,7 @@ import logging
 from typing import Optional, Dict, Any, List
 from zoneinfo import ZoneInfo
 from datetime import timedelta
-# from functools import wraps  # Nie jest już potrzebny
+from functools import wraps
 
 from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response
 from dotenv import load_dotenv
@@ -701,17 +701,25 @@ def check_existing_conflicts(db, from_date, from_employee, to_date, to_employee,
 def process_regular_swap(db, from_emp_id, to_emp_id, from_date, to_date, from_employee, to_employee):
     """Przetwarza regularną zamianę zmian"""
     try:
+        logger.info(f"process_regular_swap: {from_employee}({from_emp_id}) <-> {to_employee}({to_emp_id}) na daty {from_date} <-> {to_date}")
+        
         # Pobierz obecne zmiany obu pracowników
         from_shift = db.execute("SELECT shift_type FROM shifts WHERE date=? AND employee_id=?", (from_date, from_emp_id)).fetchone()
         to_shift = db.execute("SELECT shift_type FROM shifts WHERE date=? AND employee_id=?", (to_date, to_emp_id)).fetchone()
         
+        logger.info(f"from_shift: {from_shift}, to_shift: {to_shift}")
+        
         if not from_shift:
+            logger.error(f"{from_employee} nie ma zmiany w dniu {from_date}")
             return False, f"{from_employee} nie ma zmiany w dniu {from_date}"
         if not to_shift:
+            logger.error(f"{to_employee} nie ma zmiany w dniu {to_date}")
             return False, f"{to_employee} nie ma zmiany w dniu {to_date}"
         
         from_shift_type = from_shift["shift_type"]
         to_shift_type = to_shift["shift_type"]
+        
+        logger.info(f"from_shift_type: {from_shift_type}, to_shift_type: {to_shift_type}")
         
         # Wykonaj zamianę: pracownicy wymieniają się datami (nie typami zmian)
         # Usuń istniejące zmiany
@@ -866,36 +874,7 @@ def process_ask_request(db, from_emp_id, to_emp_id, to_date, from_employee, to_e
     else:
         logger.warning(f"Ask request: Brak zmiany dla {to_employee} na {to_date}")
 
-def process_regular_swap(db, from_emp_id, to_emp_id, from_date, to_date, from_employee, to_employee):
-    """Przetwarzanie zwykłej zamiany - wymień zmiany między dwoma pracownikami"""
-    # Pobierz obie zmiany
-    from_shift_row = db.execute(
-        "SELECT shift_type FROM shifts WHERE date = ? AND employee_id = ?", 
-        (from_date, from_emp_id)
-    ).fetchone()
-    
-    to_shift_row = db.execute(
-        "SELECT shift_type FROM shifts WHERE date = ? AND employee_id = ?", 
-        (to_date, to_emp_id)
-    ).fetchone()
-    
-    from_shift_type = from_shift_row["shift_type"] if from_shift_row else None
-    to_shift_type = to_shift_row["shift_type"] if to_shift_row else None
-    
-    # Usuń istniejące zmiany
-    db.execute("DELETE FROM shifts WHERE date = ? AND employee_id = ?", (from_date, from_emp_id))
-    db.execute("DELETE FROM shifts WHERE date = ? AND employee_id = ?", (to_date, to_emp_id))
-    
-    # Dodaj zamienione zmiany
-    if to_shift_type:
-        db.execute("INSERT INTO shifts (date, shift_type, employee_id) VALUES (?, ?, ?)", 
-                  (from_date, to_shift_type, from_emp_id))
-    
-    if from_shift_type:
-        db.execute("INSERT INTO shifts (date, shift_type, employee_id) VALUES (?, ?, ?)", 
-                  (to_date, from_shift_type, to_emp_id))
-    
-    logger.info(f"Regular swap: {from_employee} ({from_shift_type} na {from_date}) ↔ {to_employee} ({to_shift_type} na {to_date})")
+
 
 @app.post("/api/swaps/boss")
 @admin_required
@@ -938,12 +917,15 @@ def api_swaps_boss():
             
             if is_give_request:
                 # Give request: transfer shift from requester to target
+                logger.info(f"Wykonuję give_request: {from_employee} -> {to_employee} na {from_date}")
                 process_give_request(db, from_emp_id, to_emp_id, from_date, from_employee, to_employee)
             elif is_ask_request:
                 # Ask request: transfer shift from target to requester  
+                logger.info(f"Wykonuję ask_request: {from_employee} -> {to_employee} na {to_date}")
                 process_ask_request(db, from_emp_id, to_emp_id, to_date, from_employee, to_employee)
             else:
                 # Regular swap: exchange shifts
+                logger.info(f"Wykonuję regular_swap: {from_employee} <-> {to_employee} na daty {from_date} <-> {to_date}")
                 process_regular_swap(db, from_emp_id, to_emp_id, from_date, to_date, from_employee, to_employee)
         
         db.commit()
