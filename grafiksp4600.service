@@ -1,0 +1,38 @@
+[Unit]
+Description=Grafik zmian pracowników GRAFIKSP4600
+Documentation=https://github.com/your-org/grafiksp4600
+After=network.target
+
+[Service]
+Type=exec
+User=grafiksp4600
+Group=grafiksp4600
+WorkingDirectory=/opt/grafiksp4600
+Environment=FLASK_ENV=production
+Environment=PATH=/opt/grafiksp4600/venv/bin
+ExecStart=/opt/grafiksp4600/venv/bin/gunicorn --bind 127.0.0.1:8000 --workers 4 --timeout 120 --access-logfile /var/log/grafiksp4600/access.log --error-logfile /var/log/grafiksp4600/error.log wsgi:application
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# Bezpieczeństwo
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/grafiksp4600 /var/log/grafiksp4600
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+# Limity zasobów
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

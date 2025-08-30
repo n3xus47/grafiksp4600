@@ -33,7 +33,9 @@ venv.bak/
 .env.local
 .env.production
 .env.testing
-.env.backup
+
+# User configuration files
+users.json
 
 # Database
 *.db
@@ -83,4 +85,3 @@ coverage.xml
 *.tmp
 *.temp
 .cache/
-.venv/

@@ -4,24 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grafik zmian pracowników</title>
-  
-  <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#d32f2f" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Grafik SP4600" />
-  <meta name="description" content="Aplikacja do zarządzania grafikiem zmian pracowników" />
-  
-  <!-- Icons -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png" />
-  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png" />
-  
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/static/manifest.json" />
-  
-  <!-- Styles -->
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -64,13 +46,6 @@
             </div>
           </div>
         </div>
-        <!-- PWA Install Button -->
-        <div class="pwa-install-area" style="margin-bottom: 1rem;">
-          <button id="pwa-install-btn" class="btn w100" style="display: none;">
-            📱 Zainstaluj aplikację
-          </button>
-        </div>
-        
         <div class="logout-area">
           <form action="/logout" method="post">
             <button class="btn" type="submit">Wyloguj</button>
@@ -295,87 +270,6 @@
     </div>
   </main>
 
-  <!-- Service Worker Registration -->
-  <script>
-    // Rejestracja Service Worker i obsługa PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-          .then(function(registration) {
-            console.log('Service Worker zarejestrowany pomyślnie:', registration.scope);
-            
-            // Sprawdź aktualizacje
-            registration.addEventListener('updatefound', function() {
-              const newWorker = registration.installing;
-              newWorker.addEventListener('statechange', function() {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // Nowa wersja dostępna
-                  if (confirm('Dostępna jest nowa wersja aplikacji. Czy chcesz ją załadować?')) {
-                    window.location.reload();
-                  }
-                }
-              });
-            });
-          })
-          .catch(function(error) {
-            console.log('Rejestracja Service Worker nie powiodła się:', error);
-          });
-      });
-    }
-
-    // PWA Install Prompt
-    let deferredPrompt;
-    const installBtn = document.getElementById('pwa-install-btn');
-
-    window.addEventListener('beforeinstallprompt', function(e) {
-      // Zapobiegnij automatycznemu wyświetleniu promptu
-      e.preventDefault();
-      // Zapisz event do późniejszego użycia
-      deferredPrompt = e;
-      // Pokaż przycisk instalacji
-      if (installBtn) {
-        installBtn.style.display = 'block';
-      }
-    });
-
-    // Obsługa kliknięcia przycisku instalacji
-    if (installBtn) {
-      installBtn.addEventListener('click', function() {
-        if (deferredPrompt) {
-          // Pokaż prompt instalacji
-          deferredPrompt.prompt();
-          // Czekaj na wybór użytkownika
-          deferredPrompt.userChoice.then(function(choiceResult) {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('Użytkownik zaakceptował instalację PWA');
-            } else {
-              console.log('Użytkownik odrzucił instalację PWA');
-            }
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
-          });
-        }
-      });
-    }
-
-    // Ukryj przycisk instalacji gdy aplikacja jest już zainstalowana
-    window.addEventListener('appinstalled', function() {
-      console.log('PWA została zainstalowana');
-      if (installBtn) {
-        installBtn.style.display = 'none';
-      }
-      deferredPrompt = null;
-    });
-
-    // Sprawdź czy aplikacja działa w trybie standalone (zainstalowana)
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-      console.log('Aplikacja działa w trybie standalone');
-      if (installBtn) {
-        installBtn.style.display = 'none';
-      }
-    }
-  </script>
-  
   <!-- Skrypt JavaScript -->
   <script src="/static/app.js"></script>
   
