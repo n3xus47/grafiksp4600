@@ -29,37 +29,9 @@
   </header>
 
   <main class="wrap">
-    <div class="grid3">
-      <!-- Lewy panel 15% -->
-      <section class="card">
-        <h2 class="center">Dziś</h2>
-        <div class="stack">
-          <div>
-            <h3>Dniówka</h3>
-            <div id="list-d">
-              {% if shifts_today.dniowka %}
-                <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
-            </div>
-          </div>
-          <div>
-            <h3>Nocka</h3>
-            <div id="list-n">
-              {% if shifts_today.nocka %}
-                <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
-            </div>
-          </div>
-        </div>
-        <div class="logout-area">
-          <form action="/logout" method="post">
-            <button class="btn" type="submit">Wyloguj</button>
-          </form>
-        </div>
-      </section>
-
-      <!-- Środek 70%: tabelka grafik (wypełnia całą wysokość) -->
-      <section class="card center-panel" style="--section-title-h: 0px">
+    <div class="grid3-vertical">
+      <!-- Środek: tabelka grafik (na górze) -->
+      <section class="center-panel center-panel-no-title main-panel">
         
         <div class="table-wrap">
           <table class="table"
@@ -67,7 +39,8 @@
                  data-year="{{ view_year }}" 
                  data-month="{{ view_month }}" 
                  data-current-user="{{ current_emp_name or current_user }}"
-                 style="--emp-count: {{ employees|length }}; --days-count: {{ schedule_rows|length }};">
+                 data-emp-count="{{ employees|length }}"
+                 data-days-count="{{ schedule_rows|length }}">
             <thead>
               <tr>
                 <th class="col-date">data</th>
@@ -99,14 +72,30 @@
                 {% set ns_row = namespace(pair_done=false) %}
                 {% for emp in employees %}
                   {% if emp.name in pair and not ns_row.pair_done %}
-                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="Ania i Bożena"></td>
+                    {% set shift_value = shifts_by_date.get(row.date, {}).get('Ania i Bożena', '') %}
+                    {% if shift_value == 'DNIOWKA' %}
+                      {% set display_value = 'D' %}
+                    {% elif shift_value == 'NOCKA' %}
+                      {% set display_value = 'N' %}
+                    {% else %}
+                      {% set display_value = '' %}
+                    {% endif %}
+                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="Ania i Bożena" data-value="{{ display_value }}">{{ display_value }}</td>
                     {% set ns_row.pair_done = true %}
                   {% elif emp.name in pair and ns_row.pair_done %}
                     {# skip duplicate from pair #}
                   {% elif emp.name == 'Maciej' %}
                     {# remove Maciej #}
                   {% else %}
-                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="{{ emp.name }}"></td>
+                    {% set shift_value = shifts_by_date.get(row.date, {}).get(emp.name, '') %}
+                    {% if shift_value == 'DNIOWKA' %}
+                      {% set display_value = 'D' %}
+                    {% elif shift_value == 'NOCKA' %}
+                      {% set display_value = 'N' %}
+                    {% else %}
+                      {% set display_value = '' %}
+                    {% endif %}
+                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="{{ emp.name }}" data-value="{{ display_value }}">{{ display_value }}</td>
                   {% endif %}
                 {% endfor %}
                 <td class="col-day">{{ row.abbr }}</td>
@@ -135,143 +124,177 @@
         </div>
       </section>
 
-      <!-- Prawy panel 15% -->
-      <section class="card">
-        <h2 class="center">Funkcje</h2>
-        <div class="stack">
-          {% if is_admin %}
-          <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
-          <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
-          <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
-          <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
-          {% else %}
-          <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
-          <button id="btn-compose" class="btn w100">WYŚLIJ PROŚBĘ O ZAMIANĘ</button>
-          <button id="btn-give" class="btn w100">ODDAJ SWOJĄ ZMIANĘ</button>
-          {% endif %}
-        </div>
-        
-        <!-- Przyciski akcji (widoczne tylko w trybie edycji) -->
-        <div id="actions" class="actions">
-          <button id="save" class="btn">Zapisz</button>
-          <button id="cancel" class="btn">Anuluj</button>
-        </div>
-        
-        <!-- Edytor pracowników -->
-        <div id="emp-editor" class="emp-editor">
-          <div class="emp-container">
-            <button type="button" id="emp-close" class="emp-close" aria-label="Zamknij">✕</button>
-            <div class="emp-head">Pracownicy</div>
-            <div class="emp-list" id="emp-list"></div>
-            <div class="emp-add">
-              <input id="emp-name" placeholder="imię" />
-              <input id="emp-code" placeholder="id" />
-              <button id="emp-add-btn" class="btn">Dodaj</button>
+      <!-- Kontener dla dwóch paneli bocznych -->
+      <div class="panels-container">
+        <!-- Lewy panel (pod grafikiem) -->
+        <section class="card left-panel">
+          <h2 class="center">Dziś</h2>
+          <div class="stack">
+            <div>
+              <h3>Dniówka</h3>
+              <div id="list-d">
+                {% if shifts_today.dniowka %}
+                  <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+                {% else %}<p class="muted">brak przypisań</p>{% endif %}
+              </div>
+            </div>
+            <div>
+              <h3>Nocka</h3>
+              <div id="list-n">
+                {% if shifts_today.nocka %}
+                  <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
+                {% else %}<p class="muted">brak przypisań</p>{% endif %}
+              </div>
             </div>
           </div>
-        </div>
+          
+          <div class="logout-area">
+            <form action="/logout" method="post">
+              <button class="btn" type="submit">Wyloguj</button>
+            </form>
+          </div>
+          
+          <!-- Przyciski akcji (widoczne tylko w trybie edycji) -->
+          <div id="actions" class="actions">
+            <button id="save" class="btn">Zapisz</button>
+            <button id="cancel" class="btn">Anuluj</button>
+          </div>
+        </section>
 
-        <!-- Skrzynka próśb o zamianę -->
-        <div id="swap-editor" class="emp-editor">
-          <div class="emp-container">
-            <button type="button" id="swap-close" class="emp-close" aria-label="Zamknij">✕</button>
-            <div class="emp-head">Skrzynka próśb</div>
-            <div class="emp-add" style="justify-content:flex-end">
-              <button id="swap-clear" class="btn" style="display:none">Wyczyść</button>
-            </div>
-            <div class="emp-list" id="swap-list"></div>
+        <!-- Prawy panel (na dole) -->
+        <section class="card right-panel">
+          <h2 class="center">Funkcje</h2>
+          <div class="stack">
+            {% if is_admin %}
+            <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
+            <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
+            <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
+            <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
+            {% else %}
+            <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
+            <button id="btn-compose" class="btn w100">WYŚLIJ PROŚBĘ O ZAMIANĘ</button>
+            <button id="btn-give" class="btn w100">ODDAJ SWOJĄ ZMIANĘ</button>
+            {% endif %}
           </div>
-        </div>
+          
 
-        <!-- Formularz składania prośby o zamianę -->
-        <div id="compose-editor" class="emp-editor">
-          <div class="emp-container">
-            <button type="button" id="compose-close" class="emp-close" aria-label="Zamknij">✕</button>
-            <div class="emp-head">Wyślij prośbę o zamianę</div>
-            
-            <div class="compose-section">
-              <h4>Twoja zmiana</h4>
+          
+          <!-- Edytor pracowników -->
+          <div id="emp-editor" class="emp-editor">
+            <div class="emp-container">
+              <button type="button" id="emp-close" class="emp-close" aria-label="Zamknij">✕</button>
+              <div class="emp-head">Pracownicy</div>
+              <div class="emp-list" id="emp-list"></div>
               <div class="emp-add">
-                <input id="compose-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-                <select id="compose-from-date">
-                  <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-                </select>
+                <input id="emp-name" placeholder="imię" />
+                <input id="emp-code" placeholder="id" />
+                <button id="emp-add-btn" class="btn">Dodaj</button>
               </div>
-            </div>
-            
-            <div class="compose-section">
-              <h4>Zmiana do przejęcia</h4>
-              <div class="emp-add">
-                <select id="compose-to-name">
-                  <option value="" disabled selected>Wybierz osobę</option>
-                  {% for emp in employees %}
-                    {% if emp.name != (current_emp_name or current_user) %}
-                      <option value="{{ emp.name }}">{{ emp.name }}</option>
-                    {% endif %}
-                  {% endfor %}
-                </select>
-                <select id="compose-to-date">
-                  <option value="" disabled selected>Najpierw wybierz osobę</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="compose-section">
-              <h4>Komentarz (opcjonalny)</h4>
-              <div class="emp-add">
-                <textarea id="compose-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
-              </div>
-            </div>
-            
-            <div class="compose-actions">
-              <button id="compose-send" class="btn btn-primary">Wyślij prośbę</button>
             </div>
           </div>
-        </div>
 
-        <!-- Formularz oddawania zmiany -->
-        <div id="give-editor" class="emp-editor">
-          <div class="emp-container">
-            <button type="button" id="give-close" class="emp-close" aria-label="Zamknij">✕</button>
-            <div class="emp-head">Oddaj swoją zmianę</div>
-            
-            <div class="compose-section">
-              <h4>Twoja zmiana do oddania</h4>
-              <div class="emp-add">
-                <input id="give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-                <select id="give-from-date">
-                  <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-                </select>
+          <!-- Skrzynka próśb o zamianę -->
+          <div id="swap-editor" class="emp-editor">
+            <div class="emp-container">
+              <button type="button" id="swap-close" class="emp-close" aria-label="Zamknij">✕</button>
+              <div class="emp-head">Skrzynka próśb</div>
+              <div class="emp-add emp-add-right">
+                <button id="swap-clear" class="btn swap-clear-btn">Wyczyść</button>
               </div>
-            </div>
-            
-            <div class="compose-section">
-              <h4>Osoba do której oddajesz</h4>
-              <div class="emp-add">
-                <select id="give-to-name">
-                  <option value="" disabled selected>Wybierz osobę</option>
-                  {% for emp in employees %}
-                    {% if emp.name != (current_emp_name or current_user) %}
-                      <option value="{{ emp.name }}">{{ emp.name }}</option>
-                    {% endif %}
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-            
-            <div class="compose-section">
-              <h4>Komentarz (opcjonalny)</h4>
-              <div class="emp-add">
-                <textarea id="give-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
-              </div>
-            </div>
-            
-            <div class="compose-actions">
-              <button id="give-send" class="btn btn-primary">Oddaj zmianę</button>
+              <div class="emp-list" id="swap-list"></div>
             </div>
           </div>
-        </div>
-      </section>
+
+          <!-- Formularz składania prośby o zamianę -->
+          <div id="compose-editor" class="emp-editor">
+            <div class="emp-container">
+              <button type="button" id="compose-close" class="emp-close" aria-label="Zamknij">✕</button>
+              <div class="emp-head">Wyślij prośbę o zamianę</div>
+              
+              <div class="compose-section">
+                <h4>Twoja zmiana</h4>
+                <div class="emp-add">
+                  <input id="compose-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+                  <select id="compose-from-date">
+                    <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="compose-section">
+                <h4>Zmiana do przejęcia</h4>
+                <div class="emp-add">
+                  <select id="compose-to-name">
+                    <option value="" disabled selected>Wybierz osobę</option>
+                    {% for emp in employees %}
+                      {% if emp.name != (current_emp_name or current_user) %}
+                        <option value="{{ emp.name }}">{{ emp.name }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                  <select id="compose-to-date">
+                    <option value="" disabled selected>Najpierw wybierz osobę</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="compose-section">
+                <h4>Komentarz (opcjonalny)</h4>
+                <div class="emp-add">
+                  <textarea id="compose-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
+                </div>
+              </div>
+              
+              <div class="compose-actions">
+                <button id="compose-send" class="btn btn-primary">Wyślij prośbę</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formularz oddawania zmiany -->
+          <div id="give-editor" class="emp-editor">
+            <div class="emp-container">
+              <button type="button" id="give-close" class="emp-close" aria-label="Zamknij">✕</button>
+              <div class="emp-head">Oddaj swoją zmianę</div>
+              
+              <div class="compose-section">
+                <h4>Twoja zmiana do oddania</h4>
+                <div class="emp-add">
+                  <input id="give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+                  <select id="give-from-date">
+                    <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="compose-section">
+                <h4>Osoba do której oddajesz</h4>
+                <div class="emp-add">
+                  <select id="give-to-name">
+                    <option value="" disabled selected>Wybierz osobę</option>
+                    {% for emp in employees %}
+                      {% if emp.name != (current_emp_name or current_user) %}
+                        <option value="{{ emp.name }}">{{ emp.name }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              
+              <div class="compose-section">
+                <h4>Komentarz (opcjonalny)</h4>
+                <div class="emp-add">
+                  <textarea id="give-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
+                </div>
+              </div>
+              
+              <div class="compose-actions">
+                <button id="give-send" class="btn btn-primary">Oddaj zmianę</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 
