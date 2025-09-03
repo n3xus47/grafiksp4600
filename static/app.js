@@ -140,6 +140,54 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Przechwyć event instalacji PWA (jeśli dostępny)
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('PWA może być zainstalowana automatycznie');
+  // Zapobiegaj automatycznemu wyświetleniu promptu
+  e.preventDefault();
+  // Zapisz event do późniejszego użycia
+  deferredPrompt = e;
+});
+
+// Uniwersalna funkcja instalacji PWA
+function installPWA() {
+  // Sprawdź czy mamy dostęp do automatycznej instalacji
+  if (deferredPrompt) {
+    // Automatyczna instalacja (Chrome/Edge)
+    deferredPrompt.prompt();
+    
+    // Czekaj na odpowiedź użytkownika
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('Użytkownik zaakceptował instalację PWA');
+      } else {
+        console.log('Użytkownik odrzucił instalację PWA');
+      }
+      // Wyczyść deferredPrompt
+      deferredPrompt = null;
+    });
+    return;
+  }
+  
+  // Fallback - instrukcje dla urządzeń bez automatycznej instalacji
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  
+  if (isIOS) {
+    // Instrukcje dla iOS
+    alert('Aby zainstalować aplikację na iPhone/iPad:\n\n1. Kliknij przycisk "Udostępnij" (kwadrat ze strzałką)\n2. Wybierz "Dodaj do ekranu głównego"\n3. Potwierdź dodanie\n\nAplikacja pojawi się na ekranie głównym!');
+  } else if (isAndroid) {
+    // Instrukcje dla Android
+    alert('Aby zainstalować aplikację na Android:\n\n1. Kliknij menu Chrome (trzy kropki)\n2. Wybierz "Dodaj do ekranu głównego" lub "Zainstaluj aplikację"\n3. Potwierdź instalację\n\nAplikacja pojawi się na ekranie głównym!');
+  } else {
+    // Instrukcje dla desktop
+    alert('Aby zainstalować aplikację na komputerze:\n\n1. Kliknij ikonę instalacji w pasku adresu przeglądarki\n2. LUB użyj menu przeglądarki → "Zainstaluj aplikację"\n3. Potwierdź instalację\n\nAplikacja zostanie zainstalowana jak zwykły program!');
+  }
+}
+
 // Główna funkcja aplikacji
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została załadowana');
