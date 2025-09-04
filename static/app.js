@@ -4,6 +4,19 @@
  */
 
 (function(){
+  // Debouncing utility
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
   // Funkcja aktualizacji zegara
   function updateClock() {
     const now = new Date();
@@ -23,6 +36,127 @@
   // Inicjalizacja i aktualizacja zegara co sekundę
   updateClock();
   setInterval(updateClock, 1000);
+  
+  // Funkcja podświetlenia dzisiejszego dnia w kolumnach DATA i DZIEŃ
+  function highlightToday() {
+    const now = new Date();
+    const todayDay = now.getDate().toString().padStart(2, '0'); // Format DD
+    
+    // Mapowanie dni tygodnia - Python używa 'Czw', JavaScript 'czw'
+    const dayNames = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
+    const todayDayName = dayNames[now.getDay() - 1]; // getDay() zwraca 1-7, ale array ma 0-6
+    
+    console.log('Szukam dnia:', todayDay, 'i nazwy:', todayDayName);
+    
+    // Usuń klasy 'today', 'dniowka', 'nocka' ze wszystkich elementów
+    document.querySelectorAll('.col-date, .col-day, .slot').forEach(element => {
+      element.classList.remove('today', 'dniowka', 'nocka');
+    });
+    
+    // Znajdź wiersze z dzisiejszą datą i podświetl tylko te kolumny
+    const table = document.querySelector('.table');
+    if (table) {
+      const rows = table.querySelectorAll('tr');
+      rows.forEach(row => {
+        const dateCell = row.querySelector('.col-date');
+        const dayCell = row.querySelector('.col-day');
+        
+        if (dateCell && dayCell && dateCell.textContent.trim() === todayDay) {
+          // To jest wiersz z dzisiejszą datą - podświetl WSZYSTKIE kolumny DATA, DZIEŃ i PODSUMOWANIE w tym wierszu
+          const allDateCells = row.querySelectorAll('.col-date');
+          const allDayCells = row.querySelectorAll('.col-day');
+          const summaryCell = row.querySelector('.col-summary');
+          
+          allDateCells.forEach(cell => cell.classList.add('today'));
+          allDayCells.forEach(cell => cell.classList.add('today'));
+          if (summaryCell) summaryCell.classList.add('today');
+          
+          console.log('Podświetlono dzisiejszy wiersz - data:', dateCell.textContent.trim(), 'dzień:', dayCell.textContent.trim());
+          
+          // Podświetl komórki z pracownikami w tym wierszu
+          const slots = row.querySelectorAll('.slot');
+          slots.forEach(slot => {
+            slot.classList.add('today');
+            
+            // Sprawdź czy komórka zawiera D lub N i dodaj odpowiednią klasę
+            const content = slot.textContent.trim();
+            if (content === 'D') {
+              slot.classList.add('dniowka');
+              console.log('Podświetlono D (dniówka) dla:', slot.getAttribute('data-employee'));
+            } else if (content === 'N') {
+              slot.classList.add('nocka');
+              console.log('Podświetlono N (nocka) dla:', slot.getAttribute('data-employee'));
+            }
+          });
+        }
+      });
+    }
+  }
+  
+  // Funkcja wyróżnienia zalogowanej osoby
+  function highlightCurrentUser() {
+    const table = document.querySelector('.table');
+    if (table) {
+      const currentUserName = table.getAttribute('data-current-user');
+      console.log('Zalogowana osoba:', currentUserName);
+      
+      if (currentUserName) {
+        // Znajdź nagłówek z imieniem zalogowanej osoby
+        const headers = table.querySelectorAll('th.col-emp');
+        headers.forEach(header => {
+          if (header.textContent.trim() === currentUserName) {
+            header.classList.add('current-user');
+            console.log('Wyróżniono nagłówek dla:', currentUserName);
+          }
+        });
+        
+        // Znajdź wszystkie komórki z danymi zalogowanej osoby
+        const slots = table.querySelectorAll('.slot');
+        slots.forEach(slot => {
+          const employeeName = slot.getAttribute('data-employee');
+          if (employeeName === currentUserName) {
+            slot.classList.add('current-user');
+          }
+        });
+      }
+    }
+  }
+  
+  // Funkcja aktualizacji licznika zmian (tylko dla adminów)
+  function updateSummary() {
+    const table = document.querySelector('.table');
+    if (table) {
+      // Sprawdź czy użytkownik jest adminem (czy kolumna licznika istnieje)
+      const summaryHeader = table.querySelector('.col-summary');
+      if (!summaryHeader) return; // Nie jest adminem, nie aktualizuj
+      
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const slots = row.querySelectorAll('.slot');
+        let dniowkaCount = 0;
+        let nockaCount = 0;
+        
+        slots.forEach(slot => {
+          const content = slot.textContent.trim();
+          if (content === 'D') dniowkaCount++;
+          if (content === 'N') nockaCount++;
+        });
+        
+        // Aktualizuj licznik w wierszu
+        const dniowkaElement = row.querySelector('.dniowka-count');
+        const nockaElement = row.querySelector('.nocka-count');
+        
+        if (dniowkaElement) dniowkaElement.textContent = dniowkaCount;
+        if (nockaElement) nockaElement.textContent = nockaCount;
+      });
+    }
+  }
+  
+  // Uruchom podświetlenie
+  highlightToday();
+  highlightCurrentUser();
+  updateSummary();
+  setInterval(highlightToday, 60000); // Aktualizuj co minutę
 })();
 
 // Funkcja wymuszenia odświeżenia strony (z cache busting)
@@ -573,12 +707,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Funkcje trybu edycji
   function toggleEdit() {
-    editMode = !editMode;
-    if (actions) actions.classList.toggle('show', editMode);
-    if (!editMode) { 
-      pending.clear(); 
-      hideEditor(); 
-    }
+    // Użyj requestAnimationFrame dla lepszej wydajności
+    requestAnimationFrame(() => {
+      editMode = !editMode;
+      if (actions) actions.classList.toggle('show', editMode);
+      
+      // Dodaj/usuń klasę edit-mode na body dla delikatnego mrygania
+      document.body.classList.toggle('edit-mode', editMode);
+      
+      if (!editMode) { 
+        pending.clear(); 
+        hideEditor(); 
+      }
+    });
   }
 
   function save() {
@@ -586,6 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
       pending.clear();
       editMode = false;
       if (actions) actions.classList.remove('show');
+      document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
       hideEditor();
     };
     
@@ -627,6 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function cancel() {
     editMode = false;
     if (actions) actions.classList.remove('show');
+    document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
     hideEditor();
     location.reload();
   }
@@ -644,45 +787,57 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // --- Zarządzanie pracownikami ---
   function renderEmployees(items) {
-    empList.innerHTML = '';
-    for (const emp of items) {
-      const row = document.createElement('div');
-      row.className = 'emp-row';
-      row.innerHTML = `
-        <div>${emp.name} <span class="meta">(${emp.code || '-'})</span></div>
-        <div class="emp-actions">
-          <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
-          <button data-id="${emp.id}" class="btn">Usuń</button>
-        </div>
-      `;
+    // Użyj requestAnimationFrame dla lepszej wydajności
+    requestAnimationFrame(() => {
+      // Użyj DocumentFragment dla lepszej wydajności
+      const fragment = document.createDocumentFragment();
       
-      // Przycisk edycji
-      row.querySelector('.btn-edit').addEventListener('click', () => {
-        showEditEmployeeDialog(emp);
-      });
+      for (const emp of items) {
+        const row = document.createElement('div');
+        row.className = 'emp-row';
+        row.innerHTML = `
+          <div>${emp.name} <span class="meta">(${emp.code || '-'})</span></div>
+          <div class="emp-actions">
+            <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
+            <button data-id="${emp.id}" class="btn">Usuń</button>
+          </div>
+        `;
+        
+        // Przycisk edycji
+        row.querySelector('.btn-edit').addEventListener('click', () => {
+          showEditEmployeeDialog(emp);
+        });
+        
+        // Przycisk usuwania
+        row.querySelector('.btn:not(.btn-edit)').addEventListener('click', () => {
+          if (confirm(`Czy na pewno chcesz usunąć pracownika "${emp.name}"?`)) {
+            fetch(`/api/employees/${emp.id}`, { method: 'DELETE' })
+              .then(response => response.json())
+              .then(data => {
+                if (data.error) {
+                  alert('Błąd podczas usuwania: ' + data.error);
+                } else {
+                  // Zaktualizuj cache
+                  employeesCache = employeesCache.filter(e => e.id !== emp.id);
+                  employeesCacheTime = Date.now();
+                  loadEmployees();
+                  alert('Pracownik został usunięty');
+                }
+              })
+              .catch(error => {
+                console.error('Błąd podczas usuwania pracownika:', error);
+                alert('Wystąpił błąd podczas usuwania pracownika');
+              });
+          }
+        });
+        
+        fragment.appendChild(row);
+      }
       
-      // Przycisk usuwania
-      row.querySelector('.btn:not(.btn-edit)').addEventListener('click', () => {
-        if (confirm(`Czy na pewno chcesz usunąć pracownika "${emp.name}"?`)) {
-          fetch(`/api/employees/${emp.id}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
-              if (data.error) {
-                alert('Błąd podczas usuwania: ' + data.error);
-              } else {
-                loadEmployees();
-                alert('Pracownik został usunięty');
-              }
-            })
-            .catch(error => {
-              console.error('Błąd podczas usuwania pracownika:', error);
-              alert('Wystąpił błąd podczas usuwania pracownika');
-            });
-        }
-      });
-      
-      empList.appendChild(row);
-    }
+      // Wyczyść i dodaj wszystkie elementy jednocześnie
+      empList.innerHTML = '';
+      empList.appendChild(fragment);
+    });
   }
   
   function showEditEmployeeDialog(emp) {
@@ -774,7 +929,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.error) {
           throw new Error(data.error);
         }
-        renderEmployees(data.employees || []); 
+        // Zaktualizuj cache
+        employeesCache = data.employees || [];
+        employeesCacheTime = Date.now();
+        renderEmployees(employeesCache); 
       })
       .catch(error => {
         console.error('Błąd podczas ładowania pracowników:', error);
@@ -782,11 +940,32 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
+  // Cache dla pracowników
+  let employeesCache = null;
+  let employeesCacheTime = 0;
+  const CACHE_DURATION = 30000; // 30 sekund
+
   function toggleEmps() {
     if (!empEditor) return;
     const show = !empEditor.classList.contains('show');
-    empEditor.classList.toggle('show', show);
-    if (show) loadEmployees();
+    
+    if (show) {
+      // Pokaż modal najpierw
+      empEditor.classList.add('show');
+      
+      // Użyj requestAnimationFrame dla lepszej wydajności
+      requestAnimationFrame(() => {
+        // Użyj cache jeśli jest świeży
+        const now = Date.now();
+        if (employeesCache && (now - employeesCacheTime) < CACHE_DURATION) {
+          renderEmployees(employeesCache);
+        } else {
+          loadEmployees();
+        }
+      });
+    } else {
+      empEditor.classList.remove('show');
+    }
   }
   
   function closeEmps() { 
