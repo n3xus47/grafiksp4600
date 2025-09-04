@@ -16,7 +16,12 @@
     <div class="wrap header-bar">
       <div class="header-left">
         <img class="logo" src="{{ url_for('static', filename='PKN.WA.D.png') }}" alt="Logo firmy" />
-        <button class="nav-btn" onclick="installPWA()" title="Zainstaluj aplikację">📱</button>
+        <button class="pwa-btn" onclick="installPWA()" title="Zainstaluj aplikację">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          POBIERZ
+        </button>
       </div>
       <div class="header-center">
         <a class="nav-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="Poprzedni miesiąc">&#x25C0;</a>
@@ -62,6 +67,9 @@
                 {% endfor %}
                 <th class="col-day">dzień</th>
                 <th class="col-date">data</th>
+                {% if is_admin %}
+                <th class="col-summary">licznik</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -101,6 +109,12 @@
                 {% endfor %}
                 <td class="col-day">{{ row.abbr }}</td>
                 <td class="col-date">{{ row.dd }}</td>
+                {% if is_admin %}
+                <td class="col-summary">
+                  <div class="summary-item dniowka-count">{{ row.shifts.DNIOWKA|length if row.shifts and row.shifts.DNIOWKA else 0 }}</div>
+                  <div class="summary-item nocka-count">{{ row.shifts.NOCKA|length if row.shifts and row.shifts.NOCKA else 0 }}</div>
+                </td>
+                {% endif %}
               </tr>
               {% endfor %}
             </tbody>
@@ -149,18 +163,13 @@
             </div>
           </div>
           
-
+          <!-- Przycisk wyloguj w lewym panelu -->
           <div class="logout-area">
             <form action="/logout" method="post">
-              <button class="btn" type="submit">Wyloguj</button>
+              <button class="btn w100" type="submit">WYLOGUJ</button>
             </form>
           </div>
-          
-          <!-- Przyciski akcji (widoczne tylko w trybie edycji) -->
-          <div id="actions" class="actions">
-            <button id="save" class="btn">Zapisz</button>
-            <button id="cancel" class="btn">Anuluj</button>
-          </div>
+
         </section>
 
         <!-- Prawy panel (na dole) -->
@@ -179,126 +188,132 @@
             {% endif %}
           </div>
           
-
-          
-          <!-- Edytor pracowników -->
-          <div id="emp-editor" class="emp-editor">
-            <div class="emp-container">
-              <button type="button" id="emp-close" class="emp-close" aria-label="Zamknij">✕</button>
-              <div class="emp-head">Pracownicy</div>
-              <div class="emp-list" id="emp-list"></div>
-              <div class="emp-add">
-                <input id="emp-name" placeholder="imię" />
-                <input id="emp-code" placeholder="id" />
-                <button id="emp-add-btn" class="btn">Dodaj</button>
-              </div>
-            </div>
+          <!-- Przyciski akcji (widoczne tylko w trybie edycji) -->
+          <div id="actions" class="actions">
+            <button id="save" class="btn">Zapisz</button>
+            <button id="cancel" class="btn">Anuluj</button>
           </div>
 
-          <!-- Skrzynka próśb o zamianę -->
-          <div id="swap-editor" class="emp-editor">
-            <div class="emp-container">
-              <button type="button" id="swap-close" class="emp-close" aria-label="Zamknij">✕</button>
-              <div class="emp-head">Skrzynka próśb</div>
-              <div class="emp-add emp-add-right">
-                <button id="swap-clear" class="btn swap-clear-btn">Wyczyść</button>
-              </div>
-              <div class="emp-list" id="swap-list"></div>
-            </div>
-          </div>
-
-          <!-- Formularz składania prośby o zamianę -->
-          <div id="compose-editor" class="emp-editor">
-            <div class="emp-container">
-              <button type="button" id="compose-close" class="emp-close" aria-label="Zamknij">✕</button>
-              <div class="emp-head">Wyślij prośbę o zamianę</div>
-              
-              <div class="compose-section">
-                <h4>Twoja zmiana</h4>
-                <div class="emp-add">
-                  <input id="compose-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-                  <select id="compose-from-date">
-                    <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="compose-section">
-                <h4>Zmiana do przejęcia</h4>
-                <div class="emp-add">
-                  <select id="compose-to-name">
-                    <option value="" disabled selected>Wybierz osobę</option>
-                    {% for emp in employees %}
-                      {% if emp.name != (current_emp_name or current_user) %}
-                        <option value="{{ emp.name }}">{{ emp.name }}</option>
-                      {% endif %}
-                    {% endfor %}
-                  </select>
-                  <select id="compose-to-date">
-                    <option value="" disabled selected>Najpierw wybierz osobę</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="compose-section">
-                <h4>Komentarz (opcjonalny)</h4>
-                <div class="emp-add">
-                  <textarea id="compose-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
-                </div>
-              </div>
-              
-              <div class="compose-actions">
-                <button id="compose-send" class="btn btn-primary">Wyślij prośbę</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Formularz oddawania zmiany -->
-          <div id="give-editor" class="emp-editor">
-            <div class="emp-container">
-              <button type="button" id="give-close" class="emp-close" aria-label="Zamknij">✕</button>
-              <div class="emp-head">Oddaj swoją zmianę</div>
-              
-              <div class="compose-section">
-                <h4>Twoja zmiana do oddania</h4>
-                <div class="emp-add">
-                  <input id="give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-                  <select id="give-from-date">
-                    <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="compose-section">
-                <h4>Osoba do której oddajesz</h4>
-                <div class="emp-add">
-                  <select id="give-to-name">
-                    <option value="" disabled selected>Wybierz osobę</option>
-                    {% for emp in employees %}
-                      {% if emp.name != (current_emp_name or current_user) %}
-                        <option value="{{ emp.name }}">{{ emp.name }}</option>
-                      {% endif %}
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-              
-              <div class="compose-section">
-                <h4>Komentarz (opcjonalny)</h4>
-                <div class="emp-add">
-                  <textarea id="give-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
-                </div>
-              </div>
-              
-              <div class="compose-actions">
-                <button id="give-send" class="btn btn-primary">Oddaj zmianę</button>
-              </div>
-            </div>
-          </div>
         </section>
       </div>
     </div>
   </main>
+
+  <!-- Modale - poza kontenerem paneli, na poziomie całej strony -->
+  <!-- Edytor pracowników -->
+  <div id="emp-editor" class="emp-editor">
+    <div class="emp-container">
+      <button type="button" id="emp-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Pracownicy</div>
+      <div class="emp-list" id="emp-list"></div>
+      <div class="emp-add">
+        <input id="emp-name" placeholder="imię" />
+        <input id="emp-code" placeholder="id" />
+        <button id="emp-add-btn" class="btn">Dodaj</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skrzynka próśb o zamianę -->
+  <div id="swap-editor" class="emp-editor">
+    <div class="emp-container">
+      <button type="button" id="swap-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Skrzynka próśb</div>
+      <div class="emp-add emp-add-right">
+        <button id="swap-clear" class="btn swap-clear-btn">Wyczyść</button>
+      </div>
+      <div class="emp-list" id="swap-list"></div>
+    </div>
+  </div>
+
+  <!-- Formularz składania prośby o zamianę -->
+  <div id="compose-editor" class="emp-editor">
+    <div class="emp-container">
+      <button type="button" id="compose-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Wyślij prośbę o zamianę</div>
+      
+      <div class="compose-section">
+        <h4>Twoja zmiana</h4>
+        <div class="emp-add">
+          <input id="compose-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+          <select id="compose-from-date">
+            <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="compose-section">
+        <h4>Zmiana do przejęcia</h4>
+        <div class="emp-add">
+          <select id="compose-to-name">
+            <option value="" disabled selected>Wybierz osobę</option>
+            {% for emp in employees %}
+              {% if emp.name != (current_emp_name or current_user) %}
+                <option value="{{ emp.name }}">{{ emp.name }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          <select id="compose-to-date">
+            <option value="" disabled selected>Najpierw wybierz osobę</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="compose-section">
+        <h4>Komentarz (opcjonalny)</h4>
+        <div class="emp-add">
+          <textarea id="compose-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
+        </div>
+      </div>
+      
+      <div class="compose-actions">
+        <button id="compose-send" class="btn btn-primary">Wyślij prośbę</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formularz oddawania zmiany -->
+  <div id="give-editor" class="emp-editor">
+    <div class="emp-container">
+      <button type="button" id="give-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Oddaj swoją zmianę</div>
+      
+      <div class="compose-section">
+        <h4>Twoja zmiana do oddania</h4>
+        <div class="emp-add">
+          <input id="give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+          <select id="give-from-date">
+            <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="compose-section">
+        <h4>Osoba do której oddajesz</h4>
+        <div class="emp-add">
+          <select id="give-to-name">
+            <option value="" disabled selected>Wybierz osobę</option>
+            {% for emp in employees %}
+              {% if emp.name != (current_emp_name or current_user) %}
+                <option value="{{ emp.name }}">{{ emp.name }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="compose-section">
+        <h4>Komentarz (opcjonalny)</h4>
+        <div class="emp-add">
+          <textarea id="give-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
+        </div>
+      </div>
+      
+      <div class="compose-actions">
+        <button id="give-send" class="btn btn-primary">Oddaj zmianę</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Skrypt JavaScript -->
   <script src="/static/app.js"></script>
