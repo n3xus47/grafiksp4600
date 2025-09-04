@@ -51,9 +51,16 @@ def add_security_headers(response):
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
         # Dodaj nagłówek Content-Security-Policy
-        response.headers['Content-Security-Policy'] = "upgrade-insecure-requests; block-all-mixed-content"
+        response.headers["Content-Security-Policy"] = "upgrade-insecure-requests; block-all-mixed-content"
+    
+    # Wyłącz cache dla plików statycznych
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     
     return response
+    
 
 # Initialize OAuth
 oauth = OAuth(app)
@@ -1354,8 +1361,7 @@ def index():
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
-        
-        logger.info(f"Główna strona załadowana dla użytkownika {session.get('user_email')}")
+        logger.info(f"Główna strona załadowana dla użytkownika {session.get("user_email")}")
         return response
 
     except Exception as e:
