@@ -73,12 +73,21 @@ function handleResponsiveDesign() {
   if (isMobile) {
     document.body.classList.add('mobile-view');
     
-    // Ukryj niepotrzebne elementy na małych ekranach
-    const headerLeft = document.querySelector('.header-left');
-    const headerRight = document.querySelector('.header-right');
-    
-    if (headerLeft) headerLeft.style.display = 'none';
-    if (headerRight) headerRight.style.display = 'none';
+    // Na bardzo wąskich ekranach (poniżej 360px) ukryj boki, na szerszych zostaw
+    if (width < 360) {
+      const headerLeft = document.querySelector('.header-left');
+      const headerRight = document.querySelector('.header-right');
+      
+      if (headerLeft) headerLeft.style.display = 'none';
+      if (headerRight) headerRight.style.display = 'none';
+    } else {
+      // Na szerszych ekranach mobilnych pokaż wszystkie elementy
+      const headerLeft = document.querySelector('.header-left');
+      const headerRight = document.querySelector('.header-right');
+      
+      if (headerLeft) headerLeft.style.display = 'flex';
+      if (headerRight) headerRight.style.display = 'flex';
+    }
     
     // Dostosuj rozmiar przycisków dla dotyku
     const buttons = document.querySelectorAll('.btn, .nav-btn');
