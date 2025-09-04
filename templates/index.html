@@ -16,6 +16,7 @@
     <div class="wrap header-bar">
       <div class="header-left">
         <img class="logo" src="{{ url_for('static', filename='PKN.WA.D.png') }}" alt="Logo firmy" />
+        <button class="nav-btn" onclick="installPWA()" title="Zainstaluj aplikację">📱</button>
       </div>
       <div class="header-center">
         <a class="nav-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="Poprzedni miesiąc">&#x25C0;</a>
@@ -23,7 +24,6 @@
         <a class="nav-btn" href="/?year={{ next_year }}&month={{ next_month }}" aria-label="Następny miesiąc">&#x25B6;</a>
       </div>
       <div class="header-right">
-        <button class="nav-btn" onclick="installPWA()" title="Zainstaluj aplikację">📱</button>
         <span id="clock">Ładowanie...</span>
       </div>
     </div>
