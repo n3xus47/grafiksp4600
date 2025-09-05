@@ -86,6 +86,8 @@
                       {% set display_value = 'D' %}
                     {% elif shift_value == 'NOCKA' %}
                       {% set display_value = 'N' %}
+                    {% elif shift_value %}
+                      {% set display_value = shift_value %}
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
@@ -101,6 +103,8 @@
                       {% set display_value = 'D' %}
                     {% elif shift_value == 'NOCKA' %}
                       {% set display_value = 'N' %}
+                    {% elif shift_value %}
+                      {% set display_value = shift_value %}
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
@@ -338,6 +342,16 @@
           const displayValue = shiftType === 'DNIOWKA' ? 'D' : shiftType === 'NOCKA' ? 'N' : shiftType;
           cell.textContent = displayValue;
           cell.dataset.value = shiftType;
+          
+          // Dodaj odpowiednią klasę dla stylowania
+          cell.classList.remove('dniowka', 'nocka', 'custom-shift');
+          if (shiftType === 'DNIOWKA') {
+            cell.classList.add('dniowka');
+          } else if (shiftType === 'NOCKA') {
+            cell.classList.add('nocka');
+          } else if (shiftType && shiftType.length > 0) {
+            cell.classList.add('custom-shift');
+          }
         }
       });
     });
