@@ -162,8 +162,11 @@ def validate_date_format(date_str: str) -> bool:
         return False
 
 def validate_shift_type(shift_type: str) -> bool:
-    """Waliduje typ zmiany"""
-    return shift_type in ("DNIOWKA", "NOCKA")
+    """Waliduje typ zmiany - akceptuje DNIOWKA, NOCKA oraz niestandardowe teksty"""
+    if not shift_type or not shift_type.strip():
+        return False
+    # Akceptuj standardowe typy oraz niestandardowe teksty (niepuste)
+    return True
 
 def safe_get_json() -> Dict[str, Any]:
     """Bezpiecznie pobiera JSON z request"""
@@ -272,7 +275,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS shifts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       date TEXT NOT NULL,
-      shift_type TEXT NOT NULL CHECK(shift_type IN ('DNIOWKA','NOCKA')),
+      shift_type TEXT NOT NULL,
       employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
       UNIQUE(date, shift_type, employee_id)
     );
@@ -455,14 +458,18 @@ def api_save():
             employee_name = change.get("employee") or change.get("name")  # Support both formats
             shift_type_raw = change.get("shift_type") or change.get("value")  # Support both formats
             
-            # Map abbreviated shift types to full names
+            # Map abbreviated shift types to full names, but preserve custom text
             shift_type_mapping = {
                 'D': 'DNIOWKA',
                 'DNIOWKA': 'DNIOWKA',
                 'N': 'NOCKA', 
                 'NOCKA': 'NOCKA'
             }
-            shift_type = shift_type_mapping.get(shift_type_raw, shift_type_raw)
+            # If it's not a standard single-letter mapping, keep the original value (for custom text like "D 9-21", "D 10-22")
+            if shift_type_raw in shift_type_mapping:
+                shift_type = shift_type_mapping[shift_type_raw]
+            else:
+                shift_type = shift_type_raw  # Keep custom text as-is
             
             logger.info(f"Parsed - date: {date}, employee: {employee_name}, shift_raw: {shift_type_raw} -> shift: {shift_type}")
             
@@ -483,14 +490,14 @@ def api_save():
             delete_result = db.execute("DELETE FROM shifts WHERE date=? AND employee_id=?", (date, employee_id))
             logger.info(f"DELETE query wykonane dla {date}, {employee_id}")
             
-            # Add new shift if shift_type is not empty
-            if shift_type and shift_type in ('DNIOWKA', 'NOCKA'):
+            # Add new shift if shift_type is not empty (accept any non-empty shift type)
+            if shift_type and shift_type.strip():
                 db.execute("INSERT INTO shifts(date, shift_type, employee_id) VALUES (?,?,?)", 
                           (date, shift_type, employee_id))
                 logger.info(f"INSERT wykonane: {date}, {shift_type}, {employee_id}")
                 processed_count += 1
             else:
-                logger.info(f"Brak shift_type lub nieprawidłowy: {shift_type_raw} -> {shift_type}")
+                logger.info(f"Brak shift_type lub pusty: {shift_type_raw} -> {shift_type}")
         
         logger.info(f"Przetworzono {processed_count} zmian, wywołuję db.commit()")
         
@@ -1201,12 +1208,19 @@ def index():
             WHERE s.date = ?
         """, (today,)).fetchall()
         
-        shifts_today = {"dniowka": [], "nocka": []}
+        # Przygotuj shifts_today dynamicznie dla wszystkich typów zmian
+        shifts_today = {}
         for shift in today_shifts:
-            if shift["shift_type"] == "DNIOWKA":
-                shifts_today["dniowka"].append(shift["name"])
-            elif shift["shift_type"] == "NOCKA":
-                shifts_today["nocka"].append(shift["name"])
+            shift_type = shift["shift_type"]
+            if shift_type not in shifts_today:
+                shifts_today[shift_type] = []
+            shifts_today[shift_type].append(shift["name"])
+        
+        # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
+        if "DNIOWKA" not in shifts_today:
+            shifts_today["DNIOWKA"] = []
+        if "NOCKA" not in shifts_today:
+            shifts_today["NOCKA"] = []
         
         # Generate calendar days for the month with proper structure
         import datetime as dt_module
@@ -1252,6 +1266,20 @@ def index():
                         WHERE s.date = ?
                     """, (date_str,)).fetchall()
                     
+                    # Inicjalizuj słownik zmian dynamicznie
+                    shifts_dict = {}
+                    for shift in day_shifts:
+                        shift_type = shift["shift_type"]
+                        if shift_type not in shifts_dict:
+                            shifts_dict[shift_type] = []
+                        shifts_dict[shift_type].append(shift["name"])
+                    
+                    # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
+                    if "DNIOWKA" not in shifts_dict:
+                        shifts_dict["DNIOWKA"] = []
+                    if "NOCKA" not in shifts_dict:
+                        shifts_dict["NOCKA"] = []
+                    
                     day_data = {
                         "day": day,
                         "dd": f"{day:02d}",  # Format as 01, 02, etc.
@@ -1262,11 +1290,8 @@ def index():
                         "is_weekend": is_weekend,
                         "is_holiday": is_holiday,
                         "holiday_name": polish_holidays.get((month, day), ""),
-                        "shifts": {"DNIOWKA": [], "NOCKA": []}
+                        "shifts": shifts_dict
                     }
-                    
-                    for shift in day_shifts:
-                        day_data["shifts"][shift["shift_type"]].append(shift["name"])
                     
                     calendar_week.append(day_data)
             calendar_days.append(calendar_week)
@@ -1311,8 +1336,8 @@ def index():
                         "is_holiday": bool(day["is_holiday"]) if day["is_holiday"] is not None else False,
                         "holiday_name": str(day["holiday_name"]) if day["holiday_name"] is not None else "",
                         "shifts": {
-                            "DNIOWKA": [str(name) for name in day["shifts"]["DNIOWKA"]],
-                            "NOCKA": [str(name) for name in day["shifts"]["NOCKA"]]
+                            shift_type: [str(name) for name in employees_list] 
+                            for shift_type, employees_list in day["shifts"].items()
                         }
                     }
                     week_clean.append(day_clean)
@@ -1334,14 +1359,11 @@ def index():
                     shifts_by_date[date_str] = {}
                     for emp in employees_clean:
                         emp_name = emp["name"]
-                        # Sprawdź czy pracownik ma zmianę tego dnia
-                        has_dniowka = emp_name in day["shifts"]["DNIOWKA"]
-                        has_nocka = emp_name in day["shifts"]["NOCKA"]
-                        if has_dniowka:
-                            shifts_by_date[date_str][emp_name] = "DNIOWKA"
-                        elif has_nocka:
-                            shifts_by_date[date_str][emp_name] = "NOCKA"
-                        # else: brak zmiany dla tego pracownika
+                        # Sprawdź czy pracownik ma zmianę tego dnia (dowolny typ)
+                        for shift_type, employees_list in day["shifts"].items():
+                            if emp_name in employees_list:
+                                shifts_by_date[date_str][emp_name] = shift_type
+                                break  # Pracownik może mieć tylko jedną zmianę dziennie
         
         response = make_response(render_template("index.html", 
             shifts_today=shifts_today,

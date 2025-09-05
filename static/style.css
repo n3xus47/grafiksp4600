@@ -462,6 +462,13 @@ body.edit-mode .slot.selected {
   text-shadow: 0 0 3px rgba(0, 191, 255, 0.4) !important;
 }
 
+/* Własne napisy - pomarańczowy */
+.slot.today.custom-shift {
+  color: #FF8C00 !important;
+  font-weight: 900 !important;
+  text-shadow: 0 0 3px rgba(255, 140, 0, 0.4) !important;
+}
+
 /* ===== WYRÓŻNIENIE ZALOGOWANEJ OSOBY ===== */
 /* Czerwone imię zalogowanej osoby w nagłówku */
 th.col-emp.current-user,

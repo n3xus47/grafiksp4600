@@ -86,6 +86,10 @@
             } else if (content === 'N') {
               slot.classList.add('nocka');
               console.log('Podświetlono N (nocka) dla:', slot.getAttribute('data-employee'));
+            } else if (content && content.length > 0) {
+              // Własny napis - dodaj klasę custom
+              slot.classList.add('custom-shift');
+              console.log('Podświetlono własny napis:', content, 'dla:', slot.getAttribute('data-employee'));
             }
           });
         }
@@ -653,8 +657,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const now = new Date();
       const isToday = (y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate());
       
-      if (isToday && (value === 'D' || value === 'N')) {
-        const wrap = value === 'D' ? todayD : todayN;
+      if (isToday && (value === 'D' || value === 'N' || (value && value.length > 0))) {
+        let wrap;
+        if (value === 'D') {
+          wrap = todayD;
+        } else if (value === 'N') {
+          wrap = todayN;
+        } else {
+          // Własny napis - dodaj do dniówki
+          wrap = todayD;
+        }
         if (wrap) {
           let list = wrap.querySelector('ul');
           let empty = wrap.querySelector('p.muted');
@@ -671,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const names = [name];
           for (const nm of names) {
             const li = document.createElement('li');
-            li.textContent = nm;
+            li.textContent = value === 'D' || value === 'N' ? nm : `${nm} (${value})`;
             list.appendChild(li);
           }
           
