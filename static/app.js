@@ -78,7 +78,7 @@
           slots.forEach(slot => {
             slot.classList.add('today');
             
-            // Sprawdź czy komórka zawiera D lub N i dodaj odpowiednią klasę
+            // Sprawdź czy komórka zawiera D, N lub międzyzmianę i dodaj odpowiednią klasę
             const content = slot.textContent.trim();
             if (content === 'D') {
               slot.classList.add('dniowka');
@@ -86,6 +86,10 @@
             } else if (content === 'N') {
               slot.classList.add('nocka');
               console.log('Podświetlono N (nocka) dla:', slot.getAttribute('data-employee'));
+            } else if (content && content.startsWith('P ')) {
+              // Międzyzmiana w formacie "P 10-22"
+              slot.classList.add('poludniowka');
+              console.log('Podświetlono międzyzmianę:', content, 'dla:', slot.getAttribute('data-employee'));
             } else if (content && content.length > 0) {
               // Własny napis - dodaj klasę custom
               slot.classList.add('custom-shift');
@@ -139,19 +143,28 @@
         const slots = row.querySelectorAll('.slot');
         let dniowkaCount = 0;
         let nockaCount = 0;
+        let poludniowkaCount = 0;
         
         slots.forEach(slot => {
           const content = slot.textContent.trim();
-          if (content === 'D') dniowkaCount++;
-          if (content === 'N') nockaCount++;
+          if (content === 'D') {
+            dniowkaCount++;
+          } else if (content === 'N') {
+            nockaCount++;
+          } else if (content && content.startsWith('P ')) {
+            // Międzyzmiana w formacie "P 10-22"
+            poludniowkaCount++;
+          }
         });
         
         // Aktualizuj licznik w wierszu
         const dniowkaElement = row.querySelector('.dniowka-count');
         const nockaElement = row.querySelector('.nocka-count');
+        const poludniowkaElement = row.querySelector('.poludniowka-count');
         
         if (dniowkaElement) dniowkaElement.textContent = dniowkaCount;
         if (nockaElement) nockaElement.textContent = nockaCount;
+        if (poludniowkaElement) poludniowkaElement.textContent = poludniowkaCount;
       });
     }
   }
@@ -346,10 +359,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const table = document.getElementById('grafik');
   const btnToggle = document.getElementById('btn-edit');
   const editor = document.getElementById('slot-editor');
-  const actions = document.getElementById('actions');
+  const todayActions = document.getElementById('today-actions');
   const input = document.getElementById('opt-custom');
-  const btnSave = document.getElementById('save');
-  const btnCancel = document.getElementById('cancel');
+  const btnSaveToday = document.getElementById('save-today');
+  const btnCancelToday = document.getElementById('cancel-today');
+  const pHoursPanel = document.getElementById('p-hours-panel');
+  const pStartHour = document.getElementById('p-start-hour');
+  const pEndHour = document.getElementById('p-end-hour');
+  const pConfirm = document.getElementById('p-confirm');
   const btnEmps = document.getElementById('btn-emps');
   const empEditor = document.getElementById('emp-editor');
   const empList = document.getElementById('emp-list');
@@ -357,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const empCode = document.getElementById('emp-code');
   const empAddBtn = document.getElementById('emp-add-btn');
   const empClose = document.getElementById('emp-close');
-  const btnSwaps = document.getElementById('btn-swaps');
+  const btnSwaps = document.getElementById('btn-swaps-admin') || document.getElementById('btn-swaps-user');
   const swapEditor = document.getElementById('swap-editor');
   const swapClose = document.getElementById('swap-close');
   const swapList = document.getElementById('swap-list');
@@ -439,6 +456,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Usuń pulsowanie i dodaj odpowiednią animację
     cell.classList.remove('editing');
     
+    // Usuń wszystkie klasy typów zmian
+    cell.classList.remove('dniowka', 'nocka', 'custom-shift', 'poludniowka');
+    
     if (value === '') {
       // Czerwone mryganie po usunięciu
       cell.classList.add('deleted');
@@ -447,6 +467,17 @@ document.addEventListener('DOMContentLoaded', function() {
       justDeleted = true;
       setTimeout(() => justDeleted = false, 2000); // Resetuj flagę po 2s
     } else {
+      // Dodaj odpowiednią klasę dla stylowania
+      if (value === 'D') {
+        cell.classList.add('dniowka');
+      } else if (value === 'N') {
+        cell.classList.add('nocka');
+      } else if (value.startsWith('P ')) {
+        cell.classList.add('poludniowka');
+      } else if (value.length > 0) {
+        cell.classList.add('custom-shift');
+      }
+      
       // Zielone mryganie po zapisaniu
       cell.classList.add('saved');
       setTimeout(() => cell.classList.remove('saved'), 800);
@@ -647,6 +678,13 @@ document.addEventListener('DOMContentLoaded', function() {
       pending.set(k(date, name), value);
     }
     
+    // Ukryj panel godzin międzyzmiany jeśli był otwarty
+    if (pHoursPanel) {
+      pHoursPanel.classList.add('hidden');
+      pStartHour.value = '';
+      pEndHour.value = '';
+    }
+    
     hideEditor();
 
     // Aktualizacja panelu "Dzisiejsza zmiana" jeśli edytujemy dzisiejszą datę i wartość D/N
@@ -707,7 +745,16 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event listeners dla edytora
   editor.addEventListener('click', (e) => {
     const b = e.target.closest('button.opt');
-    if (b) choose(b.dataset.value);
+    if (b) {
+      const value = b.dataset.value;
+      if (value === 'P') {
+        // Pokaż panel wyboru godzin dla międzyzmiany
+        pHoursPanel.classList.remove('hidden');
+        pStartHour.focus();
+      } else {
+        choose(value);
+      }
+    }
   });
   
   input.addEventListener('keydown', (e) => {
@@ -717,12 +764,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Walidacja pól godzin - tylko cyfry
+  pStartHour.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  });
+  
+  pEndHour.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  });
+
+  // Obsługa potwierdzenia godzin międzyzmiany
+  pConfirm.addEventListener('click', () => {
+    const startHour = parseInt(pStartHour.value);
+    const endHour = parseInt(pEndHour.value);
+    
+    if (isNaN(startHour) || isNaN(endHour)) {
+      alert('Proszę podać prawidłowe godziny');
+      return;
+    }
+    
+    if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 23) {
+      alert('Godziny muszą być w zakresie 0-23');
+      return;
+    }
+    
+    if (startHour >= endHour) {
+      alert('Godzina końca musi być późniejsza niż godzina startu');
+      return;
+    }
+    
+    // Utwórz wartość międzyzmiany w formacie "P 10-22"
+    const pValue = `P ${startHour}-${endHour}`;
+    choose(pValue);
+  });
+
   // Funkcje trybu edycji
   function toggleEdit() {
     // Użyj requestAnimationFrame dla lepszej wydajności
     requestAnimationFrame(() => {
       editMode = !editMode;
-      if (actions) actions.classList.toggle('show', editMode);
+      if (todayActions) todayActions.classList.toggle('hidden', !editMode);
       
       // Dodaj/usuń klasę edit-mode na body dla delikatnego mrygania
       document.body.classList.toggle('edit-mode', editMode);
@@ -738,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const finish = () => {
       pending.clear();
       editMode = false;
-      if (actions) actions.classList.remove('show');
+      if (todayActions) todayActions.classList.add('hidden');
       document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
       hideEditor();
     };
@@ -780,17 +861,30 @@ document.addEventListener('DOMContentLoaded', function() {
   
   function cancel() {
     editMode = false;
-    if (actions) actions.classList.remove('show');
+    if (todayActions) todayActions.classList.add('hidden');
     document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
     hideEditor();
     location.reload();
   }
 
   // Event listeners dla przycisków edycji
+  console.log('Debug - btnToggle:', btnToggle);
+  console.log('Debug - btnEmps:', btnEmps);
+  console.log('Debug - btnSwaps:', btnSwaps);
+  console.log('Debug - btnCompose:', btnCompose);
+  console.log('Debug - btnGive:', btnGive);
+  
+  // Sprawdź czy wszystkie przyciski funkcji są znalezione
+  console.log('Debug - btn-swaps-admin:', document.getElementById('btn-swaps-admin'));
+  console.log('Debug - btn-swaps-user:', document.getElementById('btn-swaps-user'));
+  console.log('Debug - btn-edit:', document.getElementById('btn-edit'));
+  console.log('Debug - btn-compose:', document.getElementById('btn-compose'));
+  console.log('Debug - btn-give:', document.getElementById('btn-give'));
+  
   if (btnToggle) btnToggle.addEventListener('click', toggleEdit);
   if (table) table.addEventListener('click', onCellClick);
-  if (btnSave) btnSave.addEventListener('click', save);
-  if (btnCancel) btnCancel.addEventListener('click', cancel);
+  if (btnSaveToday) btnSaveToday.addEventListener('click', save);
+  if (btnCancelToday) btnCancelToday.addEventListener('click', cancel);
   
   document.addEventListener('click', (e) => {
     if (!editor.classList.contains('show')) return;
@@ -1676,6 +1770,8 @@ document.addEventListener('DOMContentLoaded', function() {
       characterData: true
     });
   }
+
+
 
   console.log('Aplikacja została w pełni załadowana i jest gotowa do użycia');
 });

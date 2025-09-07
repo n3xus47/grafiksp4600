@@ -2,6 +2,8 @@
 
 Aplikacja webowa do zarządzania grafikiem zmian pracowników z systemem uwierzytelniania Google OAuth2.
 
+> **⚠️ UWAGA:** To jest wersja pokazowa projektu. Oficjalna wersja działa na serwerze produkcyjnym pod domeną [grafik4600.com](https://grafik4600.com)
+
 ## 🚀 Funkcjonalności
 
 - **Zarządzanie grafikiem zmian** - edycja, przeglądanie i zarządzanie zmianami pracowników
@@ -18,6 +20,51 @@ Aplikacja webowa do zarządzania grafikiem zmian pracowników z systemem uwierzy
 - Flask 2.3+
 - SQLite3
 - Konto Google Developer (dla OAuth2)
+
+## ⚙️ Konfiguracja
+
+### 1. Sklonuj repozytorium
+```bash
+git clone https://github.com/n3xus47/grafiksp4600.git
+cd grafiksp4600
+```
+
+### 2. Zainstaluj zależności
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Skonfiguruj zmienne środowiskowe
+```bash
+# Skopiuj przykładową konfigurację
+cp env.example .env
+
+# Edytuj plik .env i uzupełnij:
+# - GOOGLE_CLIENT_ID
+# - GOOGLE_CLIENT_SECRET
+# - SECRET_KEY
+# - WHITELIST_EMAILS
+```
+
+### 4. Skonfiguruj Google OAuth2
+1. Przejdź do [Google Cloud Console](https://console.cloud.google.com/)
+2. Utwórz nowy projekt lub wybierz istniejący
+3. Włącz Google+ API
+4. Utwórz poświadczenia OAuth2
+5. Dodaj URI przekierowania: `http://localhost:8000/auth/callback`
+6. Skopiuj Client ID i Client Secret do pliku `.env`
+
+### 5. Zainicjalizuj bazę danych
+```bash
+flask init-db
+```
+
+### 6. Uruchom aplikację
+```bash
+python app.py
+```
+
+Aplikacja będzie dostępna pod adresem: http://localhost:8000
 
 ## 🛠️ Instalacja
 
@@ -62,7 +109,7 @@ FLASK_ENV=development
 2. Utwórz nowy projekt lub wybierz istniejący
 3. Włącz Google+ API
 4. Utwórz poświadczenia OAuth2
-5. Dodaj URI przekierowania: `http://localhost:5000/auth/callback`
+5. Dodaj URI przekierowania: `http://localhost:8000/auth/callback`
 6. Skopiuj Client ID i Client Secret do pliku `.env`
 
 ### 6. Zainicjalizuj bazę danych
@@ -75,7 +122,7 @@ flask init-db
 python app.py
 ```
 
-Aplikacja będzie dostępna pod adresem: http://localhost:5000
+Aplikacja będzie dostępna pod adresem: http://localhost:8000
 
 ## 🔧 Użycie
 

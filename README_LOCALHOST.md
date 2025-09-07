@@ -41,7 +41,7 @@ Aplikacja Flask do zarządzania grafikiem zmian pracowników z systemem uwierzyt
 
 4. **Otwórz przeglądarkę:**
    ```
-   http://localhost:5000
+   http://localhost:8000
    ```
 
 ## 🔧 Konfiguracja
@@ -59,7 +59,7 @@ Aplikacja wymaga konfiguracji Google OAuth2:
 2. Utwórz nowy projekt lub wybierz istniejący
 3. Włącz Google+ API
 4. Utwórz credentials (OAuth 2.0 Client ID)
-5. Dodaj `http://localhost:5000/auth/callback` jako redirect URI
+5. Dodaj `http://localhost:8000/auth/callback` jako redirect URI
 6. Skopiuj Client ID i Client Secret do pliku `.env`
 
 ### Dozwolone emaile
