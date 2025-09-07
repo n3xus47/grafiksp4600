@@ -26,6 +26,10 @@ class Config:
     # Logowanie
     LOG_LEVEL = "INFO"
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+    # Bezpieczeństwo - nagłówki HTTP
+    HSTS_MAX_AGE = 31536000  # 1 rok
+    CSP_POLICY = "upgrade-insecure-requests; block-all-mixed-content"
 
 
 class DevelopmentConfig(Config):

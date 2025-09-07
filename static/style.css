@@ -5,6 +5,9 @@
   --red: #ff0000;            /* Mocny jaskrawy czerwony jak Spotify green */
   --red-hover: #ff3333;      /* Czerwony hover - jaśniejszy */
   --red-light: #ff6666;      /* Czerwony jasny dla tekstu na ciemnym */
+  --green: #00aa00;          /* Zielony dla międzyzmian */
+  --green-hover: #00cc00;    /* Zielony hover - jaśniejszy */
+  --green-light: #00dd00;    /* Zielony jasny dla tekstu na ciemnym */
   --white: #ffffff;          /* Czysty biały dla tekstu */
   --gray-text: #b3b3b3;      /* Spotify szary tekst */
   --gray-light: #535353;     /* Spotify jaśniejszy szary */
@@ -80,6 +83,9 @@ textarea,
   cursor: default;
   color: var(--white);
 }
+
+/* Wyjątek dla podświetlania dzisiejszego dnia - musi być po globalnym stylu */
+/* Usunięto - pozwalamy na czerwony kolor dla dzisiejszego dnia */
 
 /* Elementy .muted w delikatnym czerwonym */
 .muted {
@@ -300,173 +306,75 @@ button, .btn, .nav-btn, a, [role="button"] {
   border-top-color: var(--gray-light) !important;
 }
 
-/* Upewnij się, że w lewym panelu nie ma przycisków akcji */
-.left-panel .actions {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-}
-
-/* Style dla przycisków Zapisz i Anuluj w prawym panelu */
-.right-panel .actions {
-  margin-top: 0.5rem !important;
-  padding-top: 0.5rem !important;
-  border-top: 2px solid var(--border) !important;
-  text-align: center !important;
-  transition: border-top-color 0.3s ease !important;
-  display: none !important;
-  flex-direction: row !important;
-  gap: 0.5rem !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  background: var(--card) !important;
-  padding: 1rem !important;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1) !important;
-  z-index: 10 !important;
-}
-
-.right-panel .actions.show {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-.right-panel .actions .btn {
-  width: 50% !important;
-  height: 28px !important;
-  margin: 0 !important;
-  border: none !important;
-  border-radius: 500px !important;
-  font-weight: var(--font-weight-bold) !important;
-  font-size: 11px !important;
-  background: var(--red) !important;
-  color: var(--white) !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-}
-
-.right-panel .actions .btn:hover {
-  background: var(--white) !important;
-  color: var(--black) !important;
-  transform: none !important;
-}
-
-/* Hover effect dla linii nad przyciskami akcji w prawym panelu */
-.right-panel:hover .actions {
-  border-top-color: var(--gray-light) !important;
-}
 
 /* ===== TRYB EDYCJI - CIEMNIEJSZY KOLOR I CZERWONE AKCENTY ===== */
 body.edit-mode {
   /* filter: brightness(0.8) saturate(1.1); - Wyłączone dla lepszej wydajności */
+  /* Dodatkowe style dla trybu edycji można dodać tutaj */
+  position: relative;
 }
 
-body.edit-mode .main-panel {
-  background: rgba(0, 0, 0, 0.1) !important;
+/* Podświetlenie tabeli na czerwono w trybie edycji */
+body.edit-mode .table-wrap {
   border: 2px solid var(--red) !important;
-  /* box-shadow: 0 0 20px rgba(255, 0, 0, 0.3) !important; - Wyłączone dla lepszej wydajności */
+  border-radius: var(--radius) !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.3) !important;
 }
 
-body.edit-mode .table {
-  background: rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid var(--red) !important;
+/* Tylko czerwona ramka tabeli w trybie edycji - bez innych zmian */
+body.edit-mode .main-panel {
+  background: var(--card) !important;
+  border: 2px solid var(--red) !important;
 }
 
-body.edit-mode .table th {
-  background: rgba(255, 0, 0, 0.05) !important;
-  color: var(--red) !important;
-  font-weight: 700 !important;
-}
 
-body.edit-mode .table td {
-  background: rgba(0, 0, 0, 0.02) !important;
-  border-color: rgba(255, 0, 0, 0.1) !important;
-}
 
-body.edit-mode .table td.col-summary {
-  background: var(--bg-secondary) !important;
-}
 
-body.edit-mode .slot {
-  background: rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid rgba(255, 0, 0, 0.2) !important;
-  color: var(--white) !important;
-  font-weight: 600 !important;
-}
 
-body.edit-mode .slot:hover {
-  background: rgba(255, 0, 0, 0.1) !important;
-  border-color: var(--red) !important;
-  /* transform: scale(1.05) !important; - Wyłączone dla lepszej wydajności */
-  /* transition: background-color 0.15s ease, transform 0.15s ease !important; - Wyłączone dla lepszej wydajności */
-}
 
-body.edit-mode .slot.editing {
-  background: var(--red) !important;
-  color: var(--white) !important;
-  /* animation: pulse-orange 1s infinite !important; - Wyłączone dla lepszej wydajności */
-  border-color: var(--white) !important;
-  transition: background-color 0.05s ease, color 0.05s ease !important;
-}
 
-body.edit-mode .slot.saved {
-  background: var(--red) !important;
-  color: var(--white) !important;
-  /* animation: pulse-green 0.8s !important; - Wyłączone dla lepszej wydajności */
-}
 
-body.edit-mode .slot.deleted {
-  background: var(--red) !important;
-  color: var(--white) !important;
-  /* animation: pulse-red 0.8s !important; - Wyłączone dla lepszej wydajności */
-}
 
-body.edit-mode .slot.selected {
-  background: rgba(255, 0, 0, 0.1) !important;
-  color: var(--white) !important;
-  border-color: var(--red) !important;
-}
 
 /* ===== PODŚWIETLENIE DZISIEJSZEGO DNIA ===== */
-/* Podświetlenie tylko napisów w kolumnach DATA i DZIEŃ */
+/* Podświetlenie tylko napisów w kolumnach DATA i DZIEŃ - tylko kolor czcionki */
 .col-date.today, .col-day.today {
   color: var(--red) !important;
   font-weight: 700 !important;
 }
 
-/* Podświetlenie kolumny podsumowania w dzisiejszym dniu */
+/* Podświetlenie kolumny podsumowania w dzisiejszym dniu - tylko czerwona ramka */
 .col-summary.today {
-  border: 0.5px solid var(--red) !important;
+  border: 2px solid var(--red) !important;
 }
 
-/* Podświetlenie liter D i N w dzisiejszym dniu */
+/* Podświetlenie liter D i N w dzisiejszym dniu - tylko kolor czcionki */
 .slot.today {
-  position: relative !important;
+  position: relative;
 }
 
-/* D - żółty jak słońce - tylko czcionka */
+/* D - żółty tylko w dzisiejszym dniu */
 .slot.today.dniowka {
   color: #FFD700 !important;
   font-weight: 900 !important;
-  text-shadow: 0 0 3px rgba(255, 215, 0, 0.4) !important;
 }
 
-/* N - niebieski jaskrawy - tylko czcionka */
+/* N - niebieski tylko w dzisiejszym dniu */
 .slot.today.nocka {
   color: #00BFFF !important;
   font-weight: 900 !important;
-  text-shadow: 0 0 3px rgba(0, 191, 255, 0.4) !important;
 }
 
-/* Własne napisy - pomarańczowy */
-.slot.today.custom-shift {
-  color: #FF8C00 !important;
+/* Międzyzmiany - zielony tylko w dzisiejszym dniu */
+.slot.today.poludniowka {
+  color: #00aa00 !important;
   font-weight: 900 !important;
-  text-shadow: 0 0 3px rgba(255, 140, 0, 0.4) !important;
+}
+
+/* Własne napisy - czerwony tylko w dzisiejszym dniu */
+.slot.today.custom-shift {
+  color: #ff0000 !important;
+  font-weight: 900 !important;
 }
 
 /* ===== WYRÓŻNIENIE ZALOGOWANEJ OSOBY ===== */
@@ -493,6 +401,9 @@ th.col-emp.current-user .rot {
   max-width: none !important; /* Usuwamy ograniczenie szerokości */
   font-size: 12px !important;
   font-weight: 600 !important;
+  display: flex !important; /* Flexbox dla równomiernego podziału */
+  justify-content: space-between !important; /* Równomierny podział */
+  align-items: center !important; /* Wyśrodkowanie pionowe */
   position: sticky !important;
   right: 0 !important;
   z-index: 10 !important;
@@ -511,8 +422,8 @@ th.col-emp.current-user .rot {
   border-radius: 3px !important;
   font-size: 11px !important;
   display: inline-block !important;
-  width: 45% !important;
-  text-align: center !important;
+  flex: 1 !important; /* Każdy element zajmuje równomiernie 33% */
+  text-align: center !important; /* Wyśrodkowanie tekstu w każdym elemencie */
 }
 
 .dniowka-count {
@@ -521,6 +432,15 @@ th.col-emp.current-user .rot {
   font-weight: 700 !important;
   float: left !important;
   margin-right: 2px !important;
+}
+
+.poludniowka-count {
+  color: #00aa00 !important;
+  background: rgba(0, 170, 0, 0.1) !important;
+  font-weight: 700 !important;
+  float: left !important;
+  margin-right: 2px !important;
+  margin-left: 2px !important;
 }
 
 .nocka-count {
@@ -660,10 +580,7 @@ body{
 }
 
 .nav-btn:hover {
-  background: rgba(211, 47, 47, 0.1);
   color: var(--red);
-  transform: scale(1.1);
-  border-radius: 50%;
 }
 
 .nav-btn:active {
@@ -735,9 +652,9 @@ body{
 /* Nowy układ pionowy - CZYSTY GRID */
 .grid3-vertical {
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 0 1rem; /* Usuwamy przerwę między paskiem a tabelą */
   width: 100%;
   max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
   padding: 0; /* Usuwamy cały padding - tabela bezpośrednio pod headerem */
@@ -746,9 +663,254 @@ body{
   overflow: visible; /* Cała zawartość widoczna */
 }
 
-/* Główny panel z grafikiem - RZĄD 1 */
-.main-panel {
+/* Pasek z informacjami o dzisiejszych zmianach - RZĄD 1 - WĄSKI PASEK */
+.today-bar {
   grid-row: 1;
+  grid-column: 1;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.3rem var(--card-pad);
+  margin-bottom: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.today-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.today-section {
+  flex: 1;
+  text-align: center;
+  padding: 0.25rem;
+  border-right: 1px solid var(--border);
+}
+
+/* Kolory nagłówków w górnym pasku - odpowiadają kolorom w tabeli */
+.today-section h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.today-section:first-child h3 {
+  color: #FFD700 !important; /* Żółty - dniówka */
+}
+
+.today-section:nth-child(2) h3 {
+  color: #00aa00 !important; /* Zielony - popołudniówka */
+}
+
+.today-section:last-child h3 {
+  color: #00BFFF !important; /* Niebieski - nocka */
+}
+
+.today-section:last-child {
+  border-right: none;
+}
+
+/* Style dla przycisków akcji w pasku today-bar */
+.today-actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+  background: var(--card);
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+}
+
+.today-actions.hidden {
+  display: none;
+}
+
+.today-actions .btn {
+  width: 80px;
+  height: 32px;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 500px;
+  background: var(--red);
+  color: var(--white);
+  cursor: pointer;
+  transition: all 0.1s ease-out;
+}
+
+.today-actions .btn:hover {
+  background: var(--white);
+  color: var(--black);
+  transform: none;
+}
+
+.today-actions .btn:active {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* Panel wyboru godzin dla międzyzmiany */
+.p-hours-panel {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.p-hours-panel.hidden {
+  display: none;
+}
+
+.hours-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hours-inputs label {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text);
+}
+
+.hours-inputs input {
+  width: 60px;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.hours-inputs input:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+}
+
+#p-confirm {
+  width: 40px;
+  height: 24px;
+  font-size: 0.65rem;
+  padding: 0.2rem 0.4rem;
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  align-self: center;
+  transition: all 0.1s ease-out;
+  margin-top: 0.25rem;
+}
+
+#p-confirm:hover {
+  background: var(--white);
+  color: var(--green);
+}
+
+/* Kolor zielony dla międzyzmian - tylko tekst w dzisiejszym dniu */
+.slot.today.poludniowka {
+  color: var(--green) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Kolor czerwony dla własnych zmian - tylko tekst w dzisiejszym dniu */
+.slot.today.custom-shift {
+  color: var(--red) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Responsywność dla przycisków w today-bar */
+@media (max-width: 768px) {
+  .today-actions {
+    padding: 0.3rem;
+    gap: 0.3rem;
+  }
+  
+  .today-actions .btn {
+    width: 70px;
+    height: 28px;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .hours-inputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .hours-inputs input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .today-actions .btn {
+    width: 60px;
+    height: 26px;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.3rem;
+  }
+}
+
+.today-section h3 {
+  margin: 0 0 0.15rem 0;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.today-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.today-section ul li {
+  margin: 0;
+  padding: 0.1rem 0.3rem;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.today-section .muted {
+  color: var(--fg-secondary);
+  font-style: italic;
+  font-size: 0.6rem;
+}
+
+/* Główny panel z grafikiem - RZĄD 2 */
+.main-panel {
+  grid-row: 2;
   grid-column: 1;
   width: 100%;
   /* Usuwamy background - tabela bezpośrednio na tle */
@@ -760,39 +922,10 @@ body{
   position: relative;
 }
 
-/* Kontener dla dwóch paneli bocznych - RZĄD 2 */
-.panels-container {
-  grid-row: 2;
-  grid-column: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  width: 100%;
-  max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
-  box-sizing: border-box; /* Padding wliczony w szerokość */
-  height: auto; /* Wysokość dostosowuje się do zawartości */
-  overflow: visible; /* Cała zawartość widoczna */
-}
-
-/* Lewy panel - RZĄD 2, KOLUMNA 1 */
-.left-panel {
-  grid-column: 1;
-  width: 100%;
-  max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
-  min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--card-pad);
-  min-height: 280px;
-  height: auto; /* Wysokość dostosowuje się do zawartości */
-  overflow: visible; /* Cała zawartość widoczna */
-  box-sizing: border-box; /* Padding wliczony w szerokość */
-}
-
-/* Prawy panel - RZĄD 2, KOLUMNA 2 */
+/* Prawy panel - RZĄD 3, rozszerzony na całą szerokość */
 .right-panel {
-  grid-column: 2;
+  grid-row: 3;
+  grid-column: 1;
   width: 100%;
   max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
   min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -804,6 +937,12 @@ body{
   height: auto; /* Wysokość dostosowuje się do zawartości */
   overflow: visible; /* Cała zawartość widoczna */
   box-sizing: border-box; /* Padding wliczony w szerokość */
+}
+
+/* Klasa dla pełnej szerokości */
+.right-panel.full-width {
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Style dla wewnętrznych elementów paneli */
@@ -844,10 +983,10 @@ body{
 
 /* ===== RESPONSYWNOŚĆ DLA NOWEGO GRID ===== */
 
-/* Responsywność - zachowujemy układ poziomy na wszystkich szerokościach */
+/* Responsywność - nowy układ pionowy */
 @media (max-width: 900px) {
   .grid3-vertical {
-    gap: 0.5rem;
+    gap: 0 0.5rem; /* Usuwamy przerwę między paskiem a tabelą */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
@@ -855,13 +994,25 @@ body{
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle jak na 901px+ */
   }
   
-  /* Zachowujemy układ poziomy - panele obok siebie */
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zawsze 2 kolumny obok siebie */
-    gap: 0.5rem;
+  .today-bar {
+    padding: 0.4rem 0.75rem;
+    min-height: 50px;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 1rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.75rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.3rem;
+  }
+  
+  .right-panel {
     padding: 0.75rem;
     min-height: 200px; /* Zmniejszona wysokość na węższych ekranach */
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -873,7 +1024,7 @@ body{
 /* Wąskie tablety - dodatkowe dostosowanie dla 730px */
 @media (max-width: 730px) {
   .grid3-vertical {
-    gap: 0.4rem;
+    gap: 0 0.4rem; /* Usuwamy przerwę między paskiem a tabelą */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
@@ -881,12 +1032,25 @@ body{
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zachowujemy 2 kolumny */
-    gap: 0.4rem;
+  .today-bar {
+    padding: 0.3rem 0.6rem;
+    min-height: 45px;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.8rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.7rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.65rem;
+    padding: 0.08rem 0.25rem;
+  }
+  
+  .right-panel {
     padding: 0.6rem;
     min-height: 180px; /* Jeszcze mniejsza wysokość */
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -951,7 +1115,7 @@ body{
 /* Bardzo wąskie tablety - dla 650px */
 @media (max-width: 650px) {
   .grid3-vertical {
-    gap: 0.3rem;
+    gap: 0 0.3rem; /* Usuwamy przerwę między paskiem a tabelą */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
@@ -959,12 +1123,25 @@ body{
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zachowujemy 2 kolumny */
-    gap: 0.3rem;
+  .today-bar {
+    padding: 0.25rem 0.5rem;
+    min-height: 40px;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.6rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.65rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.6rem;
+    padding: 0.08rem 0.2rem;
+  }
+  
+  .right-panel {
     padding: 0.5rem;
     min-height: 160px; /* Jeszcze mniejsza wysokość */
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -1029,7 +1206,7 @@ body{
 /* Bardzo wąskie ekrany - dla 600px i mniejszych */
 @media (max-width: 600px) {
   .grid3-vertical {
-    gap: 0.2rem;
+    gap: 0 0.2rem; /* Usuwamy przerwę między paskiem a tabelą */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
@@ -1037,12 +1214,25 @@ body{
     padding: 0;
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zachowujemy 2 kolumny */
-    gap: 0.2rem;
+  .today-bar {
+    padding: 0.2rem 0.4rem;
+    min-height: 35px;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.4rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.6rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.55rem;
+    padding: 0.05rem 0.15rem;
+  }
+  
+  .right-panel {
     padding: 0.4rem;
     min-height: 140px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -1107,7 +1297,7 @@ body{
 /* Ekstremalnie wąskie ekrany - dla 500px i mniejszych */
 @media (max-width: 500px) {
   .grid3-vertical {
-    gap: 0.1rem;
+    gap: 0 0.1rem; /* Usuwamy przerwę między paskiem a tabelą */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
@@ -1115,12 +1305,25 @@ body{
     padding: 0;
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zachowujemy 2 kolumny */
-    gap: 0.1rem;
+  .today-bar {
+    padding: 0.15rem 0.3rem;
+    min-height: 30px;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.3rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.55rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.5rem;
+    padding: 0.05rem 0.1rem;
+  }
+  
+  .right-panel {
     padding: 0.3rem;
     min-height: 120px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -1274,7 +1477,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   width:100%;
   max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
   height:100%;
-  table-layout:auto; /* Pozwala na skalowanie kolumn */
+  table-layout:auto; /* Przywracam auto dla lepszego układu */
   border-collapse:separate;
   border-spacing:0;
 }
@@ -1369,7 +1572,6 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .table tbody tr.off-day td,
 .table tbody tr.off-day th{
   background: var(--gray);
-  color: var(--white) !important;
   border: 1px solid var(--border);
 }
 
@@ -1377,7 +1579,6 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .center-panel:not(.card) .table tbody tr.off-day td,
 .center-panel:not(.card) .table tbody tr.off-day th {
   background: var(--gray);
-  color: var(--white) !important;
   border: 1px solid var(--border);
 }
 
@@ -1414,17 +1615,17 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 /* WYSOKOŚĆ WIERSZY dla panelu bez karty - równa wysokość */
 .center-panel:not(.card) .table tbody tr {
-  height: calc(100% / var(--days-count));
+  height: 30px; /* Stała wysokość zamiast calc */
 }
 
 /* WYSOKOŚĆ WIERSZY dla głównego panelu w układzie pionowym */
 .main-panel .table tbody tr {
-  height: calc(100% / var(--days-count));
+  height: 30px; /* Stała wysokość zamiast calc */
 }
 
 /* WYSOKOŚĆ WIERSZY dla panelu bez tytułu w układzie pionowym */
 .main-panel.center-panel-no-title .table tbody tr {
-  height: calc(100% / var(--days-count));
+  height: 30px; /* Stała wysokość zamiast calc */
 }
 
 /* szerokości kolumn – dostosowują się do ekranu */
@@ -1847,13 +2048,20 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 /* Tablet - średnie ekrany */
 @media (max-width: 1024px) {
-  .grid3 {
-    grid-template-columns: minmax(0, 15%) minmax(0, 70%) minmax(0, 15%);
-    gap: 0.75rem;
+  .grid3-vertical {
+    gap: 0 0.75rem; /* Usuwamy przerwę między paskiem a tabelą */
   }
   
   .card {
     padding: 1rem;
+  }
+  
+  .today-bar {
+    padding: 1rem;
+  }
+  
+  .today-content {
+    gap: 1.5rem;
   }
   
   .table th, .table td {
@@ -1871,23 +2079,34 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
 }
 
-/* Tablet - małe ekrany - zachowujemy układ poziomy */
+/* Tablet - małe ekrany - nowy układ pionowy */
 @media (max-width: 900px) {
-  /* Zachowujemy układ poziomy - tylko dostosowujemy rozmiary */
   .grid3-vertical {
-    gap: 0.5rem;
+    gap: 0 0.5rem; /* Usuwamy przerwę między paskiem a tabelą */
   }
   
   .main-panel {
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zawsze 2 kolumny obok siebie */
-    gap: 0.5rem;
+  .today-bar {
+    padding: 0.75rem;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 1rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.9rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.4rem;
+  }
+  
+  .right-panel {
     padding: 0.75rem;
     min-height: 200px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -1932,28 +2151,39 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
 }
 
-/* Mobile - duże telefony - zachowujemy układ poziomy */
+/* Mobile - duże telefony - nowy układ pionowy */
 @media (max-width: 768px) {
   .wrap {
     padding: 0; /* Usuwamy padding - zawartość ma się mieścić w 100% ekranu */
     margin: 0 auto;
   }
   
-  /* Zachowujemy układ poziomy - tylko dostosowujemy rozmiary */
   .grid3-vertical {
-    gap: 0.4rem;
+    gap: 0 0.4rem; /* Usuwamy przerwę między paskiem a tabelą */
   }
   
   .main-panel {
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zawsze 2 kolumny obok siebie */
-    gap: 0.4rem;
+  .today-bar {
+    padding: 0.5rem;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.8rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.85rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.3rem;
+  }
+  
+  .right-panel {
     padding: 0.5rem;
     min-height: 180px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -2014,28 +2244,39 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
 }
 
-/* Mobile - małe telefony - zachowujemy układ poziomy */
+/* Mobile - małe telefony - nowy układ pionowy */
 @media (max-width: 480px) {
   .wrap {
     padding: 0; /* Usuwamy padding - zawartość ma się mieścić w 100% ekranu */
     margin: 0 auto;
   }
   
-  /* Zachowujemy układ poziomy - tylko dostosowujemy rozmiary */
   .grid3-vertical {
-    gap: 0.3rem;
+    gap: 0 0.3rem; /* Usuwamy przerwę między paskiem a tabelą */
   }
   
   .main-panel {
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zawsze 2 kolumny obok siebie */
-    gap: 0.3rem;
+  .today-bar {
+    padding: 0.4rem;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.6rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.8rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.25rem;
+  }
+  
+  .right-panel {
     padding: 0.4rem;
     min-height: 160px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -2105,28 +2346,39 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
 }
 
-/* Mobile - bardzo małe telefony - zachowujemy układ poziomy */
+/* Mobile - bardzo małe telefony - nowy układ pionowy */
 @media (max-width: 360px) {
   .wrap {
     padding: 0; /* Usuwamy padding - zawartość ma się mieścić w 100% ekranu */
     margin: 0 auto;
   }
   
-  /* Zachowujemy układ poziomy - tylko dostosowujemy rozmiary */
   .grid3-vertical {
-    gap: 0.2rem;
+    gap: 0 0.2rem; /* Usuwamy przerwę między paskiem a tabelą */
   }
   
   .main-panel {
     padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
   }
   
-  .panels-container {
-    grid-template-columns: 1fr 1fr; /* Zawsze 2 kolumny obok siebie */
-    gap: 0.2rem;
+  .today-bar {
+    padding: 0.3rem;
   }
   
-  .left-panel, .right-panel {
+  .today-content {
+    gap: 0.4rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.75rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.65rem;
+    padding: 0.05rem 0.2rem;
+  }
+  
+  .right-panel {
     padding: 0.3rem;
     min-height: 140px;
     min-width: 0; /* Pozwala na zmniejszenie poniżej zawartości */
@@ -2190,9 +2442,16 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 /* Landscape orientation dla telefonów */
 @media (max-width: 768px) and (orientation: landscape) {
-  .grid3 {
-    grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
-    gap: 0.5rem;
+  .grid3-vertical {
+    gap: 0 0.3rem; /* Usuwamy przerwę między paskiem a tabelą */
+  }
+  
+  .today-bar {
+    padding: 0.4rem;
+  }
+  
+  .today-content {
+    gap: 0.6rem;
   }
   
   .wrap {
@@ -2236,13 +2495,20 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 /* ===== JAVASCRIPT RESPONSIVE CLASSES ===== */
 
 /* Klasa dla widoku mobilnego */
-body.mobile-view .grid3 {
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
+body.mobile-view .grid3-vertical {
+  gap: 0 0.5rem; /* Usuwamy przerwę między paskiem a tabelą */
 }
 
 body.mobile-view .card {
   padding: 0.75rem;
+}
+
+body.mobile-view .today-bar {
+  padding: 0.75rem;
+}
+
+body.mobile-view .today-content {
+  gap: 1rem;
 }
 
 body.mobile-view .table-wrap {
@@ -2259,19 +2525,33 @@ body.mobile-view .table {
 /* JavaScript responsive classes - header handled by CSS media queries */
 
 /* Klasa dla widoku tablet */
-body.tablet-view .grid3 {
-  grid-template-columns: minmax(0, 15%) minmax(0, 70%) minmax(0, 15%);
-  gap: 0.75rem;
+body.tablet-view .grid3-vertical {
+  gap: 0 0.75rem; /* Usuwamy przerwę między paskiem a tabelą */
 }
 
 body.tablet-view .card {
   padding: 1rem;
 }
 
+body.tablet-view .today-bar {
+  padding: 1rem;
+}
+
+body.tablet-view .today-content {
+  gap: 1.5rem;
+}
+
 /* Klasa dla orientacji landscape na mobile */
-body.landscape-mode .grid3 {
-  grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
-  gap: 0.5rem;
+body.landscape-mode .grid3-vertical {
+  gap: 0.3rem;
+}
+
+body.landscape-mode .today-bar {
+  padding: 0.4rem;
+}
+
+body.landscape-mode .today-content {
+  gap: 0.6rem;
 }
 
 /* Landscape mode - header handled by CSS media queries */
@@ -2281,7 +2561,7 @@ body.landscape-mode .wrap {
 }
 
 /* Animacje dla responsywności */
-.grid3, .card, .table-wrap {
+.grid3-vertical, .card, .table-wrap, .today-bar {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -2307,6 +2587,22 @@ body.mobile-view .table .slot {
 
 /* Poprawki dla bardzo małych ekranów */
 @media (max-width: 360px) {
+  .today-bar {
+    padding: 0.3rem;
+  }
+  
+  .today-content {
+    gap: 0.4rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.75rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.65rem;
+    padding: 0.05rem 0.2rem;
+  }
   
   .table th, .table td {
     font-size: 8px;
@@ -2343,6 +2639,7 @@ body.mobile-view .table .slot {
 .slot-editor .row{display:flex; gap:6px; margin-bottom:6px}
 .slot-editor .row:last-child{margin-bottom:0}
 .slot-editor .opt{flex:1; padding:.35rem 0; border-radius:500px; border:none; background:var(--bg-secondary); color:var(--white); cursor:pointer;transition:all 0.2s; font-weight:var(--font-weight-medium)}
+.slot-editor .opt.center{flex:1; margin:0 2px}
 .slot-editor .opt:hover{
   background: var(--red); 
   border-color: var(--red); 
@@ -2722,7 +3019,6 @@ body.mobile-view .table .slot {
 .slot.editing {
   /* animation: pulse-red 1.5s ease-in-out infinite; - Wyłączone dla lepszej wydajności */
   background: var(--red) !important;
-  color: var(--white) !important;
   border: 2px solid var(--red) !important;
   transition: background-color 0.05s ease, color 0.05s ease !important;
 }
@@ -2743,7 +3039,6 @@ body.mobile-view .table .slot {
 .slot.saved {
   /* animation: flash-white 0.8s ease-in-out; - Wyłączone dla lepszej wydajności */
   background: var(--green) !important;
-  color: var(--white) !important;
   border: 2px solid var(--green) !important;
 }
 
@@ -2763,7 +3058,6 @@ body.mobile-view .table .slot {
 .slot.deleted {
   /* animation: flash-red 0.8s ease-in-out; - Wyłączone dla lepszej wydajności */
   background: var(--red) !important;
-  color: var(--white) !important;
   border: 2px solid var(--red) !important;
 }
 
@@ -2808,7 +3102,10 @@ body.mobile-view .table .slot {
 
 
 /* Modal system - 70% screen width */
-.emp-editor{
+.emp-editor,
+#swap-editor,
+#compose-editor,
+#give-editor {
   position: fixed; 
   inset: 0; 
   display: none; 
@@ -2819,22 +3116,34 @@ body.mobile-view .table .slot {
   will-change: transform, opacity;
   transform: translateZ(0); /* Wymusza hardware acceleration */
 }
-.emp-editor.show{
+.emp-editor.show,
+#swap-editor.show,
+#compose-editor.show,
+#give-editor.show {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
-.emp-editor::before{
+.emp-editor::before,
+#swap-editor::before,
+#compose-editor::before,
+#give-editor::before {
   content: ""; 
   position: absolute; 
   inset: 0; 
   background: rgba(0, 0, 0, 0.7);
   /* backdrop-filter: blur(4px); - Wyłączone dla lepszej wydajności */
 }
-.emp-editor > *{position: relative; z-index: 1;}
+.emp-editor > *,
+#swap-editor > *,
+#compose-editor > *,
+#give-editor > * {position: relative; z-index: 1;}
 
 /* Modal container - 70% of viewport */
-.emp-editor .emp-container{
+.emp-editor .emp-container,
+#swap-editor .emp-container,
+#compose-editor .emp-container,
+#give-editor .emp-container {
   position: relative; 
   background: var(--card); 
   border: 1px solid var(--border); 
@@ -3138,6 +3447,170 @@ select:focus, input:focus, textarea:focus {
   transform: scale(1.02);
 }
 
+/* Responsywność dla paska "Dziś" - układ pionowy na małych ekranach */
+@media (max-width: 600px) {
+  .today-content {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .today-section {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3rem;
+  }
+  
+  .today-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+/* Dodatkowa responsywność dla bardzo małych ekranów */
+@media (max-width: 400px) {
+  .today-content {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  
+  .today-section {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.2rem;
+  }
+  
+  .today-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na bardzo małych ekranach */
+@media (max-width: 320px) {
+  .today-bar {
+    padding: 0.1rem 0.2rem;
+    min-height: 25px;
+  }
+  
+  .today-content {
+    gap: 0.2rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.6rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.5rem;
+    padding: 0.05rem 0.1rem;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na ekstremalnie małych ekranach */
+@media (max-width: 280px) {
+  .today-bar {
+    padding: 0.08rem 0.1rem;
+    min-height: 20px;
+  }
+  
+  .today-content {
+    gap: 0.1rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.55rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.45rem;
+    padding: 0.05rem 0.08rem;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na ekstremalnie małych ekranach */
+@media (max-width: 240px) {
+  .today-bar {
+    padding: 0.05rem 0.08rem;
+    min-height: 18px;
+  }
+  
+  .today-content {
+    gap: 0.05rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.5rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.4rem;
+    padding: 0.05rem 0.05rem;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na ekstremalnie małych ekranach */
+@media (max-width: 200px) {
+  .today-bar {
+    padding: 0.02rem 0.05rem;
+    min-height: 15px;
+  }
+  
+  .today-content {
+    gap: 0.02rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.45rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.35rem;
+    padding: 0.02rem 0.02rem;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na ekstremalnie małych ekranach */
+@media (max-width: 160px) {
+  .today-bar {
+    padding: 0.01rem 0.03rem;
+    min-height: 12px;
+  }
+  
+  .today-content {
+    gap: 0.01rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.4rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.3rem;
+    padding: 0.01rem 0.01rem;
+  }
+}
+
+/* Responsywność dla paska "Dziś" na ekstremalnie małych ekranach */
+@media (max-width: 120px) {
+  .today-bar {
+    padding: 0.005rem 0.02rem;
+    min-height: 10px;
+  }
+  
+  .today-content {
+    gap: 0.005rem;
+  }
+  
+  .today-section h3 {
+    font-size: 0.35rem;
+  }
+  
+  .today-section ul li {
+    font-size: 0.25rem;
+    padding: 0.005rem 0.005rem;
+  }
+}
+
 /* Usuń domyślne strzałki w select na WebKit */
 select {
   -webkit-appearance: none;
@@ -3178,6 +3651,14 @@ select {
     margin-bottom: 0.75rem;
     padding: 0.4rem;
   }
+  
+  .today-bar {
+    padding: 0.75rem;
+  }
+  
+  .today-content {
+    gap: 1rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -3195,6 +3676,14 @@ select {
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
     padding: 0.3rem;
+  }
+  
+  .today-bar {
+    padding: 0.5rem;
+  }
+  
+  .today-content {
+    gap: 0.8rem;
   }
 }
 
@@ -3214,4 +3703,56 @@ select {
     margin-bottom: 0.4rem;
     padding: 0.25rem;
   }
+  
+  .today-bar {
+    padding: 0.4rem;
+  }
+  
+  .today-content {
+    gap: 0.6rem;
+  }
 }
+
+/* Licznik zmian - podsumowanie */
+.shift-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.shift-count {
+  display: flex;
+  justify-content: space-between;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.shift-count.dniowka {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.shift-count.nocka {
+  background-color: rgba(0, 123, 255, 0.2);
+  color: #007bff;
+}
+
+.shift-count.custom {
+  background-color: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+}
+
+.shift-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 3px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  font-weight: 600;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+

@@ -1,4 +1,27 @@
-# Python
+# Wrażliwe pliki - NIE commituj na GitHub
+server.env
+production_secrets.txt
+cookies.txt
+
+# Pliki środowiskowe z prawdziwymi danymi
+.env
+*.env
+!env.example
+!local_config.env
+!prod.env
+
+# Bazy danych
+*.db
+*.sqlite
+*.sqlite3
+app.db
+test.db
+
+# Logi
+logs/
+*.log
+
+# Cache i tymczasowe pliki
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,31 +44,12 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual environment
 venv/
-.venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-
-# Environment variables
-.env
-.env.local
-.env.production
-.env.testing
-
-# User configuration files
-users.json
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Logs
-*.log
-logs/
 
 # IDE
 .vscode/
@@ -63,26 +67,46 @@ logs/
 ehthumbs.db
 Thumbs.db
 
-# Flask
-instance/
-.webassets-cache
+# SSL certificates
+ssl/
+*.pem
+*.key
+*.crt
 
-# Testing
-.coverage
-.pytest_cache/
+# Backup files
+*.backup
+*.bak
+*_backup_*
+
+# Monitoring data
+monitoring/health_check.log
+monitoring_report.txt
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
 htmlcov/
-.tox/
-.nox/
+.coverage
+.coverage.*
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
 
-# Production
-*.pid
-*.seed
-*.pid.lock
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# pyenv
+.python-version
+
+# Environments
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

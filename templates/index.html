@@ -36,7 +36,42 @@
 
   <main class="wrap">
     <div class="grid3-vertical">
-      <!-- Środek: tabelka grafik (na górze) -->
+      <!-- Pasek z informacjami o dzisiejszych zmianach (na górze) -->
+      <section class="today-bar">
+        <div class="today-content">
+          <div class="today-section">
+            <h3>DNIÓWKA</h3>
+            <div id="list-d">
+              {% if shifts_today.dniowka %}
+                <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+          <div class="today-section">
+            <h3>POPOŁUDNIÓWKA</h3>
+            <div id="list-p">
+              {% if shifts_today.popoludniowka %}
+                <ul>{% for name in shifts_today.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+          <div class="today-section">
+            <h3>NOCKA</h3>
+            <div id="list-n">
+              {% if shifts_today.nocka %}
+                <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+        </div>
+        <!-- Kontener dla przycisków akcji w trybie edycji -->
+        <div id="today-actions" class="today-actions hidden">
+          <button id="save-today" class="btn">Zapisz</button>
+          <button id="cancel-today" class="btn">Anuluj</button>
+        </div>
+      </section>
+
+      <!-- Środek: tabelka grafik -->
       <section class="center-panel center-panel-no-title main-panel">
         
         <div class="table-wrap">
@@ -62,7 +97,7 @@
                   {% elif emp.name == 'Maciej' %}
                     {# remove Maciej #}
                   {% else %}
-                    <th class="col-emp"><span class="rot">{{ emp.name }}</span></th>
+                    <th class="col-emp"><span class="rot">{{ emp.display_name }}</span></th>
                   {% endif %}
                 {% endfor %}
                 <th class="col-day">dzień</th>
@@ -116,6 +151,7 @@
                 {% if is_admin %}
                 <td class="col-summary">
                   <div class="summary-item dniowka-count">{{ row.shifts.DNIOWKA|length if row.shifts and row.shifts.DNIOWKA else 0 }}</div>
+                  <div class="summary-item poludniowka-count">{{ row.shifts.POPOLUDNIOWKA|length if row.shifts and row.shifts.POPOLUDNIOWKA else 0 }}</div>
                   <div class="summary-item nocka-count">{{ row.shifts.NOCKA|length if row.shifts and row.shifts.NOCKA else 0 }}</div>
                 </td>
                 {% endif %}
@@ -128,10 +164,21 @@
           <div id="slot-editor" class="slot-editor hidden">
             <div class="row">
               <button data-value="D" class="opt left">D</button>
+              <button data-value="P" class="opt center">P</button>
               <button data-value="N" class="opt right">N</button>
             </div>
             <div class="row">
               <input type="text" id="opt-custom" placeholder="własne" maxlength="10" />
+            </div>
+            <!-- Panel wyboru godzin dla międzyzmiany -->
+            <div id="p-hours-panel" class="p-hours-panel hidden">
+              <div class="hours-inputs">
+                <label>Start:</label>
+                <input type="text" id="p-start-hour" placeholder="10" maxlength="2" />
+                <label>Koniec:</label>
+                <input type="text" id="p-end-hour" placeholder="22" maxlength="2" />
+              </div>
+              <button id="p-confirm" class="btn">OK</button>
             </div>
           </div>
           
@@ -143,63 +190,29 @@
         </div>
       </section>
 
-      <!-- Kontener dla dwóch paneli bocznych -->
-      <div class="panels-container">
-        <!-- Lewy panel (pod grafikiem) -->
-        <section class="card left-panel">
-          <h2 class="center">Dziś</h2>
-          <div class="stack">
-            <div>
-              <h3>Dniówka</h3>
-              <div id="list-d">
-                {% if shifts_today.dniowka %}
-                  <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-                {% else %}<p class="muted">brak przypisań</p>{% endif %}
-              </div>
-            </div>
-            <div>
-              <h3>Nocka</h3>
-              <div id="list-n">
-                {% if shifts_today.nocka %}
-                  <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
-                {% else %}<p class="muted">brak przypisań</p>{% endif %}
-              </div>
-            </div>
-          </div>
-          
-          <!-- Przycisk wyloguj w lewym panelu -->
-          <div class="logout-area">
-            <form action="/logout" method="post">
-              <button class="btn w100" type="submit">WYLOGUJ</button>
-            </form>
-          </div>
+      <!-- Prawy panel (rozszerzony na całą szerokość) -->
+      <section class="card right-panel full-width">
+        <h2 class="center">Funkcje</h2>
+        <div class="stack">
+          {% if is_admin %}
+          <button id="btn-swaps-admin" class="btn w100">SKRZYNKA PRÓŚB</button>
+          <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
+          <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
+          <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
+          {% else %}
+          <button id="btn-swaps-user" class="btn w100">SKRZYNKA PRÓŚB</button>
+          <button id="btn-compose" class="btn w100">WYŚLIJ PROŚBĘ O ZAMIANĘ</button>
+          <button id="btn-give" class="btn w100">ODDAJ SWOJĄ ZMIANĘ</button>
+          {% endif %}
+        </div>
 
-        </section>
-
-        <!-- Prawy panel (na dole) -->
-        <section class="card right-panel">
-          <h2 class="center">Funkcje</h2>
-          <div class="stack">
-            {% if is_admin %}
-            <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
-            <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
-            <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
-            <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
-            {% else %}
-            <button id="btn-swaps" class="btn w100">SKRZYNKA PRÓŚB</button>
-            <button id="btn-compose" class="btn w100">WYŚLIJ PROŚBĘ O ZAMIANĘ</button>
-            <button id="btn-give" class="btn w100">ODDAJ SWOJĄ ZMIANĘ</button>
-            {% endif %}
-          </div>
-          
-          <!-- Przyciski akcji (widoczne tylko w trybie edycji) -->
-          <div id="actions" class="actions">
-            <button id="save" class="btn">Zapisz</button>
-            <button id="cancel" class="btn">Anuluj</button>
-          </div>
-
-        </section>
-      </div>
+        <!-- Przycisk wyloguj na dole -->
+        <div class="logout-area">
+          <form action="/logout" method="post">
+            <button class="btn w100" type="submit">WYLOGUJ</button>
+          </form>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -344,11 +357,13 @@
           cell.dataset.value = shiftType;
           
           // Dodaj odpowiednią klasę dla stylowania
-          cell.classList.remove('dniowka', 'nocka', 'custom-shift');
+          cell.classList.remove('dniowka', 'nocka', 'custom-shift', 'poludniowka');
           if (shiftType === 'DNIOWKA') {
             cell.classList.add('dniowka');
           } else if (shiftType === 'NOCKA') {
             cell.classList.add('nocka');
+          } else if (shiftType && shiftType.startsWith('P ')) {
+            cell.classList.add('poludniowka');
           } else if (shiftType && shiftType.length > 0) {
             cell.classList.add('custom-shift');
           }

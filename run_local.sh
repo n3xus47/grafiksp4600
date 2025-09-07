@@ -52,7 +52,7 @@ echo "2. Uzupełnij GOOGLE_CLIENT_ID i GOOGLE_CLIENT_SECRET w pliku .env"
 echo "3. Dodaj swój email do WHITELIST_EMAILS w pliku .env"
 echo "4. Uruchom aplikację: python app.py"
 echo ""
-echo "🌐 Aplikacja będzie dostępna pod adresem: http://localhost:5000"
+echo "🌐 Aplikacja będzie dostępna pod adresem: http://localhost:8000"
 echo ""
 echo "🔧 Uruchamianie aplikacji..."
 

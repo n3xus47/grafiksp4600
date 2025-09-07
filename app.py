@@ -1,6 +1,6 @@
 """
-Aplikacja do zarządzania grafikiem zmian pracowników
-System uwierzytelniania przez Google OAuth2
+Employee shift schedule management system
+Google OAuth2 authentication system
 """
 
 import os
@@ -42,18 +42,20 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 # Dodatkowe nagłówki bezpieczeństwa
 @app.after_request
 def add_security_headers(response):
-    """Dodaje nagłówki bezpieczeństwa do odpowiedzi"""
+    """Adds security headers to response"""
     if app.config.get('PREFERRED_URL_SCHEME') == 'https':
-        # Bardzo agresywne HSTS - wymuś HTTPS
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+        # Aggressive HSTS - force HTTPS
+        hsts_max_age = app.config.get('HSTS_MAX_AGE', 31536000)
+        response.headers['Strict-Transport-Security'] = f'max-age={hsts_max_age}; includeSubDomains; preload'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # Dodaj nagłówek Content-Security-Policy
-        response.headers["Content-Security-Policy"] = "upgrade-insecure-requests; block-all-mixed-content"
+        # Add Content-Security-Policy header
+        csp_policy = app.config.get('CSP_POLICY', "upgrade-insecure-requests; block-all-mixed-content")
+        response.headers["Content-Security-Policy"] = csp_policy
     
-    # Wyłącz cache dla plików statycznych
+    # Disable cache for static files
     if request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
@@ -80,20 +82,28 @@ google = oauth.register(
 db_path = app.config.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), "app.db"))
 
 def get_db():
-    """Pobiera połączenie z bazą danych"""
+    """
+    Gets database connection from Flask g object.
+    Creates new connection if not exists.
+    Returns: sqlite3.Connection object
+    """
     if "db" not in g:
         try:
             g.db = sqlite3.connect(db_path)
             g.db.row_factory = sqlite3.Row
-            # Włącz foreign keys
+            # Enable foreign keys
             g.db.execute("PRAGMA foreign_keys = ON")
         except sqlite3.Error as e:
-            logger.error(f"Błąd połączenia z bazą danych: {e}")
-            abort(500, "Błąd bazy danych")
+            logger.error(f"Database connection error: {e}")
+            abort(500, "Database error")
     return g.db
 
 def close_db(e=None):
-    """Zamyka połączenie z bazą danych"""
+    """
+    Closes database connection.
+    Args:
+        e: Exception object (unused, for Flask teardown)
+    """
     db = g.pop("db", None)
     if db is not None:
         try:
@@ -173,8 +183,11 @@ def safe_get_json() -> Dict[str, Any]:
     try:
         data = request.get_json(silent=True)
         return data if data else {}
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         logger.error(f"Błąd parsowania JSON: {e}")
+        return {}
+    except Exception as e:
+        logger.error(f"Nieoczekiwany błąd podczas parsowania JSON: {e}")
         return {}
 
 # Rate limiting (prosta implementacja)
@@ -463,11 +476,15 @@ def api_save():
                 'D': 'DNIOWKA',
                 'DNIOWKA': 'DNIOWKA',
                 'N': 'NOCKA', 
-                'NOCKA': 'NOCKA'
+                'NOCKA': 'NOCKA',
+                'P': 'POPOLUDNIOWKA'
             }
             # If it's not a standard single-letter mapping, keep the original value (for custom text like "D 9-21", "D 10-22")
             if shift_type_raw in shift_type_mapping:
                 shift_type = shift_type_mapping[shift_type_raw]
+            elif shift_type_raw and shift_type_raw.startswith('P '):
+                # Międzyzmiana w formacie "P 10-22" - zachowaj pełny tekst
+                shift_type = shift_type_raw
             else:
                 shift_type = shift_type_raw  # Keep custom text as-is
             
@@ -546,7 +563,8 @@ def api_swaps_create():
             'D': 'DNIOWKA',
             'DNIOWKA': 'DNIOWKA',
             'N': 'NOCKA', 
-            'NOCKA': 'NOCKA'
+            'NOCKA': 'NOCKA',
+            'P': 'POPOLUDNIOWKA'
         }
         
         from_shift_raw = (data.get("from_shift") or "").strip().upper() or None
@@ -643,9 +661,37 @@ def api_swaps_create():
     except sqlite3.Error as e:
         logger.error(f"Błąd bazy danych podczas tworzenia prośby o zamianę: {e}")
         return jsonify(error="Błąd bazy danych"), 500
+    except ValueError as e:
+        logger.error(f"Błąd walidacji danych: {e}")
+        return jsonify(error="Nieprawidłowe dane"), 400
     except Exception as e:
         logger.error(f"Nieoczekiwany błąd podczas tworzenia prośby o zamianę: {e}")
         return jsonify(error="Wystąpił nieoczekiwany błąd"), 500
+
+def _check_request_conflicts(req, from_date, from_employee, to_date, to_employee, is_give_request, is_ask_request):
+    """Sprawdza konflikty dla pojedynczego requestu"""
+    conflicts = []
+    
+    if is_give_request:
+        if req["from_date"] == from_date and req["from_employee"] == from_employee:
+            conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
+        elif req["to_date"] == from_date and req["to_employee"] == from_employee:
+            conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
+    elif is_ask_request:
+        if req["to_date"] == to_date and req["to_employee"] == to_employee:
+            conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
+    else:
+        # Regular swap - sprawdź obie daty
+        if req["from_date"] == from_date and req["from_employee"] == from_employee:
+            conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
+        elif req["from_date"] == to_date and req["from_employee"] == to_employee:
+            conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
+        elif req["to_date"] == from_date and req["to_employee"] == from_employee:
+            conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
+        elif req["to_date"] == to_date and req["to_employee"] == to_employee:
+            conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
+    
+    return conflicts
 
 def check_existing_conflicts(db, from_date, from_employee, to_date, to_employee, is_give_request, is_ask_request):
     """Sprawdza czy daty nie są już zaangażowane w inne prośby o zamianę"""
@@ -687,24 +733,7 @@ def check_existing_conflicts(db, from_date, from_employee, to_date, to_employee,
     
         # Znajdź konkretne konflikty
         for req in existing_requests:
-            if is_give_request:
-                if req["from_date"] == from_date and req["from_employee"] == from_employee:
-                    conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
-                elif req["to_date"] == from_date and req["to_employee"] == from_employee:
-                    conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
-            elif is_ask_request:
-                if req["to_date"] == to_date and req["to_employee"] == to_employee:
-                    conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
-            else:
-                # Regular swap - sprawdź obie daty
-                if req["from_date"] == from_date and req["from_employee"] == from_employee:
-                    conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
-                elif req["from_date"] == to_date and req["from_employee"] == to_employee:
-                    conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
-                elif req["to_date"] == from_date and req["to_employee"] == from_employee:
-                    conflicts.append(f"Twoja zmiana w dniu {from_date} jest już zaangażowana w prośbę o zamianę")
-                elif req["to_date"] == to_date and req["to_employee"] == to_employee:
-                    conflicts.append(f"Zmiana {to_employee} w dniu {to_date} jest już zaangażowana w prośbę o zamianę")
+            conflicts.extend(_check_request_conflicts(req, from_date, from_employee, to_date, to_employee, is_give_request, is_ask_request))
         
         return conflicts
         
@@ -1212,15 +1241,33 @@ def index():
         shifts_today = {}
         for shift in today_shifts:
             shift_type = shift["shift_type"]
-            if shift_type not in shifts_today:
-                shifts_today[shift_type] = []
-            shifts_today[shift_type].append(shift["name"])
+            
+            # Mapuj międzyzmiany (P 10-22) do kategorii POPOLUDNIOWKA
+            if shift_type and shift_type.startswith('P '):
+                category = "POPOLUDNIOWKA"
+                # Wyciągnij godziny z międzyzmiany (P 10-22 -> 10-22)
+                hours = shift_type[2:] if len(shift_type) > 2 else ""
+                display_name = f"{shift['name']} ({hours})" if hours else shift['name']
+            else:
+                category = shift_type
+                display_name = shift["name"]
+                
+            if category not in shifts_today:
+                shifts_today[category] = []
+            shifts_today[category].append(display_name)
         
         # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
         if "DNIOWKA" not in shifts_today:
             shifts_today["DNIOWKA"] = []
         if "NOCKA" not in shifts_today:
             shifts_today["NOCKA"] = []
+        if "POPOLUDNIOWKA" not in shifts_today:
+            shifts_today["POPOLUDNIOWKA"] = []
+        
+        # Dodaj małe litery dla template (kompatybilność z frontendem)
+        shifts_today["dniowka"] = shifts_today.get("DNIOWKA", [])
+        shifts_today["nocka"] = shifts_today.get("NOCKA", [])
+        shifts_today["popoludniowka"] = shifts_today.get("POPOLUDNIOWKA", [])
         
         # Generate calendar days for the month with proper structure
         import datetime as dt_module
@@ -1279,6 +1326,8 @@ def index():
                         shifts_dict["DNIOWKA"] = []
                     if "NOCKA" not in shifts_dict:
                         shifts_dict["NOCKA"] = []
+                    if "POPOLUDNIOWKA" not in shifts_dict:
+                        shifts_dict["POPOLUDNIOWKA"] = []
                     
                     day_data = {
                         "day": day,
@@ -1310,11 +1359,25 @@ def index():
         logger.info(f"Liczba tygodni kalendarza: {len(calendar_days)}")
         
         # Konwertuj sqlite Row objects na dict żeby uniknąć problemów z serializacją
+        # i dodaj licznik zmian dla każdego pracownika
         employees_clean = []
         for e in employees:
+            # Policz zmiany dla tego pracownika w bieżącym miesiącu
+            shift_count = db.execute("""
+                SELECT COUNT(*) as count 
+                FROM shifts 
+                WHERE employee_id = ? 
+                AND date LIKE ?
+            """, (e["id"], f"{year:04d}-{month:02d}-%")).fetchone()
+            
+            count = shift_count["count"] if shift_count else 0
+            display_name = f"{e['name']} ({count})" if e["name"] else ""
+            
             employees_clean.append({
                 "id": int(e["id"]) if e["id"] is not None else 0,
-                "name": str(e["name"]) if e["name"] is not None else ""
+                "name": str(e["name"]) if e["name"] is not None else "",
+                "display_name": display_name,
+                "shift_count": count
             })
         
         # Clean calendar_days and ensure proper types
