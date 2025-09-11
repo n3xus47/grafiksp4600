@@ -33,7 +33,7 @@ print_error() {
 
 # Check if we can connect to server
 print_status "Testing connection to server..."
-if ! ssh -o ConnectTimeout=10 $REMOTE_USER@$SERVER_IP "echo 'Connection successful'"; then
+if ! sshpass -p 'MiaOzzie3547.xd' ssh -o ConnectTimeout=10 $REMOTE_USER@$SERVER_IP "echo 'Connection successful'"; then
     print_error "Cannot connect to server. Please check:"
     echo "  1. Server IP: $SERVER_IP"
     echo "  2. SSH key is added to server"
@@ -52,15 +52,16 @@ tar -czf deploy-package.tar.gz \
     --exclude='*.log' \
     --exclude='.env' \
     --exclude='.env.backup' \
+    --exclude='deploy-package.tar.gz' \
     .
 
 # Upload to server
 print_status "Uploading application to server..."
-scp deploy-package.tar.gz $REMOTE_USER@$SERVER_IP:/tmp/
+sshpass -p 'MiaOzzie3547.xd' scp deploy-package.tar.gz $REMOTE_USER@$SERVER_IP:/tmp/
 
 # Deploy on server
 print_status "Deploying application on server..."
-ssh $REMOTE_USER@$SERVER_IP << 'ENDSSH'
+sshpass -p 'MiaOzzie3547.xd' ssh $REMOTE_USER@$SERVER_IP << 'ENDSSH'
 set -e
 
 # Update system
