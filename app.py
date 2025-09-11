@@ -413,6 +413,8 @@ def ensure_swaps_table():
             columns_to_add.append("ALTER TABLE swap_requests ADD COLUMN is_give_request BOOLEAN DEFAULT 0")
         if 'is_ask_request' not in existing_columns:
             columns_to_add.append("ALTER TABLE swap_requests ADD COLUMN is_ask_request BOOLEAN DEFAULT 0")
+        if 'final_status' not in existing_columns:
+            columns_to_add.append("ALTER TABLE swap_requests ADD COLUMN final_status TEXT DEFAULT 'PENDING'")
         
         # Wykonaj ALTER TABLE dla każdej brakującej kolumny
         for alter_statement in columns_to_add:
@@ -446,6 +448,84 @@ def ensure_swaps_table():
         db.rollback()
         raise
 
+def ensure_unavailability_table():
+    """Tworzy lub aktualizuje tabelę unavailability_requests"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        table_exists = db.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='unavailability_requests'
+        """).fetchone()
+        
+        if not table_exists:
+            # Utwórz nową tabelę
+            db.executescript("""
+                CREATE TABLE unavailability_requests (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  employee_id INTEGER NOT NULL,
+                  month_year TEXT NOT NULL,
+                  selected_days TEXT NOT NULL,  -- JSON array of dates
+                  comment TEXT,
+                  status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','APPROVED','REJECTED')),
+                  boss_comment TEXT,
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+                );
+                
+                -- Indeksy dla lepszej wydajności
+                CREATE INDEX IF NOT EXISTS idx_unavail_employee ON unavailability_requests(employee_id);
+                CREATE INDEX IF NOT EXISTS idx_unavail_month ON unavailability_requests(month_year);
+                CREATE INDEX IF NOT EXISTS idx_unavail_status ON unavailability_requests(status);
+            """)
+            db.commit()
+            logger.info("Utworzono tabelę unavailability_requests z indeksami")
+        else:
+            logger.info("Tabela unavailability_requests już istnieje")
+        
+    except sqlite3.Error as e:
+        logger.error(f"Błąd podczas tworzenia tabeli unavailability_requests: {e}")
+        db.rollback()
+        raise
+
+def ensure_schedule_changes_table():
+    """Tworzy tabelę schedule_changes jeśli nie istnieje"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        table_exists = db.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='schedule_changes'
+        """).fetchone()
+        
+        if not table_exists:
+            # Utwórz nową tabelę
+            db.executescript("""
+                CREATE TABLE schedule_changes (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  date TEXT NOT NULL,
+                  employee_name TEXT NOT NULL,
+                  shift_type TEXT,
+                  action TEXT NOT NULL,
+                  changed_by TEXT NOT NULL,
+                  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_schedule_changes_date ON schedule_changes(date);
+                CREATE INDEX IF NOT EXISTS idx_schedule_changes_employee ON schedule_changes(employee_name);
+                CREATE INDEX IF NOT EXISTS idx_schedule_changes_changed_at ON schedule_changes(changed_at);
+            """)
+            db.commit()
+            logger.info("Utworzono tabelę schedule_changes z indeksami")
+        else:
+            logger.info("Tabela schedule_changes już istnieje")
+        
+    except sqlite3.Error as e:
+        logger.error(f"Błąd podczas tworzenia tabeli schedule_changes: {e}")
+        db.rollback()
+        raise
 
 @app.post("/api/save")
 @login_required
@@ -460,7 +540,11 @@ def api_save():
             return jsonify(error="Brak zmian do zapisania"), 400
         
         db = get_db()
+        ensure_schedule_changes_table()  # Upewnij się, że tabela istnieje
         logger.info(f"Przetwarzanie {len(changes)} zmian w api_save")
+        
+        # Pobierz nazwę użytkownika
+        user_email = session.get('user_email', 'unknown')
         
         # Process each change
         processed_count = 0
@@ -503,6 +587,10 @@ def api_save():
             employee_id = emp_row["id"]
             logger.info(f"Employee ID: {employee_id}")
             
+            # Pobierz poprzedni shift dla porównania
+            old_shift = db.execute("SELECT shift_type FROM shifts WHERE date=? AND employee_id=?", (date, employee_id)).fetchone()
+            old_shift_type = old_shift["shift_type"] if old_shift else None
+            
             # Delete existing shift for this date/employee
             delete_result = db.execute("DELETE FROM shifts WHERE date=? AND employee_id=?", (date, employee_id))
             logger.info(f"DELETE query wykonane dla {date}, {employee_id}")
@@ -513,8 +601,22 @@ def api_save():
                           (date, shift_type, employee_id))
                 logger.info(f"INSERT wykonane: {date}, {shift_type}, {employee_id}")
                 processed_count += 1
+                
+                # Zapisz zmianę do schedule_changes
+                action = "DODANO" if not old_shift_type else "ZMIENIONO"
+                db.execute("""
+                    INSERT INTO schedule_changes (date, employee_name, shift_type, action, changed_by)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (date, employee_name, shift_type, action, user_email))
             else:
                 logger.info(f"Brak shift_type lub pusty: {shift_type_raw} -> {shift_type}")
+                
+                # Zapisz usunięcie do schedule_changes
+                if old_shift_type:
+                    db.execute("""
+                        INSERT INTO schedule_changes (date, employee_name, shift_type, action, changed_by)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (date, employee_name, old_shift_type, "USUNIETO", user_email))
         
         logger.info(f"Przetworzono {processed_count} zmian, wywołuję db.commit()")
         
@@ -647,11 +749,11 @@ def api_swaps_create():
         db.execute("""
             INSERT INTO swap_requests(
                 requester_user_id, from_date, from_employee, to_date, to_employee, 
-                comment_requester, from_shift, to_shift, is_give_request, is_ask_request
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                comment_requester, from_shift, to_shift, is_give_request, is_ask_request, final_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session["user_id"], from_date, from_employee, to_date, to_employee, 
-            comment, from_shift, to_shift, is_give_request, is_ask_request
+            comment, from_shift, to_shift, is_give_request, is_ask_request, 'OCZEKUJACE'
         ))
         db.commit()
         
@@ -741,6 +843,19 @@ def check_existing_conflicts(db, from_date, from_employee, to_date, to_employee,
         logger.error(f"Błąd podczas sprawdzania konfliktów: {e}")
         return [f"Błąd bazy danych: {e}"]
 
+def calculate_final_status(recipient_status, boss_status):
+    """Oblicza finalny status prośby na podstawie statusów pracownika i szefa"""
+    if recipient_status == 'DECLINED':
+        return 'ODRZUCONE'
+    elif recipient_status == 'ACCEPTED' and boss_status == 'APPROVED':
+        return 'ZATWIERDZONE'
+    elif recipient_status == 'ACCEPTED' and boss_status == 'REJECTED':
+        return 'ODRZUCONE_PRZEZ_SZEFA'
+    elif recipient_status == 'ACCEPTED' and boss_status == 'PENDING':
+        return 'WSTEPNIE_ZATWIERDZONE'
+    else:
+        return 'OCZEKUJACE'
+
 def process_regular_swap(db, from_emp_id, to_emp_id, from_date, to_date, from_employee, to_employee):
     """Przetwarza regularną zamianę zmian"""
     try:
@@ -803,18 +918,27 @@ def api_swaps_inbox():
         logger.info(f"api_swaps_inbox DEBUG - user_role: {user_role}, is_boss: {is_boss}")
         
         if is_boss:
-            # Szef widzi prośby zaakceptowane przez pracowników, czekające na jego decyzję
+            # Szef widzi tylko prośby zaakceptowane przez pracowników, czekające na jego decyzję
             requests = db.execute("""
                 SELECT id, from_date, from_employee, to_date, to_employee, 
                        comment_requester, recipient_status, boss_status,
-                       from_shift, to_shift, is_give_request, is_ask_request, created_at
+                       from_shift, to_shift, is_give_request, is_ask_request, created_at,
+                       COALESCE(final_status, 
+                         CASE 
+                           WHEN recipient_status = 'DECLINED' THEN 'ODRZUCONE'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'APPROVED' THEN 'ZATWIERDZONE'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'REJECTED' THEN 'ODRZUCONE_PRZEZ_SZEFA'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'PENDING' THEN 'WSTEPNIE_ZATWIERDZONE'
+                           ELSE 'OCZEKUJACE'
+                         END
+                       ) as final_status
                 FROM swap_requests 
                 WHERE recipient_status = 'ACCEPTED' AND boss_status = 'PENDING'
                 ORDER BY created_at DESC
             """).fetchall()
             logger.info(f"api_swaps_inbox DEBUG - found {len(requests)} boss requests (recipient_status=ACCEPTED, boss_status=PENDING)")
         else:
-            # Zwykli pracownicy widzą prośby skierowane do nich
+            # Zwykli pracownicy widzą prośby skierowane do nich lub wysłane przez nich
             me_emp = db.execute("SELECT name FROM employees WHERE user_id=?", (user_id,)).fetchone()
             my_name = me_emp["name"] if me_emp else session.get("user_name", "")
             logger.info(f"api_swaps_inbox DEBUG - my_name: {my_name}")
@@ -822,11 +946,20 @@ def api_swaps_inbox():
             requests = db.execute("""
                 SELECT id, from_date, from_employee, to_date, to_employee, 
                        comment_requester, recipient_status, boss_status,
-                       from_shift, to_shift, is_give_request, is_ask_request, created_at
+                       from_shift, to_shift, is_give_request, is_ask_request, created_at,
+                       COALESCE(final_status, 
+                         CASE 
+                           WHEN recipient_status = 'DECLINED' THEN 'ODRZUCONE'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'APPROVED' THEN 'ZATWIERDZONE'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'REJECTED' THEN 'ODRZUCONE_PRZEZ_SZEFA'
+                           WHEN recipient_status = 'ACCEPTED' AND boss_status = 'PENDING' THEN 'WSTEPNIE_ZATWIERDZONE'
+                           ELSE 'OCZEKUJACE'
+                         END
+                       ) as final_status
                 FROM swap_requests 
-                WHERE to_employee = ? AND recipient_status = 'PENDING'
+                WHERE to_employee = ? OR from_employee = ?
                 ORDER BY created_at DESC
-            """, (my_name,)).fetchall()
+            """, (my_name, my_name)).fetchall()
             logger.info(f"api_swaps_inbox DEBUG - found {len(requests)} requests for {my_name}")
         
         response_data = {
@@ -861,6 +994,16 @@ def api_swaps_respond():
             SET recipient_status = ?, updated_at = datetime('now') 
             WHERE id = ?
         """, (status, request_id))
+        
+        # Update final status
+        request_row = db.execute("SELECT recipient_status, boss_status FROM swap_requests WHERE id = ?", (request_id,)).fetchone()
+        if request_row:
+            final_status = calculate_final_status(status, request_row["boss_status"])
+            db.execute("""
+                UPDATE swap_requests 
+                SET final_status = ? 
+                WHERE id = ?
+            """, (final_status, request_id))
         
         db.commit()
         
@@ -945,6 +1088,14 @@ def api_swaps_boss():
             WHERE id = ?
         """, (status, request_id))
         
+        # Update final status
+        final_status = calculate_final_status(request_row["recipient_status"], status)
+        db.execute("""
+            UPDATE swap_requests 
+            SET final_status = ? 
+            WHERE id = ?
+        """, (final_status, request_id))
+        
         # If approved, execute the swap
         if status == 'APPROVED' and request_row["recipient_status"] == 'ACCEPTED':
             from_employee = request_row["from_employee"]
@@ -988,6 +1139,215 @@ def api_swaps_clear():
     cur = db.execute("DELETE FROM swap_requests")
     db.commit()
     return jsonify(status="ok", deleted=cur.rowcount)
+
+@app.post("/api/notifications/test")
+@login_required
+def api_notifications_test():
+    """Test powiadomień - endpoint do testowania"""
+    try:
+        return jsonify(status="ok", message="Powiadomienie testowe wysłane")
+    except Exception as e:
+        logger.error(f"Błąd podczas testowania powiadomień: {e}")
+        return jsonify(error="Wystąpił błąd podczas testowania powiadomień"), 500
+
+@app.get("/api/schedule/changes")
+@login_required
+def api_schedule_changes():
+    """Pobiera ostatnie zmiany w grafiku dla powiadomień"""
+    try:
+        db = get_db()
+        user_id = session.get("user_id")
+        
+        # Pobierz nazwę aktualnego użytkownika
+        user_row = db.execute("SELECT name FROM users WHERE id=?", (user_id,)).fetchone()
+        current_user_name = user_row["name"] if user_row else "Nieznany użytkownik"
+        
+        # Pobierz ostatnie zmiany z ostatnich 24 godzin
+        changes = db.execute("""
+            SELECT id, date, employee_name, shift_type, action, changed_by, changed_at
+            FROM schedule_changes 
+            WHERE changed_at > datetime('now', '-1 day')
+            ORDER BY changed_at DESC
+            LIMIT 50
+        """).fetchall()
+        
+        # Konwertuj na listę słowników
+        changes_list = []
+        for change in changes:
+            changes_list.append({
+                'id': change['id'],
+                'date': change['date'],
+                'employee_name': change['employee_name'],
+                'shift_type': change['shift_type'],
+                'action': change['action'],
+                'changed_by': change['changed_by'],
+                'changed_at': change['changed_at']
+            })
+        
+        return jsonify({
+            'changes': changes_list,
+            'current_user_name': current_user_name
+        })
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania zmian w grafiku: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania zmian"), 500
+
+# --- Unavailability API -----------------------------------------------------
+@app.post("/api/unavailability")
+@login_required
+@rate_limit_required(max_requests=10, window=60)
+def api_unavailability_create():
+    """Tworzy nowe zgłoszenie niedyspozycji"""
+    try:
+        ensure_unavailability_table()
+        data = safe_get_json()
+        
+        month_year = data.get("month_year", "").strip()
+        selected_days = data.get("selected_days", [])
+        comment = (data.get("comment") or "").strip()
+        
+        if not month_year or not selected_days:
+            return jsonify(error="Brak miesiąca lub wybranych dni"), 400
+        
+        # Sprawdź czy użytkownik ma przypisanego pracownika
+        db = get_db()
+        me_emp = db.execute("SELECT id, name FROM employees WHERE user_id=?", (session.get("user_id"),)).fetchone()
+        if not me_emp:
+            return jsonify(error="Nie masz przypisanego pracownika"), 400
+        
+        employee_id = me_emp["id"]
+        
+        # Sprawdź czy nie ma już zgłoszenia na ten miesiąc
+        existing = db.execute("""
+            SELECT id FROM unavailability_requests 
+            WHERE employee_id = ? AND month_year = ? AND status = 'PENDING'
+        """, (employee_id, month_year)).fetchone()
+        
+        if existing:
+            return jsonify(error="Masz już aktywne zgłoszenie niedyspozycji na ten miesiąc"), 400
+        
+        # Zapisz zgłoszenie
+        import json
+        selected_days_json = json.dumps(selected_days)
+        
+        db.execute("""
+            INSERT INTO unavailability_requests(employee_id, month_year, selected_days, comment)
+            VALUES (?, ?, ?, ?)
+        """, (employee_id, month_year, selected_days_json, comment))
+        
+        db.commit()
+        
+        logger.info(f"Utworzono zgłoszenie niedyspozycji: {me_emp['name']} na {month_year}")
+        return jsonify(status="ok", message="Zgłoszenie niedyspozycji zostało wysłane")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia zgłoszenia niedyspozycji: {e}")
+        return jsonify(error="Wystąpił błąd podczas wysyłania zgłoszenia"), 500
+
+@app.get("/api/unavailability/inbox")
+@login_required
+def api_unavailability_inbox():
+    """Pobiera zgłoszenia niedyspozycji dla skrzynki"""
+    try:
+        ensure_unavailability_table()
+        db = get_db()
+        
+        user_id = session.get("user_id")
+        user_role_row = db.execute("SELECT role FROM users WHERE id=?", (user_id,)).fetchone()
+        user_role = user_role_row["role"] if user_role_row and user_role_row["role"] else "USER"
+        is_boss = user_role.upper() == "ADMIN"
+        
+        if is_boss:
+            # Szef widzi wszystkie zgłoszenia czekające na zatwierdzenie
+            requests = db.execute("""
+                SELECT u.id, u.month_year, u.selected_days, u.comment, u.status, u.created_at,
+                       e.name as employee_name
+                FROM unavailability_requests u
+                JOIN employees e ON u.employee_id = e.id
+                WHERE u.status = 'PENDING'
+                ORDER BY u.created_at DESC
+            """).fetchall()
+        else:
+            # Pracownik widzi swoje zgłoszenia
+            me_emp = db.execute("SELECT id FROM employees WHERE user_id=?", (user_id,)).fetchone()
+            if not me_emp:
+                return jsonify(items=[], is_boss=False)
+            
+            requests = db.execute("""
+                SELECT u.id, u.month_year, u.selected_days, u.comment, u.status, u.created_at,
+                       e.name as employee_name
+                FROM unavailability_requests u
+                JOIN employees e ON u.employee_id = e.id
+                WHERE u.employee_id = ?
+                ORDER BY u.created_at DESC
+            """, (me_emp["id"],)).fetchall()
+        
+        response_data = {
+            'items': [dict(r) for r in requests],
+            'is_boss': is_boss
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania zgłoszeń niedyspozycji: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania zgłoszeń"), 500
+
+@app.post("/api/unavailability/respond")
+@admin_required
+def api_unavailability_respond():
+    """Zatwierdza lub odrzuca zgłoszenie niedyspozycji (tylko admin)"""
+    try:
+        data = safe_get_json()
+        request_id = data.get("id")
+        status = data.get("status")
+        boss_comment = (data.get("boss_comment") or "").strip()
+        
+        if not request_id or status not in ['APPROVED', 'REJECTED']:
+            return jsonify(error="Nieprawidłowe dane"), 400
+        
+        db = get_db()
+        
+        # Pobierz dane zgłoszenia
+        request_row = db.execute("""
+            SELECT u.*, e.name as employee_name
+            FROM unavailability_requests u
+            JOIN employees e ON u.employee_id = e.id
+            WHERE u.id = ?
+        """, (request_id,)).fetchone()
+        
+        if not request_row:
+            return jsonify(error="Zgłoszenie nie zostało znalezione"), 404
+        
+        # Aktualizuj status
+        db.execute("""
+            UPDATE unavailability_requests 
+            SET status = ?, boss_comment = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (status, boss_comment, request_id))
+        
+        # Jeśli zatwierdzone, dodaj wpisy "-" do tabeli shifts
+        if status == 'APPROVED':
+            import json
+            selected_days = json.loads(request_row["selected_days"])
+            employee_id = request_row["employee_id"]
+            
+            for date_str in selected_days:
+                # Usuń istniejące wpisy dla tego pracownika w tym dniu
+                db.execute("DELETE FROM shifts WHERE date = ? AND employee_id = ?", (date_str, employee_id))
+                # Dodaj wpis z "-"
+                db.execute("INSERT INTO shifts(date, shift_type, employee_id) VALUES (?, ?, ?)", 
+                          (date_str, "-", employee_id))
+        
+        db.commit()
+        
+        logger.info(f"Admin {session.get('user_email')} {status} zgłoszenie niedyspozycji {request_id}")
+        return jsonify(status="ok", message=f"Zgłoszenie zostało {status}")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas odpowiadania na zgłoszenie niedyspozycji: {e}")
+        return jsonify(error="Wystąpił błąd podczas przetwarzania zgłoszenia"), 500
 
 # --- Employees API -------------------------------------------------------------
 @app.get("/api/employees")
@@ -1202,6 +1562,9 @@ def logout():
 def index():
     """Główna strona aplikacji - wymagane logowanie"""
     try:
+        # Zapewnij że wszystkie tabele istnieją
+        ensure_unavailability_table()
+        
         # Get current date for calendar
         year = int(request.args.get('year', dt.datetime.now().year))
         month = int(request.args.get('month', dt.datetime.now().month))
