@@ -1,19 +1,25 @@
 <!doctype html>
 <html lang="pl">
 <head>
+    <!-- Podstawowe meta tagi -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Offline - Grafik SP4600</title>
+    
+    <!-- Arkusz stylów i manifest PWA -->
     <link rel="stylesheet" href="/static/style.css">
     <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Meta tagi PWA -->
     <meta name="theme-color" content="#d32f2f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Grafik SP4600">
 </head>
 <body>
+    <!-- Strona wyświetlana gdy użytkownik jest offline -->
     <div class="offline-container">
-        <div class="offline-icon">📶</div>
+        <div class="offline-icon">📶</div>  <!-- Ikona braku połączenia -->
         <h1 class="offline-title">Brak połączenia z internetem</h1>
         <p class="offline-message">
             Nie można połączyć się z serwerem. Sprawdź swoje połączenie internetowe i spróbuj ponownie.

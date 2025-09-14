@@ -1,33 +1,46 @@
 :root{
-  /* Spotify-inspired paleta z czerwonym Orlenem */
-  --black: #121212;          /* Spotify główne tło - głęboki czarny */
-  --gray: #1a1a1a;           /* Spotify secondary - ciemny szary */
-  --red: #ff0000;            /* Mocny jaskrawy czerwony jak Spotify green */
-  --red-hover: #ff3333;      /* Czerwony hover - jaśniejszy */
-  --red-light: #ff6666;      /* Czerwony jasny dla tekstu na ciemnym */
-  --green: #00aa00;          /* Zielony dla międzyzmian */
-  --green-hover: #00cc00;    /* Zielony hover - jaśniejszy */
-  --green-light: #00dd00;    /* Zielony jasny dla tekstu na ciemnym */
-  --white: #ffffff;          /* Czysty biały dla tekstu */
-  --gray-text: #b3b3b3;      /* Spotify szary tekst */
-  --gray-light: #535353;     /* Spotify jaśniejszy szary */
+  /* 
+   * Paleta kolorów inspirowana Spotify z czerwonym akcentem Orlenu
+   * Wszystkie kolory są zdefiniowane jako zmienne CSS żeby łatwo je zmieniać
+   */
   
-  /* Kolory tła i tekstu */
-  --bg: var(--black);
-  --bg-secondary: var(--gray);
-  --fg: var(--white);
-  --fg-secondary: var(--gray-text);
-  --muted: var(--red);
-  --card: #1a1a1a;           /* Spotify card background */
-  --card-hover: #2a2a2a;     /* Spotify card hover */
-  --border: #2a2a2a;         /* Spotify border color */
-  --border-light: #404040;   /* Jaśniejsza ramka */
+  /* Kolory podstawowe - ciemny motyw jak w Spotify */
+  --black: #121212;          /* Główne tło - głęboki czarny */
+  --gray: #1a1a1a;           /* Drugorzędne tło - ciemny szary */
+  --white: #ffffff;          /* Główny tekst - czysty biały */
+  --gray-text: #b3b3b3;      /* Drugorzędny tekst - szary */
+  --gray-light: #535353;     /* Jaśniejszy szary dla elementów */
   
-  /* Pozostałe zmienne */
-  --gap:.5rem; --radius:8px; --maxw:100%;
-  --font: 'Circular', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
+  /* Kolory akcentowe - czerwony jak logo Orlenu */
+  --red: #ff0000;            /* Główny czerwony - przyciski, linki */
+  --red-hover: #ff3333;      /* Czerwony przy najechaniu myszką */
+  --red-light: #ff6666;      /* Jaśniejszy czerwony dla tekstu na ciemnym tle */
+  
+  /* Kolory funkcjonalne - zielony dla pozytywnych akcji */
+  --green: #00aa00;          /* Zielony dla międzyzmian, sukcesów */
+  --green-hover: #00cc00;    /* Zielony przy najechaniu myszką */
+  --green-light: #00dd00;    /* Jaśniejszy zielony dla tekstu */
+  
+  /* Kolory tła i tekstu - używane w całej aplikacji */
+  --bg: var(--black);                    /* Główne tło strony */
+  --bg-secondary: var(--gray);           /* Drugorzędne tło (karty, panele) */
+  --fg: var(--white);                    /* Główny tekst */
+  --fg-secondary: var(--gray-text);      /* Drugorzędny tekst */
+  --muted: var(--red);                   /* Kolor akcentowy */
+  
+  /* Kolory kart i elementów interfejsu */
+  --card: #1a1a1a;           /* Tło kart (np. karty pracowników) */
+  --card-hover: #2a2a2a;     /* Tło kart przy najechaniu myszką */
+  --border: #2a2a2a;         /* Kolor ramek */
+  --border-light: #404040;   /* Jaśniejsza ramka dla delikatnych elementów */
+  
+  /* Pozostałe zmienne - rozmiary, czcionki */
+  --gap: .5rem;              /* Odstęp między elementami */
+  --radius: 8px;             /* Promień zaokrąglenia rogów */
+  --maxw: 100%;              /* Maksymalna szerokość */
+  --font: 'Circular', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;  /* Czcionka */
+  --font-weight-normal: 400; /* Normalna grubość czcionki */
+  --font-weight-medium: 500; /* Średnia grubość czcionki */
   --font-weight-bold: 700;
 
   /* header i layout */

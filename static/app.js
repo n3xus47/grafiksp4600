@@ -1,10 +1,14 @@
 /**
  * Aplikacja do zarządzania grafikiem zmian pracowników
  * Główny plik JavaScript z funkcjonalnością edycji, zarządzania pracownikami i próśbami o zamianę
+ * 
+ * Ten plik zawiera całą logikę frontend - edycję grafików, zarządzanie pracownikami,
+ * system wymian, powiadomienia PWA i inne funkcje interfejsu użytkownika.
  */
 
 (function(){
-  // Debouncing utility
+  // Funkcja debounce - opóźnia wykonanie funkcji o określony czas
+  // Używana żeby nie wykonywać funkcji zbyt często (np. przy wpisywaniu w pole tekstowe)
   function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -17,18 +21,18 @@
     };
   }
 
-  // Funkcja aktualizacji zegara
+  // Funkcja aktualizacji zegara - pokazuje aktualną datę i czas
   function updateClock() {
     const now = new Date();
-    const tz = 'Europe/Warsaw';
+    const tz = 'Europe/Warsaw';  // Strefa czasowa Polski
     
-    // Sprawdź czy to telefon (szerokość < 600px)
+    // Sprawdź czy to telefon (szerokość < 600px) - na telefonach mniej miejsca
     const isMobile = window.innerWidth < 600;
     
     let datePart, timePart;
     
     if (isMobile) {
-      // Krótka wersja dla telefonów
+      // Krótka wersja dla telefonów - tylko dzień, miesiąc i godzina
       datePart = now.toLocaleDateString('pl-PL', {
         day: '2-digit', month: '2-digit', timeZone: tz
       });
@@ -36,7 +40,7 @@
         hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz
       });
     } else {
-      // Pełna wersja dla większych ekranów
+      // Pełna wersja dla większych ekranów - dzień tygodnia, data i godzina
       datePart = now.toLocaleDateString('pl-PL', {
       weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: tz
     });
@@ -45,6 +49,7 @@
     });
     }
     
+    // Znajdź element zegara na stronie i zaktualizuj go
     const clockElement = document.getElementById('clock');
     if (clockElement) {
       clockElement.textContent = `${datePart} ${timePart}`;

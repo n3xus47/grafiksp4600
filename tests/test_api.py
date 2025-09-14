@@ -1,5 +1,12 @@
 """
-Testy jednostkowe dla API aplikacji
+Testy jednostkowe dla API aplikacji Grafik SP4600.
+
+Te testy sprawdzają czy wszystkie funkcje API działają poprawnie:
+- Logowanie i uwierzytelnianie
+- Zarządzanie pracownikami
+- Zarządzanie grafikami
+- System wymian
+- Walidacja danych
 """
 
 import pytest
@@ -10,21 +17,26 @@ from app import app, get_db, init_db
 
 @pytest.fixture
 def client():
-    """Klient testowy Flask"""
-    # Utwórz tymczasową bazę danych
+    """
+    Klient testowy Flask - symuluje przeglądarkę wysyłającą żądania HTTP.
+    Tworzy tymczasową bazę danych tylko dla testów.
+    """
+    # Utwórz tymczasową bazę danych - każdy test ma swoją własną bazę
     db_fd, db_path = tempfile.mkstemp()
     
+    # Skonfiguruj aplikację dla testów
     app.config.update({
-        'TESTING': True,
-        'DATABASE_PATH': db_path,
+        'TESTING': True,           # Tryb testowy Flask
+        'DATABASE_PATH': db_path,  # Użyj tymczasowej bazy danych
     })
     
+    # Utwórz klienta testowego i zainicjalizuj bazę danych
     with app.test_client() as client:
         with app.app_context():
-            init_db()
-            yield client
+            init_db()  # Utwórz tabele w bazie danych
+            yield client  # Zwróć klienta do testów
     
-    # Wyczyść po testach
+    # Wyczyść po testach - usuń tymczasową bazę danych
     os.close(db_fd)
     os.unlink(db_path)
 

@@ -1,26 +1,34 @@
-// Service Worker dla Grafik SP4600
+// Service Worker dla Grafik SP4600 - PWA (Progressive Web App)
+// Service Worker to skrypt który działa w tle przeglądarki i umożliwia:
+// - Cachowanie plików (szybsze ładowanie)
+// - Działanie offline
+// - Powiadomienia push
+
+// Nazwa cache z aktualnym czasem - zapewnia że cache się odświeża przy każdej aktualizacji
 const CACHE_NAME = 'grafiksp4600-v' + Date.now();
+
+// Lista plików które mają być cachowane (przechowywane lokalnie)
 const urlsToCache = [
-  '/',
-  '/signin',
-  '/static/style.css',
-  '/static/app.js',
-  '/static/PKN.WA.D.png',
-  '/static/manifest.json'
+  '/',                    // Strona główna
+  '/signin',              // Strona logowania
+  '/static/style.css',    // Arkusz stylów
+  '/static/app.js',       // Główny plik JavaScript
+  '/static/PKN.WA.D.png', // Logo Orlenu
+  '/static/manifest.json' // Manifest PWA
 ];
 
-// Instalacja Service Worker
+// Instalacja Service Worker - uruchamia się gdy przeglądarka instaluje SW
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache otwarty');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache);  // Dodaj wszystkie pliki do cache
       })
   );
 });
 
-// Aktywacja Service Worker
+// Aktywacja Service Worker - uruchamia się gdy SW staje się aktywny
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {

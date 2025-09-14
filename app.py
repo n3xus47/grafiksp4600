@@ -42,20 +42,30 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 # Dodatkowe nagłówki bezpieczeństwa
 @app.after_request
 def add_security_headers(response):
-    """Adds security headers to response"""
+    """
+    Dodaje nagłówki bezpieczeństwa do każdej odpowiedzi serwera.
+    To jest funkcja, która uruchamia się po każdym żądaniu HTTP.
+    """
+    # Jeśli aplikacja działa na HTTPS (produkcja), dodaj nagłówki bezpieczeństwa
     if app.config.get('PREFERRED_URL_SCHEME') == 'https':
-        # Aggressive HSTS - force HTTPS
-        hsts_max_age = app.config.get('HSTS_MAX_AGE', 31536000)
+        # HSTS - zmusza przeglądarkę do używania tylko HTTPS przez rok
+        hsts_max_age = app.config.get('HSTS_MAX_AGE', 31536000)  # 1 rok w sekundach
         response.headers['Strict-Transport-Security'] = f'max-age={hsts_max_age}; includeSubDomains; preload'
+        
+        # Zapobiega atakom MIME type sniffing
         response.headers['X-Content-Type-Options'] = 'nosniff'
+        
+        # Zapobiega ładowaniu strony w ramce (ochrona przed clickjacking)
         response.headers['X-Frame-Options'] = 'DENY'
+        
+        # Włącza ochronę przed XSS w starszych przeglądarkach
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # Add Content-Security-Policy header
+        # Content Security Policy - kontroluje jakie zasoby może ładować strona
         csp_policy = app.config.get('CSP_POLICY', "upgrade-insecure-requests; block-all-mixed-content")
         response.headers["Content-Security-Policy"] = csp_policy
     
-    # Disable cache for static files
+    # Wyłącz cache dla plików statycznych (CSS, JS) - zawsze pobieraj najnowsze wersje
     if request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
@@ -67,17 +77,22 @@ def add_security_headers(response):
 # Initialize OAuth (po załadowaniu zmiennych środowiskowych)
 oauth = OAuth(app)
 
-# Configure Google OAuth - lazy loading
+# Konfiguracja Google OAuth - lazy loading (ładowanie na żądanie)
 def get_google_oauth():
-    """Lazy loading dla Google OAuth"""
+    """
+    Tworzy i zwraca konfigurację Google OAuth tylko raz.
+    Lazy loading oznacza, że konfiguracja jest tworzona dopiero gdy jest potrzebna.
+    """
+    # Sprawdź czy już mamy skonfigurowane Google OAuth
     if not hasattr(get_google_oauth, '_google_oauth'):
+        # Jeśli nie, to skonfiguruj Google OAuth
         get_google_oauth._google_oauth = oauth.register(
-            name='google',
-            client_id=os.environ.get("GOOGLE_CLIENT_ID"),
-            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
-            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            name='google',  # Nazwa dostawcy OAuth
+            client_id=os.environ.get("GOOGLE_CLIENT_ID"),  # ID aplikacji z Google Cloud Console
+            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),  # Sekret aplikacji z Google Cloud Console
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',  # Adres konfiguracji Google
             client_kwargs={
-                'scope': 'openid email profile'
+                'scope': 'openid email profile'  # Jakie dane chcemy od Google (email i podstawowe info)
             }
         )
     return get_google_oauth._google_oauth
@@ -90,58 +105,76 @@ db_path = app.config.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__)
 
 def get_db():
     """
-    Gets database connection from Flask g object.
-    Creates new connection if not exists.
-    Returns: sqlite3.Connection object
+    Pobiera połączenie z bazą danych SQLite.
+    Jeśli połączenie nie istnieje, tworzy nowe.
+    Zwraca: obiekt połączenia sqlite3.Connection
     """
+    # Sprawdź czy już mamy połączenie z bazą danych w obiekcie g (Flask global)
     if "db" not in g:
         try:
+            # Połącz się z bazą danych SQLite
             g.db = sqlite3.connect(db_path)
+            # Ustaw row_factory żeby wyniki były jak słowniki (łatwiejsze do użycia)
             g.db.row_factory = sqlite3.Row
-            # Enable foreign keys
+            # Włącz sprawdzanie kluczy obcych (foreign keys) - ważne dla integralności danych
             g.db.execute("PRAGMA foreign_keys = ON")
         except sqlite3.Error as e:
+            # Jeśli błąd połączenia, zapisz w logach i przerwij z błędem 500
             logger.error(f"Database connection error: {e}")
             abort(500, "Database error")
     return g.db
 
 def close_db(e=None):
     """
-    Closes database connection.
+    Zamyka połączenie z bazą danych.
+    Ta funkcja jest wywoływana automatycznie przez Flask po zakończeniu żądania.
     Args:
-        e: Exception object (unused, for Flask teardown)
+        e: Obiekt wyjątku (nieużywany, dla Flask teardown)
     """
+    # Pobierz połączenie z bazy danych z obiektu g i usuń je
     db = g.pop("db", None)
     if db is not None:
         try:
+            # Zamknij połączenie z bazą danych
             db.close()
         except sqlite3.Error as e:
+            # Jeśli wystąpi błąd przy zamykaniu, zapisz w logach
             logger.error(f"Błąd zamykania bazy danych: {e}")
 
 app.teardown_appcontext(close_db)
 
-# Authentication decorators
+# Dekoratory uwierzytelniania - funkcje które sprawdzają czy użytkownik może wykonać daną akcję
 def login_required(view):
-    """Dekorator wymagający zalogowania użytkownika"""
+    """
+    Dekorator który sprawdza czy użytkownik jest zalogowany.
+    Jeśli nie, przekierowuje na stronę logowania.
+    """
     @wraps(view)
     def wrapper(*args, **kwargs):
+        # Sprawdź czy w sesji jest user_id (oznacza że użytkownik jest zalogowany)
         if not session.get("user_id"):
-            return redirect(url_for("signin"))
-        return view(*args, **kwargs)
+            return redirect(url_for("signin"))  # Przekieruj na stronę logowania
+        return view(*args, **kwargs)  # Jeśli zalogowany, wykonaj funkcję
     return wrapper
 
 def admin_required(view):
-    """Dekorator wymagający uprawnień administratora"""
+    """
+    Dekorator który sprawdza czy użytkownik ma uprawnienia administratora.
+    Jeśli nie, pokazuje błąd 403 (brak uprawnień).
+    """
     @wraps(view)
     def wrapper(*args, **kwargs):
+        # Najpierw sprawdź czy użytkownik jest zalogowany
         if not session.get("user_id"):
             return redirect(url_for("signin"))
         
         try:
+            # Pobierz rolę użytkownika z bazy danych
             db = get_db()
             row = db.execute("SELECT role FROM users WHERE id=?", (session["user_id"],)).fetchone()
-            role = row["role"] if row and row["role"] else "USER"
+            role = row["role"] if row and row["role"] else "USER"  # Domyślnie USER jeśli nie ma roli
             
+            # Sprawdź czy użytkownik ma rolę ADMIN
             if role != "ADMIN":
                 logger.warning(f"Próba dostępu do funkcji admin przez użytkownika {session['user_id']}")
                 abort(403, "Brak uprawnień administratora")
@@ -153,75 +186,103 @@ def admin_required(view):
         return view(*args, **kwargs)
     return wrapper
 
-# Funkcje pomocnicze
+# Funkcje pomocnicze - małe funkcje które pomagają w różnych zadaniach
 def load_whitelist() -> Optional[set]:
-    """Ładuje listę dozwolonych emaili z zmiennych środowiskowych"""
+    """
+    Ładuje listę dozwolonych emaili z pliku .env.
+    Tylko te emaile mogą się zalogować do aplikacji.
+    """
     raw = os.environ.get("WHITELIST_EMAILS", "").strip()
     if not raw:
-        return None
+        return None  # Jeśli nie ma listy, to wszyscy mogą się logować
+    # Podziel po przecinkach, usuń spacje i zamień na małe litery
     return {e.strip().lower() for e in raw.split(",") if e.strip()}
 
 def get_bool_field(row: sqlite3.Row, field_name: str, default: bool = False) -> bool:
-    """Bezpiecznie pobiera pole boolean z wiersza bazy danych"""
+    """
+    Bezpiecznie pobiera pole boolean (prawda/fałsz) z wiersza bazy danych.
+    Jeśli pole nie istnieje lub jest błędne, zwraca wartość domyślną.
+    """
     try:
         return bool(row.get(field_name, default))
     except (KeyError, TypeError):
-        return default
+        return default  # Jeśli błąd, zwróć wartość domyślną
 
 def validate_date_format(date_str: str) -> bool:
-    """Waliduje format daty YYYY-MM-DD"""
+    """
+    Sprawdza czy data ma poprawny format YYYY-MM-DD (np. 2024-01-15).
+    Zwraca True jeśli format jest poprawny, False jeśli nie.
+    """
     if not date_str:
-        return False
+        return False  # Pusty string to niepoprawna data
     try:
-        dt.datetime.strptime(date_str, "%Y-%m-%d")
+        dt.datetime.strptime(date_str, "%Y-%m-%d")  # Spróbuj sparsować datę
         return True
     except ValueError:
-        return False
+        return False  # Jeśli nie można sparsować, to zły format
 
 def validate_shift_type(shift_type: str) -> bool:
-    """Waliduje typ zmiany - akceptuje DNIOWKA, NOCKA oraz niestandardowe teksty"""
+    """
+    Sprawdza czy typ zmiany jest poprawny.
+    Akceptuje DNIOWKA, NOCKA oraz inne niestandardowe teksty (ale nie puste).
+    """
     if not shift_type or not shift_type.strip():
-        return False
+        return False  # Pusty string to niepoprawny typ zmiany
     # Akceptuj standardowe typy oraz niestandardowe teksty (niepuste)
     return True
 
 def safe_get_json() -> Dict[str, Any]:
-    """Bezpiecznie pobiera JSON z request"""
+    """
+    Bezpiecznie pobiera dane JSON z żądania HTTP.
+    Jeśli wystąpi błąd, zwraca pusty słownik zamiast crashować aplikację.
+    """
     try:
-        data = request.get_json(silent=True)
-        return data if data else {}
+        data = request.get_json(silent=True)  # Pobierz JSON, nie pokazuj błędów
+        return data if data else {}  # Jeśli nie ma danych, zwróć pusty słownik
     except (ValueError, TypeError) as e:
         logger.error(f"Błąd parsowania JSON: {e}")
-        return {}
+        return {}  # Zwróć pusty słownik zamiast crashować
     except Exception as e:
         logger.error(f"Nieoczekiwany błąd podczas parsowania JSON: {e}")
-        return {}
+        return {}  # Zwróć pusty słownik zamiast crashować
 
-# Rate limiting (prosta implementacja)
+# Rate limiting - ochrona przed zbyt dużą liczbą żądań od jednego użytkownika
 from collections import defaultdict
 import time
 
+# Słownik przechowujący historię żądań dla każdego użytkownika
 request_counts = defaultdict(list)
 
 def check_rate_limit(identifier: str, max_requests: int = 100, window: int = 60) -> bool:
-    """Prosty rate limiting - sprawdza czy użytkownik nie przekroczył limitu żądań"""
+    """
+    Sprawdza czy użytkownik nie przekroczył limitu żądań w danym czasie.
+    identifier: identyfikator użytkownika (user_id lub IP)
+    max_requests: maksymalna liczba żądań (domyślnie 100)
+    window: okno czasowe w sekundach (domyślnie 60)
+    """
     now = time.time()
     user_requests = request_counts[identifier]
     
-    # Usuń stare żądania
+    # Usuń stare żądania (starsze niż okno czasowe)
     user_requests[:] = [req_time for req_time in user_requests if now - req_time < window]
     
+    # Sprawdź czy nie przekroczono limitu
     if len(user_requests) >= max_requests:
-        return False
+        return False  # Przekroczono limit
     
+    # Dodaj nowe żądanie do listy
     user_requests.append(now)
-    return True
+    return True  # Wszystko OK
 
 def rate_limit_required(max_requests: int = 100, window: int = 60):
-    """Dekorator rate limiting"""
+    """
+    Dekorator który ogranicza liczbę żądań od jednego użytkownika.
+    Chroni przed atakami typu "spam" lub nadużyciami.
+    """
     def decorator(view):
         @wraps(view)
         def wrapper(*args, **kwargs):
+            # Użyj user_id jeśli użytkownik jest zalogowany, w przeciwnym razie IP
             identifier = session.get("user_id", request.remote_addr)
             if not check_rate_limit(identifier, max_requests, window):
                 logger.warning(f"Rate limit przekroczony dla {identifier}")
@@ -230,9 +291,14 @@ def rate_limit_required(max_requests: int = 100, window: int = 60):
         return wrapper
     return decorator
 
-# --- Kalendarz świąt PL --------------------------------------------------------
+# --- Kalendarz świąt polskich --------------------------------------------------------
 def _easter_sunday(year: int) -> dt.date:
-    # Anonymous Gregorian algorithm
+    """
+    Oblicza datę niedzieli wielkanocnej dla danego roku.
+    Używa algorytmu Gregoriańskiego (anonimowy algorytm).
+    To jest skomplikowana matematyka, ale działa poprawnie.
+    """
+    # Anonymous Gregorian algorithm - skomplikowana matematyka do obliczenia Wielkanocy
     a = year % 19
     b = year // 100
     c = year % 100
@@ -251,10 +317,16 @@ def _easter_sunday(year: int) -> dt.date:
 
 
 def polish_holidays(year: int) -> set:
+    """
+    Zwraca zbiór wszystkich świąt polskich w danym roku.
+    Uwzględnia święta stałe (te same daty co roku) i ruchome (zależne od Wielkanocy).
+    """
+    # Oblicz datę Wielkanocy i święta z nią związane
     easter = _easter_sunday(year)
-    easter_monday = easter + dt.timedelta(days=1)
-    corpus_christi = easter + dt.timedelta(days=60)
+    easter_monday = easter + dt.timedelta(days=1)  # Poniedziałek Wielkanocny
+    corpus_christi = easter + dt.timedelta(days=60)  # Boże Ciało
 
+    # Święta stałe - te same daty co roku
     fixed = {
         dt.date(year, 1, 1),   # Nowy Rok
         dt.date(year, 1, 6),   # Trzech Króli
@@ -267,51 +339,65 @@ def polish_holidays(year: int) -> set:
         dt.date(year, 12, 26), # Boże Narodzenie (drugi dzień)
     }
 
+    # Święta ruchome - zależne od daty Wielkanocy
     moveable = {easter_monday, corpus_christi}
-    return fixed | moveable | {easter}  # niedziela wielkanocna też dla pełnej informacji
+    return fixed | moveable | {easter}  # Połącz wszystkie święta w jeden zbiór
 
 
-# --- DB schema i proste CLI ---------------------------------------------------
+# --- Schemat bazy danych i proste polecenia CLI ---------------------------------------------------
 @app.cli.command("init-db")
 def init_db():
+    """
+    Tworzy tabele w bazie danych SQLite.
+    To polecenie można uruchomić przez: flask init-db
+    """
     db = get_db()
     db.executescript("""
-    PRAGMA foreign_keys = ON;
+    PRAGMA foreign_keys = ON;  -- Włącz sprawdzanie kluczy obcych
 
+    -- Tabela użytkowników - przechowuje dane z Google OAuth
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      google_sub TEXT NOT NULL UNIQUE,
-      email TEXT NOT NULL UNIQUE,
-      name TEXT,
-      picture TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      google_sub TEXT NOT NULL UNIQUE,  -- Unikalny ID z Google
+      email TEXT NOT NULL UNIQUE,       -- Email użytkownika
+      name TEXT,                        -- Imię i nazwisko
+      picture TEXT,                     -- URL do zdjęcia profilowego
+      created_at TEXT DEFAULT (datetime('now'))  -- Data utworzenia konta
     );
 
+    -- Tabela pracowników - lista osób które mogą mieć zmiany
     CREATE TABLE IF NOT EXISTS employees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
+      name TEXT NOT NULL UNIQUE  -- Imię i nazwisko pracownika
     );
 
+    -- Tabela zmian - grafik pracowników
     CREATE TABLE IF NOT EXISTS shifts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      date TEXT NOT NULL,
-      shift_type TEXT NOT NULL,
-      employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-      UNIQUE(date, shift_type, employee_id)
+      date TEXT NOT NULL,                    -- Data zmiany (YYYY-MM-DD)
+      shift_type TEXT NOT NULL,              -- Typ zmiany (DNIOWKA, NOCKA, etc.)
+      employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,  -- Który pracownik
+      UNIQUE(date, shift_type, employee_id)  -- Jeden pracownik może mieć tylko jedną zmianę danego typu w danym dniu
     );
     """)
     db.commit()
     print("db ready:", db_path)
 # --- Swap requests -------------------------------------------------------------
 # --- Funkcje migracji bazy danych --------------------------------------------------------
+# Te funkcje dodają nowe kolumny do istniejących tabel bez usuwania danych
 def ensure_users_role_column():
-    """Dodaje kolumnę role do tabeli users jeśli nie istnieje"""
+    """
+    Dodaje kolumnę 'role' do tabeli users jeśli nie istnieje.
+    To jest migracja - dodaje nową funkcjonalność do istniejącej bazy danych.
+    """
     try:
         db = get_db()
+        # Sprawdź jakie kolumny ma tabela users
         cols = db.execute("PRAGMA table_info(users)").fetchall()
         has_role = any(c[1] == 'role' for c in cols)
         
         if not has_role:
+            # Dodaj kolumnę role z domyślną wartością 'USER'
             db.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'USER'")
             db.commit()
             logger.info("Dodano kolumnę 'role' do tabeli users")
@@ -322,9 +408,13 @@ def ensure_users_role_column():
         raise
 
 def ensure_employees_user_id_column():
-    """Dodaje kolumnę user_id do tabeli employees jeśli nie istnieje"""
+    """
+    Dodaje kolumnę 'user_id' do tabeli employees jeśli nie istnieje.
+    Ta kolumna łączy pracowników z kontami użytkowników.
+    """
     try:
         db = get_db()
+        # Sprawdź jakie kolumny ma tabela employees
         cols = db.execute("PRAGMA table_info(employees)").fetchall()
         has_uid = any(c[1] == 'user_id' for c in cols)
         
@@ -656,34 +746,62 @@ def api_slot():
 @app.post("/api/swaps")
 @login_required
 @rate_limit_required(max_requests=20, window=60)  # Rate limiting dla swap requests
+# Funkcje pomocnicze dla systemu wymian
+def map_shift_types(shift_raw):
+    """
+    Mapuje skrócone typy zmian na pełne nazwy.
+    """
+    shift_type_mapping = {
+        'D': 'DNIOWKA',
+        'DNIOWKA': 'DNIOWKA',
+        'N': 'NOCKA', 
+        'NOCKA': 'NOCKA',
+        'P': 'POPOLUDNIOWKA'
+    }
+    return shift_type_mapping.get(shift_raw, shift_raw) if shift_raw else None
+
+def validate_swap_request_data(data):
+    """
+    Waliduje dane prośby o zamianę zmian.
+    """
+    from_employee = data.get("from_employee", "").strip()
+    to_employee = data.get("to_employee", "").strip()
+    comment = (data.get("comment") or "").strip()
+    
+    from_shift_raw = (data.get("from_shift") or "").strip().upper() or None
+    to_shift_raw = (data.get("to_shift") or "").strip().upper() or None
+    
+    from_shift = map_shift_types(from_shift_raw)
+    to_shift = map_shift_types(to_shift_raw)
+    
+    is_give_request = data.get("is_give_request", False)
+    is_ask_request = data.get("is_ask_request", False)
+    
+    return {
+        'from_employee': from_employee,
+        'to_employee': to_employee,
+        'comment': comment,
+        'from_shift': from_shift,
+        'to_shift': to_shift,
+        'is_give_request': is_give_request,
+        'is_ask_request': is_ask_request
+    }
+
 def api_swaps_create():
     """Tworzy nową prośbę o zamianę zmian"""
     try:
         ensure_swaps_table()
         data = safe_get_json()
         
-        # Walidacja wymaganych pól
-        from_employee = data.get("from_employee", "").strip()
-        to_employee = data.get("to_employee", "").strip()
-        comment = (data.get("comment") or "").strip()
-        
-        # Map abbreviated shift types to full names
-        shift_type_mapping = {
-            'D': 'DNIOWKA',
-            'DNIOWKA': 'DNIOWKA',
-            'N': 'NOCKA', 
-            'NOCKA': 'NOCKA',
-            'P': 'POPOLUDNIOWKA'
-        }
-        
-        from_shift_raw = (data.get("from_shift") or "").strip().upper() or None
-        to_shift_raw = (data.get("to_shift") or "").strip().upper() or None
-        
-        from_shift = shift_type_mapping.get(from_shift_raw, from_shift_raw) if from_shift_raw else None
-        to_shift = shift_type_mapping.get(to_shift_raw, to_shift_raw) if to_shift_raw else None
-        
-        is_give_request = data.get("is_give_request", False)
-        is_ask_request = data.get("is_ask_request", False)
+        # Waliduj dane prośby
+        request_data = validate_swap_request_data(data)
+        from_employee = request_data['from_employee']
+        to_employee = request_data['to_employee']
+        comment = request_data['comment']
+        from_shift = request_data['from_shift']
+        to_shift = request_data['to_shift']
+        is_give_request = request_data['is_give_request']
+        is_ask_request = request_data['is_ask_request']
 
         # Walidacja podstawowych pól
         if not from_employee:
@@ -1563,6 +1681,79 @@ def logout():
     logger.info(f"Użytkownik {user_email} wylogowany")
     return redirect(url_for('signin'))
 
+# Funkcje pomocnicze dla strony głównej
+def get_calendar_navigation(year, month):
+    """
+    Oblicza daty nawigacji kalendarza (poprzedni/następny miesiąc).
+    """
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+        
+    if month == 12:
+        next_year, next_month = year + 1, 1
+    else:
+        next_year, next_month = year, month + 1
+    
+    return (prev_year, prev_month), (next_year, next_month)
+
+def get_month_label(year, month):
+    """
+    Tworzy etykietę miesiąca w języku polskim.
+    """
+    month_names = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+                  'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
+    return f"{month_names[month]} {year}"
+
+def get_today_shifts(db):
+    """
+    Pobiera dzisiejsze zmiany z bazy danych i grupuje je według typów.
+    """
+    today = dt.datetime.now().strftime('%Y-%m-%d')
+    
+    # Pobierz dzisiejsze zmiany
+    today_shifts = db.execute("""
+        SELECT e.name, s.shift_type
+        FROM shifts s 
+        JOIN employees e ON s.employee_id = e.id 
+        WHERE s.date = ?
+    """, (today,)).fetchall()
+    
+    # Przygotuj shifts_today dynamicznie dla wszystkich typów zmian
+    shifts_today = {}
+    for shift in today_shifts:
+        shift_type = shift["shift_type"]
+        
+        # Mapuj międzyzmiany (P 10-22) do kategorii POPOLUDNIOWKA
+        if shift_type and shift_type.startswith('P '):
+            category = "POPOLUDNIOWKA"
+            # Wyciągnij godziny z międzyzmiany (P 10-22 -> 10-22)
+            hours = shift_type[2:] if len(shift_type) > 2 else ""
+            display_name = f"{shift['name']} ({hours})" if hours else shift['name']
+        else:
+            category = shift_type
+            display_name = shift["name"]
+            
+        if category not in shifts_today:
+            shifts_today[category] = []
+        shifts_today[category].append(display_name)
+    
+    # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
+    if "DNIOWKA" not in shifts_today:
+        shifts_today["DNIOWKA"] = []
+    if "NOCKA" not in shifts_today:
+        shifts_today["NOCKA"] = []
+    if "POPOLUDNIOWKA" not in shifts_today:
+        shifts_today["POPOLUDNIOWKA"] = []
+    
+    # Dodaj małe litery dla template (kompatybilność z frontendem)
+    shifts_today["dniowka"] = shifts_today.get("DNIOWKA", [])
+    shifts_today["nocka"] = shifts_today.get("NOCKA", [])
+    shifts_today["popoludniowka"] = shifts_today.get("POPOLUDNIOWKA", [])
+    
+    return shifts_today
+
 # Main page route
 @app.get("/")
 @login_required
@@ -1572,72 +1763,20 @@ def index():
         # Zapewnij że wszystkie tabele istnieją
         ensure_unavailability_table()
         
-        # Get current date for calendar
+        # Pobierz parametry kalendarza
         year = int(request.args.get('year', dt.datetime.now().year))
         month = int(request.args.get('month', dt.datetime.now().month))
         
-        # Calculate navigation dates
-        if month == 1:
-            prev_year, prev_month = year - 1, 12
-        else:
-            prev_year, prev_month = year, month - 1
-            
-        if month == 12:
-            next_year, next_month = year + 1, 1
-        else:
-            next_year, next_month = year, month + 1
+        # Oblicz nawigację kalendarza
+        (prev_year, prev_month), (next_year, next_month) = get_calendar_navigation(year, month)
         
-        # Create month label
-        month_names = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
-                      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
-        month_label = f"{month_names[month]} {year}"
+        # Utwórz etykietę miesiąca
+        month_label = get_month_label(year, month)
         
-        # Get today's shifts
-        today = dt.datetime.now().strftime('%Y-%m-%d')
+        # Pobierz dane z bazy danych
         db = get_db()
-        
-        # Get employees
         employees = db.execute("SELECT id, name FROM employees ORDER BY name").fetchall()
-        
-        # Get today's shifts
-        today_shifts = db.execute("""
-            SELECT e.name, s.shift_type
-            FROM shifts s 
-            JOIN employees e ON s.employee_id = e.id 
-            WHERE s.date = ?
-        """, (today,)).fetchall()
-        
-        # Przygotuj shifts_today dynamicznie dla wszystkich typów zmian
-        shifts_today = {}
-        for shift in today_shifts:
-            shift_type = shift["shift_type"]
-            
-            # Mapuj międzyzmiany (P 10-22) do kategorii POPOLUDNIOWKA
-            if shift_type and shift_type.startswith('P '):
-                category = "POPOLUDNIOWKA"
-                # Wyciągnij godziny z międzyzmiany (P 10-22 -> 10-22)
-                hours = shift_type[2:] if len(shift_type) > 2 else ""
-                display_name = f"{shift['name']} ({hours})" if hours else shift['name']
-            else:
-                category = shift_type
-                display_name = shift["name"]
-                
-            if category not in shifts_today:
-                shifts_today[category] = []
-            shifts_today[category].append(display_name)
-        
-        # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
-        if "DNIOWKA" not in shifts_today:
-            shifts_today["DNIOWKA"] = []
-        if "NOCKA" not in shifts_today:
-            shifts_today["NOCKA"] = []
-        if "POPOLUDNIOWKA" not in shifts_today:
-            shifts_today["POPOLUDNIOWKA"] = []
-        
-        # Dodaj małe litery dla template (kompatybilność z frontendem)
-        shifts_today["dniowka"] = shifts_today.get("DNIOWKA", [])
-        shifts_today["nocka"] = shifts_today.get("NOCKA", [])
-        shifts_today["popoludniowka"] = shifts_today.get("POPOLUDNIOWKA", [])
+        shifts_today = get_today_shifts(db)
         
         # Generate calendar days for the month with proper structure
         import datetime as dt_module
@@ -1842,4 +1981,18 @@ def debug_env():
 # --- Main --------------------------------------------------------------------
 if __name__ == "__main__":
     logger.info("Uruchamianie aplikacji Flask...")
+    
+    # Zainicjalizuj wszystkie tabele przy starcie aplikacji
+    with app.app_context():
+        try:
+            ensure_users_role_column()
+            ensure_employees_user_id_column()
+            ensure_employees_code_column()
+            ensure_swaps_table()
+            ensure_unavailability_table()
+            ensure_schedule_changes_table()
+            logger.info("Wszystkie tabele bazy danych zostały zainicjalizowane")
+        except Exception as e:
+            logger.error(f"Błąd podczas inicjalizacji tabel: {e}")
+    
     app.run(debug=False, host='localhost', port=5000)

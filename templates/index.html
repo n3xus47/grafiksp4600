@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grafik zmian pracowników</title>
-  <link rel="stylesheet" href="/static/style.css?v={{ moment().timestamp() }}">
+  <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}">
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#d32f2f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -376,12 +376,12 @@
   </div>
 
   <!-- Skrypt JavaScript -->
-  <script src="/static/app.js?v={{ moment().timestamp() }}"></script>
+  <script src="/static/app.js?v={{ range(1000000, 9999999) | random }}"></script>
   
   <!-- Inicjalizacja danych o zmianach -->
   <script>
     // Załaduj dane o zmianach z backendu
-    const shiftsData = {{ shifts_by_date | tojson }};
+    const shiftsData = {{ shifts_by_date | tojson | safe }};
     
     // Przetwórz każdą datę
     Object.keys(shiftsData).forEach(date => {
