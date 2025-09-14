@@ -533,79 +533,96 @@ function installPWA() {
 
 // Inicjalizacja Web Push Notifications
 async function initializeWebPush() {
-  console.log('Inicjalizacja Web Push Notifications...');
+  console.log('🚀 Inicjalizacja Web Push Notifications...');
   
   // Sprawdź czy przeglądarka obsługuje powiadomienia
   if (!('Notification' in window)) {
-    console.log('Ta przeglądarka nie obsługuje powiadomień');
+    console.log('❌ Ta przeglądarka nie obsługuje powiadomień');
     return;
   }
   
   // Sprawdź czy service worker jest dostępny
   if (!('serviceWorker' in navigator)) {
-    console.log('Service Worker nie jest obsługiwany');
+    console.log('❌ Service Worker nie jest obsługiwany');
     return;
   }
   
   // Sprawdź czy Push API jest dostępne
   if (!('PushManager' in window)) {
-    console.log('Push API nie jest obsługiwane');
+    console.log('❌ Push API nie jest obsługiwane');
     return;
   }
   
   try {
+    console.log('📡 Pobieranie klucza VAPID z serwera...');
     // Pobierz klucz publiczny VAPID z serwera
     const response = await fetch('/api/push/vapid-key');
     const data = await response.json();
     
     if (!data.public_key) {
-      console.error('Brak klucza VAPID z serwera');
+      console.error('❌ Brak klucza VAPID z serwera');
       return;
     }
+    console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
     
     // Sprawdź czy powiadomienia są dozwolone
+    console.log('🔔 Sprawdzanie uprawnień do powiadomień...');
+    console.log('Aktualny status uprawnień:', Notification.permission);
+    
     if (Notification.permission === 'default') {
+      console.log('📝 Prośba o uprawnienia do powiadomień...');
       const permission = await Notification.requestPermission();
-      console.log('Uprawnienie do powiadomień:', permission);
+      console.log('📝 Uprawnienie do powiadomień:', permission);
       
       if (permission !== 'granted') {
-        console.log('Użytkownik nie zezwolił na powiadomienia');
+        console.log('❌ Użytkownik nie zezwolił na powiadomienia');
+        alert('❌ Powiadomienia zostały odrzucone!\n\nAby otrzymywać powiadomienia o zmianach w grafiku, musisz zezwolić na powiadomienia w przeglądarce.\n\nOdśwież stronę i kliknij "Zezwól" gdy przeglądarka zapyta.');
         return;
       }
     } else if (Notification.permission === 'denied') {
-      console.log('Powiadomienia są zablokowane');
+      console.log('❌ Powiadomienia są zablokowane');
+      alert('❌ Powiadomienia są zablokowane!\n\nAby otrzymywać powiadomienia o zmianach w grafiku, musisz włączyć powiadomienia w ustawieniach przeglądarki.');
       return;
     }
     
+    console.log('✅ Uprawnienia do powiadomień są włączone');
+    
     // Sprawdź czy już mamy subskrypcję
+    console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     
     if (!subscription) {
-      console.log('Tworzenie nowej subskrypcji push...');
+      console.log('🆕 Tworzenie nowej subskrypcji push...');
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlB64ToUint8Array(data.public_key)
       });
+      console.log('✅ Subskrypcja push utworzona:', subscription);
       
       // Zapisz subskrypcję na serwerze
+      console.log('💾 Zapisuję subskrypcję na serwerze...');
       await saveSubscriptionToServer(subscription);
     } else {
-      console.log('Subskrypcja push już istnieje:', subscription);
+      console.log('✅ Subskrypcja push już istnieje:', subscription);
     }
     
     // Uruchom background sync
     if ('sync' in window.ServiceWorkerRegistration.prototype) {
+      console.log('🔄 Rejestruję background sync...');
       registration.sync.register('check-notifications');
     }
     
     // Sprawdź nowe prośby co 30 sekund
+    console.log('⏰ Uruchamiam sprawdzanie nowych prośb co 30 sekund...');
     setInterval(checkForNewRequests, 30000);
     
-    console.log('Web Push Notifications zainicjalizowane pomyślnie');
+    console.log('🎉 Web Push Notifications zainicjalizowane pomyślnie!');
+    alert('✅ Powiadomienia push zostały włączone!\n\nTeraz będziesz otrzymywać powiadomienia o zmianach w grafiku, nawet gdy aplikacja jest zamknięta.');
     
   } catch (error) {
-    console.error('Błąd inicjalizacji Web Push:', error);
+    console.error('❌ Błąd inicjalizacji Web Push:', error);
+    alert(`❌ Błąd inicjalizacji powiadomień: ${error.message}\n\nSprawdź konsolę przeglądarki (F12) aby zobaczyć szczegóły.`);
   }
 }
 
