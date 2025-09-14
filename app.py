@@ -904,6 +904,13 @@ def api_save():
         
         db.commit()
         logger.info(f"Zapisano {len(changes)} zmian w grafiku przez użytkownika {session.get('user_email')}")
+        
+        # Wyślij powiadomienia push o zmianach w grafiku
+        try:
+            send_schedule_change_notifications(changes, user_email)
+        except Exception as e:
+            logger.error(f"Błąd wysyłania powiadomień o zmianach: {e}")
+        
         return jsonify(status="ok", message="Zmiany zostały zapisane")
         
     except Exception as e:
@@ -2542,6 +2549,64 @@ def api_export_excel():
     except Exception as e:
         logger.error(f"Błąd podczas eksportu do Excel: {e}")
         return jsonify(error=f"Wystąpił błąd podczas eksportu do Excel: {str(e)}"), 500
+
+def send_schedule_change_notifications(changes, changed_by_email):
+    """
+    Wysyła powiadomienia push o zmianach w grafiku
+    """
+    if not WEB_PUSH_AVAILABLE:
+        logger.warning("Web Push nie jest dostępne - pomijam wysyłanie powiadomień")
+        return
+    
+    try:
+        # Grupuj zmiany według pracownika
+        changes_by_employee = {}
+        for change in changes:
+            employee_name = change.get('employee_name')
+            if employee_name and employee_name != changed_by_email:
+                if employee_name not in changes_by_employee:
+                    changes_by_employee[employee_name] = []
+                changes_by_employee[employee_name].append(change)
+        
+        # Wyślij powiadomienia do każdego pracownika
+        for employee_name, employee_changes in changes_by_employee.items():
+            # Znajdź user_id pracownika
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute("SELECT id FROM users WHERE name = ?", (employee_name,))
+            result = cursor.fetchone()
+            
+            if result:
+                user_id = result[0]
+                subscriptions = get_push_subscriptions(user_id)
+                
+                if subscriptions:
+                    # Przygotuj wiadomość
+                    change_count = len(employee_changes)
+                    if change_count == 1:
+                        change = employee_changes[0]
+                        title = "Zmiana w grafiku"
+                        body = f"Zmieniono Twój grafik na {change['date']} - {change['shift_type']}"
+                    else:
+                        title = "Zmiany w grafiku"
+                        body = f"Masz {change_count} nowych zmian w grafiku"
+                    
+                    # Wyślij powiadomienie
+                    for subscription in subscriptions:
+                        send_push_notification(subscription, title, body, {
+                            'type': 'schedule_change',
+                            'employee': employee_name,
+                            'changes_count': change_count
+                        })
+                    
+                    logger.info(f"Wysłano powiadomienie o zmianach w grafiku dla {employee_name}")
+                else:
+                    logger.info(f"Brak subskrypcji push dla {employee_name}")
+            else:
+                logger.warning(f"Nie znaleziono użytkownika: {employee_name}")
+                
+    except Exception as e:
+        logger.error(f"Błąd wysyłania powiadomień o zmianach w grafiku: {e}")
 
 # --- Main --------------------------------------------------------------------
 if __name__ == "__main__":
