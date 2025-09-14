@@ -3330,20 +3330,34 @@ async function testPushSubscription() {
     console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
     
     // Sprawdź Service Worker
+    console.log('🔧 Sprawdzanie Service Worker...');
     const registration = await navigator.serviceWorker.ready;
     console.log('✅ Service Worker gotowy:', registration);
     
     // Sprawdź istniejącą subskrypcję
+    console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
     let subscription = await registration.pushManager.getSubscription();
     console.log('Istniejąca subskrypcja:', subscription);
     
     if (!subscription) {
       console.log('🆕 Tworzenie nowej subskrypcji...');
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(data.public_key)
-      });
-      console.log('✅ Subskrypcja utworzona:', subscription);
+      console.log('Klucz VAPID do konwersji:', data.public_key.substring(0, 20) + '...');
+      
+      try {
+        const applicationServerKey = urlB64ToUint8Array(data.public_key);
+        console.log('✅ Klucz VAPID skonwertowany:', applicationServerKey.length, 'bajtów');
+        
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
+        });
+        console.log('✅ Subskrypcja utworzona:', subscription);
+      } catch (subscribeError) {
+        console.error('❌ Błąd tworzenia subskrypcji:', subscribeError);
+        throw subscribeError;
+      }
+    } else {
+      console.log('ℹ️ Używam istniejącej subskrypcji');
     }
     
     // Zapisz subskrypcję na serwerze
