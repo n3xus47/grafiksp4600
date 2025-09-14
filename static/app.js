@@ -3344,6 +3344,18 @@ async function testPushSubscription() {
     
     if (existingRegistrations.length > 0) {
       console.log('ℹ️ Znaleziono istniejące rejestracje:', existingRegistrations);
+      
+      // Sprawdź status każdej rejestracji
+      for (let i = 0; i < existingRegistrations.length; i++) {
+        const reg = existingRegistrations[i];
+        console.log(`📋 Rejestracja ${i}:`, {
+          scope: reg.scope,
+          installing: reg.installing,
+          waiting: reg.waiting,
+          active: reg.active,
+          state: reg.active ? reg.active.state : 'brak aktywnego'
+        });
+      }
     }
     
     let registration;
@@ -3358,8 +3370,16 @@ async function testPushSubscription() {
       registration = await Promise.race([swPromise, timeoutPromise]);
       console.log('✅ Service Worker gotowy:', registration);
     } catch (swError) {
-      console.error('❌ Błąd Service Worker:', swError);
-      throw swError;
+      console.error('❌ Błąd Service Worker ready:', swError);
+      
+      // Spróbuj użyć istniejącej rejestracji jako fallback
+      if (existingRegistrations.length > 0) {
+        console.log('🔄 Próbuję użyć istniejącej rejestracji jako fallback...');
+        registration = existingRegistrations[0];
+        console.log('✅ Używam istniejącej rejestracji:', registration);
+      } else {
+        throw swError;
+      }
     }
     
     // Sprawdź istniejącą subskrypcję
