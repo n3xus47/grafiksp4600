@@ -797,7 +797,7 @@ def ensure_push_subscriptions_table():
             db.executescript("""
                 CREATE TABLE push_subscriptions (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  user_id TEXT NOT NULL,
+                  user_id INTEGER NOT NULL,
                   subscription_data TEXT NOT NULL,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -808,7 +808,38 @@ def ensure_push_subscriptions_table():
             db.commit()
             logger.info("Utworzono tabelę push_subscriptions z indeksami")
         else:
-            logger.info("Tabela push_subscriptions już istnieje")
+            # Sprawdź czy user_id jest INTEGER, jeśli nie - zmigruj tabelę
+            cursor = db.cursor()
+            cursor.execute("PRAGMA table_info(push_subscriptions)")
+            columns = cursor.fetchall()
+            user_id_type = None
+            for col in columns:
+                if col[1] == 'user_id':
+                    user_id_type = col[2]
+                    break
+            
+            if user_id_type != 'INTEGER':
+                logger.info("Migracja tabeli push_subscriptions - zmiana user_id na INTEGER")
+                db.executescript("""
+                    CREATE TABLE push_subscriptions_new (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      user_id INTEGER NOT NULL,
+                      subscription_data TEXT NOT NULL,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    INSERT INTO push_subscriptions_new (id, user_id, subscription_data, created_at, updated_at)
+                    SELECT id, CAST(user_id AS INTEGER), subscription_data, created_at, updated_at
+                    FROM push_subscriptions;
+                    DROP TABLE push_subscriptions;
+                    ALTER TABLE push_subscriptions_new RENAME TO push_subscriptions;
+                    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_created_at ON push_subscriptions(created_at);
+                """)
+                db.commit()
+                logger.info("Migracja tabeli push_subscriptions zakończona")
+            else:
+                logger.info("Tabela push_subscriptions już istnieje z poprawnym typem user_id")
         
     except sqlite3.Error as e:
         logger.error(f"Błąd podczas tworzenia tabeli push_subscriptions: {e}")
