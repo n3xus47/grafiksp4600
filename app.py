@@ -179,15 +179,17 @@ def get_push_subscriptions(user_id=None):
         
         if user_id:
             cursor.execute("SELECT subscription_data FROM push_subscriptions WHERE user_id = ?", (user_id,))
+            results = cursor.fetchall()
+            conn.close()
+            
+            if results:
+                return json.loads(results[0][0])
+            else:
+                return None
         else:
             cursor.execute("SELECT user_id, subscription_data FROM push_subscriptions")
-        
-        results = cursor.fetchall()
-        conn.close()
-        
-        if user_id:
-            return json.loads(results[0][0]) if results else None
-        else:
+            results = cursor.fetchall()
+            conn.close()
             return [(row[0], json.loads(row[1])) for row in results]
             
     except Exception as e:
@@ -2610,13 +2612,33 @@ def send_schedule_change_notifications(changes, changed_by_email):
         for change in changes:
             employee_name = change.get('employee') or change.get('name')  # Support both formats
             logger.info(f"Przetwarzanie zmiany dla pracownika: {employee_name} (zmienione przez: {changed_by_email})")
-            if employee_name and employee_name != changed_by_email:
-                if employee_name not in changes_by_employee:
-                    changes_by_employee[employee_name] = []
-                changes_by_employee[employee_name].append(change)
-                logger.info(f"Dodano zmianę dla {employee_name}")
+            
+            # Sprawdź czy to nie jest zmiana dla samego siebie (porównaj po user_id)
+            if employee_name:
+                # Znajdź user_id pracownika
+                db = get_db()
+                cursor = db.cursor()
+                cursor.execute("SELECT id, email FROM users WHERE name = ?", (employee_name,))
+                employee_result = cursor.fetchone()
+                
+                if employee_result:
+                    employee_user_id, employee_email = employee_result
+                    # Sprawdź czy to nie jest zmiana dla samego siebie
+                    cursor.execute("SELECT id FROM users WHERE email = ?", (changed_by_email,))
+                    changer_result = cursor.fetchone()
+                    
+                    if changer_result and employee_user_id == changer_result[0]:
+                        logger.info(f"Pominięto zmianę dla {employee_name} (to sam użytkownik)")
+                        continue
+                    
+                    if employee_name not in changes_by_employee:
+                        changes_by_employee[employee_name] = []
+                    changes_by_employee[employee_name].append(change)
+                    logger.info(f"Dodano zmianę dla {employee_name}")
+                else:
+                    logger.warning(f"Nie znaleziono użytkownika: {employee_name}")
             else:
-                logger.info(f"Pominięto zmianę dla {employee_name} (to sam użytkownik lub brak nazwy)")
+                logger.info(f"Pominięto zmianę - brak nazwy pracownika")
         
         logger.info(f"Znaleziono {len(changes_by_employee)} pracowników do powiadomienia: {list(changes_by_employee.keys())}")
         
@@ -2630,28 +2652,29 @@ def send_schedule_change_notifications(changes, changed_by_email):
             
             if result:
                 user_id = result[0]
-                subscriptions = get_push_subscriptions(user_id)
+                subscription = get_push_subscriptions(user_id)
                 
-                if subscriptions:
+                if subscription:
                     # Przygotuj wiadomość
                     change_count = len(employee_changes)
                     if change_count == 1:
                         change = employee_changes[0]
+                        shift_type = change.get('shift_type', 'nieznany')
                         title = "Zmiana w grafiku"
-                        body = f"Zmieniono Twój grafik na {change['date']} - {change['shift_type']}"
+                        body = f"Zmieniono Twój grafik na {change['date']} - {shift_type}"
                     else:
                         title = "Zmiany w grafiku"
                         body = f"Masz {change_count} nowych zmian w grafiku"
                     
                     # Wyślij powiadomienie
-                    for subscription in subscriptions:
-                        send_push_notification(subscription, title, body, {
-                            'type': 'schedule_change',
-                            'employee': employee_name,
-                            'changes_count': change_count
-                        })
-                    
-                    logger.info(f"Wysłano powiadomienie o zmianach w grafiku dla {employee_name}")
+                    if send_push_notification(subscription, title, body, {
+                        'type': 'schedule_change',
+                        'employee': employee_name,
+                        'changes_count': change_count
+                    }):
+                        logger.info(f"Wysłano powiadomienie o zmianach w grafiku dla {employee_name}")
+                    else:
+                        logger.error(f"Błąd wysyłania powiadomienia dla {employee_name}")
                 else:
                     logger.info(f"Brak subskrypcji push dla {employee_name}")
             else:
