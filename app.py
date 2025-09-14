@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 from datetime import timedelta
 from functools import wraps
 
-from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response, send_file
+from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response, send_file, send_from_directory
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
 import calendar
@@ -1595,6 +1595,11 @@ def service_worker():
     """Service Worker dla PWA"""
     return send_from_directory('static', 'sw.js', mimetype='application/javascript')
 
+@app.get("/favicon.ico")
+def favicon():
+    """Favicon dla przeglądarki"""
+    return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
+
 @app.get("/login")
 def login():
     """Przekierowanie do Google OAuth"""
@@ -1965,8 +1970,8 @@ def index():
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
-        response.headers['Last-Modified'] = str(datetime.now())
-        response.headers['ETag'] = f'"{hash(str(datetime.now()))}"'
+        response.headers['Last-Modified'] = str(dt.datetime.now())
+        response.headers['ETag'] = f'"{hash(str(dt.datetime.now()))}"'
         logger.info(f"Główna strona załadowana dla użytkownika {session.get("user_email")}")
         return response
 
