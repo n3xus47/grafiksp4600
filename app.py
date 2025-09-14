@@ -1773,7 +1773,7 @@ def subscribe_push():
     """Zapisuje subskrypcję push dla użytkownika"""
     try:
         subscription = request.get_json()
-        user_id = session.get("user_email")
+        user_id = session.get("user_id")
         
         if not subscription:
             return jsonify(error="Brak danych subskrypcji"), 400
@@ -1818,7 +1818,7 @@ def send_push_notification_api():
         title = data.get('title', 'Test powiadomienia')
         body = data.get('body', 'To jest testowe powiadomienie')
         
-        user_id = session.get("user_email")
+        user_id = session.get("user_id")
         subscription = get_push_subscriptions(user_id)
         
         if not subscription:
