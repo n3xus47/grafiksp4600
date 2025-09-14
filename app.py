@@ -2572,14 +2572,22 @@ def send_schedule_change_notifications(changes, changed_by_email):
         return
     
     try:
+        logger.info(f"Wysyłanie powiadomień o {len(changes)} zmianach przez {changed_by_email}")
+        
         # Grupuj zmiany według pracownika
         changes_by_employee = {}
         for change in changes:
-            employee_name = change.get('employee_name')
+            employee_name = change.get('employee') or change.get('name')  # Support both formats
+            logger.info(f"Przetwarzanie zmiany dla pracownika: {employee_name} (zmienione przez: {changed_by_email})")
             if employee_name and employee_name != changed_by_email:
                 if employee_name not in changes_by_employee:
                     changes_by_employee[employee_name] = []
                 changes_by_employee[employee_name].append(change)
+                logger.info(f"Dodano zmianę dla {employee_name}")
+            else:
+                logger.info(f"Pominięto zmianę dla {employee_name} (to sam użytkownik lub brak nazwy)")
+        
+        logger.info(f"Znaleziono {len(changes_by_employee)} pracowników do powiadomienia: {list(changes_by_employee.keys())}")
         
         # Wyślij powiadomienia do każdego pracownika
         for employee_name, employee_changes in changes_by_employee.items():
