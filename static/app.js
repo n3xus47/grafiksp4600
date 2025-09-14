@@ -3331,8 +3331,21 @@ async function testPushSubscription() {
     
     // Sprawdź Service Worker
     console.log('🔧 Sprawdzanie Service Worker...');
-    const registration = await navigator.serviceWorker.ready;
-    console.log('✅ Service Worker gotowy:', registration);
+    
+    if (!navigator.serviceWorker) {
+      throw new Error('Service Worker nie jest obsługiwany w tej przeglądarce');
+    }
+    
+    console.log('🔧 Service Worker jest obsługiwany, czekam na gotowość...');
+    
+    let registration;
+    try {
+      registration = await navigator.serviceWorker.ready;
+      console.log('✅ Service Worker gotowy:', registration);
+    } catch (swError) {
+      console.error('❌ Błąd Service Worker:', swError);
+      throw swError;
+    }
     
     // Sprawdź istniejącą subskrypcję
     console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
