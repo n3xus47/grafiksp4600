@@ -3338,9 +3338,24 @@ async function testPushSubscription() {
     
     console.log('🔧 Service Worker jest obsługiwany, czekam na gotowość...');
     
+    // Sprawdź czy Service Worker jest już zarejestrowany
+    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+    console.log('📋 Istniejące rejestracje Service Worker:', existingRegistrations.length);
+    
+    if (existingRegistrations.length > 0) {
+      console.log('ℹ️ Znaleziono istniejące rejestracje:', existingRegistrations);
+    }
+    
     let registration;
     try {
-      registration = await navigator.serviceWorker.ready;
+      // Dodaj timeout dla Service Worker
+      const swPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Service Worker timeout - nie odpowiedział w ciągu 10 sekund')), 10000)
+      );
+      
+      console.log('⏱️ Czekam na Service Worker z timeout 10s...');
+      registration = await Promise.race([swPromise, timeoutPromise]);
       console.log('✅ Service Worker gotowy:', registration);
     } catch (swError) {
       console.error('❌ Błąd Service Worker:', swError);
