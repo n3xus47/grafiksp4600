@@ -5,7 +5,7 @@
 // - Powiadomienia push
 
 // Nazwa cache z aktualnym czasem - zapewnia że cache się odświeża przy każdej aktualizacji
-const CACHE_NAME = 'grafiksp4600-v' + Date.now();
+const CACHE_NAME = 'grafiksp4600-v' + new Date().toISOString().replace(/[:.]/g, '-');
 
 // Lista plików które mają być cachowane (przechowywane lokalnie)
 const urlsToCache = [
@@ -42,6 +42,9 @@ self.addEventListener('activate', event => {
           }
         })
       );
+    }).then(() => {
+      // Wymuś natychmiastowe przejęcie kontroli nad wszystkimi klientami
+      return self.clients.claim();
     })
   );
 });

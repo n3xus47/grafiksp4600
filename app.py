@@ -1962,9 +1962,11 @@ def index():
             is_admin=is_admin
         ))
         
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+        response.headers['Last-Modified'] = str(datetime.now())
+        response.headers['ETag'] = f'"{hash(str(datetime.now()))}"'
         logger.info(f"Główna strona załadowana dla użytkownika {session.get("user_email")}")
         return response
 
