@@ -135,7 +135,7 @@ def save_push_subscription(user_id, subscription):
     try:
         logger.info(f"Zapisywanie subskrypcji push - user_id: {user_id}, subscription: {subscription}")
         
-        conn = get_db_connection()
+        conn = get_db()
         cursor = conn.cursor()
         
         # Sprawdź czy użytkownik już ma subskrypcję
@@ -174,7 +174,7 @@ def get_push_subscriptions(user_id=None):
     Pobiera subskrypcje push z bazy danych
     """
     try:
-        conn = get_db_connection()
+        conn = get_db()
         cursor = conn.cursor()
         
         if user_id:
@@ -219,7 +219,7 @@ def cleanup_expired_subscriptions():
             except WebPushException as e:
                 if e.response and e.response.status_code in [410, 404]:
                     # Subskrypcja wygasła - usuń z bazy
-                    conn = get_db_connection()
+                    conn = get_db()
                     cursor = conn.cursor()
                     cursor.execute("DELETE FROM push_subscriptions WHERE user_id = ?", (user_id,))
                     conn.commit()
