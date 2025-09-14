@@ -115,7 +115,7 @@ def send_push_notification(subscription, title, body, data=None):
             subscription_info=subscription,
             data=json.dumps(notification_data),
             vapid_private_key=vapid_private_key,
-            vapid_claims={"sub": vapid_claim_email}
+            vapid_claims={"sub": f"mailto:{vapid_claim_email}"}
         )
         
         logger.info(f"Powiadomienie push wysłane: {title}")
@@ -214,7 +214,7 @@ def cleanup_expired_subscriptions():
                     subscription_info=subscription,
                     data=json.dumps({"test": True}),
                     vapid_private_key=app.config.get('VAPID_PRIVATE_KEY'),
-                    vapid_claims={"sub": app.config.get('VAPID_CLAIM_EMAIL')}
+                    vapid_claims={"sub": f"mailto:{app.config.get('VAPID_CLAIM_EMAIL')}"}
                 )
             except WebPushException as e:
                 if e.response and e.response.status_code in [410, 404]:
