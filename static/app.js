@@ -668,6 +668,129 @@ async function saveSubscriptionToServer(subscription) {
   }
 }
 
+// Inicjalizacja subskrypcji push
+async function initializePushSubscription() {
+  try {
+    console.log('🚀 Inicjalizacja Web Push Notifications...');
+    
+    // Pobierz klucz VAPID z serwera
+    console.log('📡 Pobieranie klucza VAPID z serwera...');
+    const response = await fetch('/api/push/vapid-key');
+    const data = await response.json();
+    console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
+    
+    // Sprawdź uprawnienia do powiadomień
+    console.log('🔔 Sprawdzanie uprawnień do powiadomień...');
+    console.log('Aktualny status uprawnień:', Notification.permission);
+    
+    if (Notification.permission !== 'granted') {
+      console.log('❌ Uprawnienia do powiadomień nie są włączone');
+      return;
+    }
+    
+    console.log('✅ Uprawnienia do powiadomień są włączone');
+    
+    // Sprawdź czy Service Worker jest gotowy
+    if (!('serviceWorker' in navigator)) {
+      console.log('❌ Service Worker nie jest obsługiwany');
+      return;
+    }
+    
+    console.log('🔧 Sprawdzanie Service Worker...');
+    console.log('🔧 Service Worker jest obsługiwany, czekam na gotowość...');
+    
+    // Sprawdź istniejące rejestracje
+    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+    console.log('📋 Istniejące rejestracje Service Worker:', existingRegistrations.length);
+    
+    if (existingRegistrations.length > 0) {
+      console.log('ℹ️ Znaleziono istniejące rejestracje:', existingRegistrations);
+      for (let i = 0; i < existingRegistrations.length; i++) {
+        const reg = existingRegistrations[i];
+        console.log(`📋 Rejestracja ${i}:`, {
+          scope: reg.scope,
+          installing: reg.installing,
+          waiting: reg.waiting,
+          active: reg.active,
+          state: reg.active ? reg.active.state : 'unknown'
+        });
+      }
+    }
+    
+    // Czekaj na gotowość Service Worker z timeout
+    const readyPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Service Worker timeout - nie odpowiedział w ciągu 10 sekund')), 10000)
+    );
+    
+    console.log('⏱️ Czekam na Service Worker z timeout 10s...');
+    let registration;
+    try {
+      registration = await Promise.race([readyPromise, timeoutPromise]);
+      console.log('✅ Service Worker gotowy:', registration);
+    } catch (error) {
+      console.log('❌ Błąd Service Worker ready:', error);
+      console.log('🔄 Próbuję użyć istniejącej rejestracji jako fallback...');
+      
+      if (existingRegistrations.length > 0) {
+        registration = existingRegistrations[0];
+        console.log('✅ Używam istniejącej rejestracji:', registration);
+      } else {
+        console.log('❌ Brak dostępnych rejestracji Service Worker');
+        return;
+      }
+    }
+    
+    // Sprawdź istniejącą subskrypcję
+    console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (subscription) {
+      console.log('Istniejąca subskrypcja:', subscription);
+      console.log('ℹ️ Używam istniejącej subskrypcji');
+    } else {
+      console.log('🆕 Tworzenie nowej subskrypcji push...');
+      try {
+        const applicationServerKey = urlB64ToUint8Array(data.public_key);
+        console.log('✅ Klucz VAPID skonwertowany:', applicationServerKey.length, 'bajtów');
+        
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
+        });
+        console.log('✅ Subskrypcja utworzona:', subscription);
+      } catch (subscribeError) {
+        console.error('❌ Błąd tworzenia subskrypcji:', subscribeError);
+        return;
+      }
+    }
+    
+    // Zapisz subskrypcję na serwerze
+    console.log('💾 Zapisuję subskrypcję na serwerze...');
+    const saveResponse = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+      credentials: 'include'
+    });
+    
+    console.log('Odpowiedź serwera:', saveResponse.status);
+    
+    if (saveResponse.ok) {
+      const result = await saveResponse.json();
+      console.log('✅ Subskrypcja zapisana pomyślnie:', result);
+    } else {
+      const error = await saveResponse.json();
+      console.error('❌ Błąd zapisywania subskrypcji:', error);
+    }
+    
+  } catch (error) {
+    console.error('❌ Błąd inicjalizacji subskrypcji push:', error);
+  }
+}
+
 // Sprawdzanie nowych próśb i zmian statusu
 async function checkForNewRequests() {
   try {
@@ -2990,6 +3113,12 @@ async function initializeNotifications() {
     if (Notification.permission === 'default') {
       const permission = await Notification.requestPermission();
       console.log('Uprawnienie do powiadomień:', permission);
+    }
+    
+    // Jeśli powiadomienia są dozwolone, utwórz subskrypcję push
+    if (Notification.permission === 'granted') {
+      console.log('🔔 Powiadomienia są dozwolone, inicjalizuję subskrypcję push...');
+      await initializePushSubscription();
     }
     
     // Uruchom background sync
