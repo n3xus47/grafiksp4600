@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grafik zmian pracowników</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ moment().timestamp() }}">
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#d32f2f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -200,12 +200,14 @@
           <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
           <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
           <button onclick="testNotification()" class="btn w100" style="background: #ff6b6b;">🔔 TEST POWIADOMIEŃ</button>
+          <button onclick="forcePageRefresh()" class="btn w100" style="background: #ff9800;">🔄 ODŚWIEŻ CACHE</button>
           <button id="pwa-install-manual" class="btn w100" style="background: #4caf50; display: none;">📱 ZAINSTALUJ APLIKACJĘ</button>
           {% else %}
           <button id="btn-swaps-user" class="btn w100">SKRZYNKA</button>
           <button id="btn-unavailability" class="btn w100">ZGŁOŚ NIEDYSPOZYCJE</button>
           <button id="btn-shifts" class="btn w100">ZMIANY</button>
           <button onclick="testNotification()" class="btn w100" style="background: #ff6b6b;">🔔 TEST POWIADOMIEŃ</button>
+          <button onclick="forcePageRefresh()" class="btn w100" style="background: #ff9800;">🔄 ODŚWIEŻ CACHE</button>
           <button id="pwa-install-manual" class="btn w100" style="background: #4caf50; display: none;">📱 ZAINSTALUJ APLIKACJĘ</button>
           {% endif %}
         </div>
@@ -374,7 +376,7 @@
   </div>
 
   <!-- Skrypt JavaScript -->
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v={{ moment().timestamp() }}"></script>
   
   <!-- Inicjalizacja danych o zmianach -->
   <script>

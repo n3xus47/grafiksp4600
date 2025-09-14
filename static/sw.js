@@ -1,5 +1,5 @@
 // Service Worker dla Grafik SP4600
-const CACHE_NAME = 'grafiksp4600-v1';
+const CACHE_NAME = 'grafiksp4600-v' + Date.now();
 const urlsToCache = [
   '/',
   '/signin',
