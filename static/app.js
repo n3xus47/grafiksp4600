@@ -174,43 +174,8 @@
     if (banner) {
       banner.remove();
     }
-    // Ukryj przycisk ręcznej instalacji
-    const manualButton = document.getElementById('pwa-install-manual');
-    if (manualButton) {
-      manualButton.style.display = 'none';
-    }
   });
 
-  // Obsługa przycisku ręcznej instalacji
-  document.addEventListener('DOMContentLoaded', () => {
-    const manualButton = document.getElementById('pwa-install-manual');
-    if (manualButton) {
-      manualButton.addEventListener('click', () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('Użytkownik zaakceptował instalację PWA');
-            }
-            deferredPrompt = null;
-          });
-        } else {
-          // Fallback - pokaż instrukcje
-          alert('Aby zainstalować aplikację:\n\n1. Kliknij menu (3 kropki) w Chrome\n2. Wybierz "Zainstaluj aplikację"\n3. Kliknij "Zainstaluj"');
-        }
-      });
-    }
-  });
-
-  // Pokaż przycisk ręcznej instalacji jeśli banner się nie pojawił
-  setTimeout(() => {
-    if (!installBannerShown && !window.matchMedia('(display-mode: standalone)').matches) {
-      const manualButton = document.getElementById('pwa-install-manual');
-      if (manualButton) {
-        manualButton.style.display = 'block';
-      }
-    }
-  }, 5000);
   
   // Funkcja podświetlenia dzisiejszego dnia w kolumnach DATA i DZIEŃ
   function highlightToday() {
