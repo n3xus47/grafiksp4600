@@ -3264,6 +3264,116 @@ function testNotification() {
   showNotification('To jest test powiadomienia!');
 }
 
+// Funkcja do ręcznego testowania subskrypcji push
+async function testPushSubscription() {
+  console.log('🧪 Testowanie subskrypcji push...');
+  
+  try {
+    // Sprawdź czy użytkownik jest zalogowany
+    const isLoggedIn = document.querySelector('[data-current-user]') !== null;
+    if (!isLoggedIn) {
+      alert('❌ Nie jesteś zalogowany! Zaloguj się najpierw.');
+      return;
+    }
+    
+    console.log('✅ Użytkownik jest zalogowany');
+    
+    // Sprawdź czy przeglądarka obsługuje powiadomienia
+    if (!('Notification' in window)) {
+      alert('❌ Ta przeglądarka nie obsługuje powiadomień');
+      return;
+    }
+    
+    // Sprawdź uprawnienia
+    console.log('Aktualny status uprawnień:', Notification.permission);
+    
+    if (Notification.permission === 'default') {
+      console.log('📝 Prośba o uprawnienia...');
+      const permission = await Notification.requestPermission();
+      console.log('Wynik prośby o uprawnienia:', permission);
+      
+      if (permission !== 'granted') {
+        alert('❌ Powiadomienia zostały odrzucone!');
+        return;
+      }
+    } else if (Notification.permission === 'denied') {
+      alert('❌ Powiadomienia są zablokowane!');
+      return;
+    }
+    
+    console.log('✅ Uprawnienia do powiadomień są włączone');
+    
+    // Sprawdź Service Worker
+    if (!('serviceWorker' in navigator)) {
+      alert('❌ Service Worker nie jest obsługiwany');
+      return;
+    }
+    
+    // Sprawdź Push API
+    if (!('PushManager' in window)) {
+      alert('❌ Push API nie jest obsługiwane');
+      return;
+    }
+    
+    console.log('✅ Wszystkie wymagania spełnione');
+    
+    // Pobierz klucz VAPID
+    console.log('📡 Pobieranie klucza VAPID...');
+    const response = await fetch('/api/push/vapid-key');
+    const data = await response.json();
+    
+    if (!data.public_key) {
+      alert('❌ Brak klucza VAPID z serwera');
+      return;
+    }
+    
+    console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
+    
+    // Sprawdź Service Worker
+    const registration = await navigator.serviceWorker.ready;
+    console.log('✅ Service Worker gotowy:', registration);
+    
+    // Sprawdź istniejącą subskrypcję
+    let subscription = await registration.pushManager.getSubscription();
+    console.log('Istniejąca subskrypcja:', subscription);
+    
+    if (!subscription) {
+      console.log('🆕 Tworzenie nowej subskrypcji...');
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(data.public_key)
+      });
+      console.log('✅ Subskrypcja utworzona:', subscription);
+    }
+    
+    // Zapisz subskrypcję na serwerze
+    console.log('💾 Zapisuję subskrypcję na serwerze...');
+    const saveResponse = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+    });
+    
+    console.log('Odpowiedź serwera:', saveResponse.status, saveResponse.statusText);
+    
+    if (saveResponse.ok) {
+      const result = await saveResponse.json();
+      console.log('✅ Subskrypcja zapisana:', result);
+      alert('✅ Subskrypcja push została pomyślnie zarejestrowana!\n\nTeraz możesz testować powiadomienia.');
+    } else {
+      const errorData = await saveResponse.json().catch(() => ({ error: 'Nieznany błąd' }));
+      console.error('❌ Błąd zapisywania subskrypcji:', errorData);
+      alert(`❌ Błąd zapisywania subskrypcji: ${errorData.error || 'Nieznany błąd'}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Błąd testowania subskrypcji:', error);
+    alert(`❌ Błąd testowania subskrypcji: ${error.message}`);
+  }
+}
+
 // Funkcja do ręcznego sprawdzenia statusów (np. po odświeżeniu strony)
 async function checkStatusChanges() {
   console.log('Sprawdzam zmiany statusów...');
