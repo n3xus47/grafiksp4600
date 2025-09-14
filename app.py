@@ -1585,6 +1585,16 @@ def offline():
     """Strona offline dla PWA"""
     return render_template("offline.html")
 
+@app.get("/static/manifest.json")
+def manifest():
+    """Manifest PWA"""
+    return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+
+@app.get("/static/sw.js")
+def service_worker():
+    """Service Worker dla PWA"""
+    return send_from_directory('static', 'sw.js', mimetype='application/javascript')
+
 @app.get("/login")
 def login():
     """Przekierowanie do Google OAuth"""

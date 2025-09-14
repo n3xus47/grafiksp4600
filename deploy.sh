@@ -20,7 +20,7 @@ fi
 
 # Utwórz pakiet wdrożeniowy
 echo "📦 Tworzenie pakietu wdrożeniowego..."
-tar -czf deploy-package.tar.gz \
+tar -czf /tmp/deploy-package.tar.gz \
     --exclude='venv' \
     --exclude='__pycache__' \
     --exclude='*.pyc' \
@@ -28,11 +28,12 @@ tar -czf deploy-package.tar.gz \
     --exclude='*.db' \
     --exclude='*.log' \
     --exclude='.env' \
+    --exclude='deploy-package.tar.gz' \
     .
 
 # Wyślij na serwer
 echo "⬆️ Wysyłanie na serwer..."
-sshpass -p 'MiaOzzie3547.xd' scp deploy-package.tar.gz $REMOTE_USER@$SERVER_IP:/tmp/
+sshpass -p 'MiaOzzie3547.xd' scp /tmp/deploy-package.tar.gz $REMOTE_USER@$SERVER_IP:/tmp/
 
 # Wdróż na serwerze
 echo "🔧 Wdrażanie na serwerze..."
@@ -57,7 +58,7 @@ echo "✅ Aplikacja została zaktualizowana!"
 ENDSSH
 
 # Wyczyść lokalnie
-rm deploy-package.tar.gz
+rm /tmp/deploy-package.tar.gz
 
 echo "✅ Wdrożenie zakończone pomyślnie!"
 echo "🌐 Aplikacja dostępna pod: http://$DOMAIN"

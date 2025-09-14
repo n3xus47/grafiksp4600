@@ -14,6 +14,8 @@ const urlsToCache = [
   '/static/style.css',    // Arkusz stylów
   '/static/app.js',       // Główny plik JavaScript
   '/static/PKN.WA.D.png', // Logo Orlenu
+  '/static/PKN.WA.D-192.png', // Ikona 192x192
+  '/static/PKN.WA.D-512.png', // Ikona 512x512
   '/static/manifest.json' // Manifest PWA
 ];
 
@@ -96,8 +98,8 @@ self.addEventListener('push', event => {
   
   const options = {
     body: event.data ? event.data.text() : 'Nowa prośba w skrzynce',
-    icon: '/static/PKN.WA.D.png',
-    badge: '/static/PKN.WA.D.png',
+    icon: '/static/PKN.WA.D-192.png',
+    badge: '/static/PKN.WA.D-192.png',
     vibrate: [200, 100, 200],
     data: {
       url: '/',
@@ -107,12 +109,12 @@ self.addEventListener('push', event => {
       {
         action: 'open',
         title: 'Otwórz skrzynkę',
-        icon: '/static/PKN.WA.D.png'
+        icon: '/static/PKN.WA.D-192.png'
       },
       {
         action: 'close',
         title: 'Zamknij',
-        icon: '/static/PKN.WA.D.png'
+        icon: '/static/PKN.WA.D-192.png'
       }
     ],
     requireInteraction: true,
@@ -204,8 +206,8 @@ async function checkForNewRequests() {
       if (hasChanges && notificationMessage) {
         self.registration.showNotification('Grafik SP4600', {
           body: notificationMessage,
-          icon: '/static/PKN.WA.D.png',
-          badge: '/static/PKN.WA.D.png',
+          icon: '/static/PKN.WA.D-192.png',
+          badge: '/static/PKN.WA.D-192.png',
           tag: 'grafik-notification',
           data: { url: '/' }
         });
