@@ -405,28 +405,17 @@ th.col-emp.current-user .rot {
 
 /* ===== KOLUMNA LICZNIKA ZMIAN (TYLKO DLA ADMINÓW) ===== */
 .col-summary {
-  background: var(--bg-secondary) !important;
-  border: 1px solid var(--border) !important;
-  text-align: center !important;
-  vertical-align: middle !important;
   min-width: 0 !important; /* Pozwala na zmniejszenie */
   width: auto !important; /* Automatyczne skalowanie */
   max-width: none !important; /* Usuwamy ograniczenie szerokości */
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  display: flex !important; /* Flexbox dla równomiernego podziału */
-  justify-content: space-between !important; /* Równomierny podział */
-  align-items: center !important; /* Wyśrodkowanie pionowe */
+  text-align: center !important;
+  vertical-align: middle !important;
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
   position: sticky !important;
   right: 0 !important;
   z-index: 10 !important;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1) !important;
-  white-space: normal !important; /* Pozwala na zawijanie tekstu */
-  word-wrap: break-word !important; /* Zawijanie długich słów */
-  word-break: break-word !important; /* Łamanie długich słów */
-  box-sizing: border-box !important;
-  overflow: visible !important; /* Cała zawartość widoczna */
-  text-overflow: clip !important; /* Bez ellipsis */
 }
 
 .summary-item {
@@ -1085,7 +1074,8 @@ body{
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 9px !important;
     padding: 2px 2px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -1176,7 +1166,8 @@ body{
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 8px !important;
     padding: 1px 1px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -1267,7 +1258,8 @@ body{
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 7px !important;
     padding: 0.5px 0.5px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -1358,7 +1350,8 @@ body{
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 6px !important;
     padding: 0.25px 0.25px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -1645,6 +1638,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .col-emp  { min-width: 0; width: auto; max-width: none; }
 .col-date { min-width: 0; width: auto; max-width: none; }
 .col-day  { min-width: 0; width: auto; max-width: none; }
+.col-summary { min-width: 0; width: auto; max-width: none; }
 
 /* Szerokości kolumn - automatyczne skalowanie */
 .center-panel:not(.card) .table .col-emp,
@@ -1656,8 +1650,10 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 .center-panel:not(.card) .table .col-date,
 .center-panel:not(.card) .table .col-day,
+.center-panel:not(.card) .table .col-summary,
 .main-panel .table .col-date,
-.main-panel .table .col-day {
+.main-panel .table .col-day,
+.main-panel .table .col-summary {
   width: auto; /* Automatyczne skalowanie */
   min-width: 0; /* Pozwala na zmniejszenie */
   max-width: none; /* Usuwamy ograniczenie szerokości */
@@ -2226,7 +2222,8 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 9px !important;
     padding: 2px 2px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -2319,7 +2316,8 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 8px !important;
     padding: 1px 1px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -2421,7 +2419,8 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .table .col-date,
-  .table .col-day {
+  .table .col-day,
+  .table .col-summary {
     font-size: 7px !important;
     padding: 0.5px 0.5px !important;
     min-width: 0 !important; /* Pozwala na zmniejszenie */
@@ -2933,7 +2932,8 @@ body.mobile-view .table .slot {
 .table .rot:focus,
 .table .col-date:focus,
 .table .col-day:focus,
-.table .col-emp:focus {
+.table .col-emp:focus,
+.table .col-summary:focus {
   outline: none;       /* Brak outline przy focus */
 }
 
