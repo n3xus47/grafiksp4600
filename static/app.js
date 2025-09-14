@@ -729,6 +729,8 @@ function getStatusText(finalStatus) {
 // Funkcja do testowania powiadomień (tylko dla adminów)
 async function testPushNotification() {
   try {
+    console.log('Rozpoczynam test powiadomień push...');
+    
     const response = await fetch('/api/push/send', {
       method: 'POST',
       headers: {
@@ -740,15 +742,27 @@ async function testPushNotification() {
       }),
     });
     
+    console.log('Odpowiedź serwera:', response.status, response.statusText);
+    
     if (response.ok) {
       const result = await response.json();
       console.log('Test powiadomienia:', result);
-      alert('Powiadomienie testowe wysłane!');
+      alert('✅ Powiadomienie testowe wysłane pomyślnie!');
     } else {
-      console.error('Błąd wysyłania testowego powiadomienia:', response.status);
+      const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' }));
+      console.error('Błąd wysyłania testowego powiadomienia:', response.status, errorData);
+      
+      if (response.status === 400 && errorData.error === 'Brak subskrypcji push') {
+        alert('❌ Błąd: Brak subskrypcji push!\n\nMusisz najpierw zaakceptować powiadomienia w przeglądarce.\n\n1. Odśwież stronę\n2. Zaakceptuj powiadomienia gdy przeglądarka zapyta\n3. Spróbuj ponownie');
+      } else if (response.status === 302) {
+        alert('❌ Błąd: Nie jesteś zalogowany!\n\nZaloguj się ponownie i spróbuj jeszcze raz.');
+      } else {
+        alert(`❌ Błąd wysyłania powiadomienia (${response.status}):\n${errorData.error || 'Nieznany błąd'}`);
+      }
     }
   } catch (error) {
     console.error('Błąd podczas testowania powiadomień:', error);
+    alert(`❌ Błąd połączenia: ${error.message}\n\nSprawdź połączenie internetowe i spróbuj ponownie.`);
   }
 }
 
