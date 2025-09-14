@@ -77,11 +77,17 @@ self.addEventListener('activate', event => {
           }).then(subscription => {
             console.log('Service Worker: Subskrypcja push utworzona:', subscription);
             return saveSubscriptionToServer(subscription);
+          }).catch(error => {
+            console.error('Service Worker: Błąd tworzenia subskrypcji push:', error);
+            return null;
           });
         } else {
           console.log('Service Worker: Subskrypcja push już istnieje:', subscription);
           return subscription;
         }
+      }).catch(error => {
+        console.error('Service Worker: Błąd pobierania subskrypcji push:', error);
+        return null;
       });
     })
   );

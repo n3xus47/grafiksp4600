@@ -188,6 +188,47 @@ def get_push_subscriptions(user_id=None):
         logger.error(f"Błąd pobierania subskrypcji push: {e}")
         return None
 
+def cleanup_expired_subscriptions():
+    """
+    Czyści wygasłe subskrypcje push z bazy danych
+    """
+    if not WEB_PUSH_AVAILABLE:
+        return
+    
+    try:
+        subscriptions = get_push_subscriptions()
+        if not subscriptions:
+            return
+        
+        expired_count = 0
+        for user_id, subscription in subscriptions:
+            try:
+                # Próbuj wysłać testowe powiadomienie
+                webpush(
+                    subscription_info=subscription,
+                    data=json.dumps({"test": True}),
+                    vapid_private_key=app.config.get('VAPID_PRIVATE_KEY'),
+                    vapid_claims={"sub": app.config.get('VAPID_CLAIM_EMAIL')}
+                )
+            except WebPushException as e:
+                if e.response and e.response.status_code in [410, 404]:
+                    # Subskrypcja wygasła - usuń z bazy
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM push_subscriptions WHERE user_id = ?", (user_id,))
+                    conn.commit()
+                    conn.close()
+                    expired_count += 1
+                    logger.info(f"Usunięto wygasłą subskrypcję dla użytkownika {user_id}")
+                else:
+                    logger.warning(f"Błąd sprawdzania subskrypcji dla {user_id}: {e}")
+        
+        if expired_count > 0:
+            logger.info(f"Usunięto {expired_count} wygasłych subskrypcji")
+            
+    except Exception as e:
+        logger.error(f"Błąd czyszczenia wygasłych subskrypcji: {e}")
+
 # Konfiguracja Google OAuth - lazy loading (ładowanie na żądanie)
 def get_google_oauth():
     """
@@ -1730,6 +1771,14 @@ def subscribe_push():
         if not subscription:
             return jsonify(error="Brak danych subskrypcji"), 400
         
+        # Walidacja danych subskrypcji
+        required_fields = ['endpoint', 'keys']
+        if not all(field in subscription for field in required_fields):
+            return jsonify(error="Nieprawidłowe dane subskrypcji"), 400
+        
+        if 'keys' not in subscription or not subscription['keys']:
+            return jsonify(error="Brak kluczy w subskrypcji"), 400
+        
         if save_push_subscription(user_id, subscription):
             return jsonify(message="Subskrypcja zapisana pomyślnie")
         else:
@@ -1754,6 +1803,7 @@ def get_vapid_key():
 
 @app.post("/api/push/send")
 @login_required
+@rate_limit_required(max_requests=5, window=60)
 def send_push_notification_api():
     """Wysyła powiadomienie push do użytkownika (test)"""
     try:
@@ -1805,6 +1855,23 @@ def send_push_to_all():
         
     except Exception as e:
         logger.error(f"Błąd wysyłania powiadomień do wszystkich: {e}")
+        return jsonify(error="Błąd serwera"), 500
+
+@app.post("/api/push/cleanup")
+@login_required
+def cleanup_push_subscriptions():
+    """Czyści wygasłe subskrypcje push (tylko admin)"""
+    try:
+        # Sprawdź czy użytkownik jest administratorem
+        user_email = session.get("user_email")
+        if not is_admin_user(user_email):
+            return jsonify(error="Brak uprawnień"), 403
+        
+        cleanup_expired_subscriptions()
+        return jsonify(message="Czyszczenie wygasłych subskrypcji zakończone")
+        
+    except Exception as e:
+        logger.error(f"Błąd czyszczenia subskrypcji: {e}")
         return jsonify(error="Błąd serwera"), 500
 
 # Authentication routes
