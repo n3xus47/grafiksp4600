@@ -64,19 +64,26 @@ def add_security_headers(response):
     return response
     
 
-# Initialize OAuth
+# Initialize OAuth (po załadowaniu zmiennych środowiskowych)
 oauth = OAuth(app)
 
-# Configure Google OAuth
-google = oauth.register(
-    name='google',
-    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
-    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+# Configure Google OAuth - lazy loading
+def get_google_oauth():
+    """Lazy loading dla Google OAuth"""
+    if not hasattr(get_google_oauth, '_google_oauth'):
+        get_google_oauth._google_oauth = oauth.register(
+            name='google',
+            client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={
+                'scope': 'openid email profile'
+            }
+        )
+    return get_google_oauth._google_oauth
+
+# Inicjalizacja Google OAuth
+google = get_google_oauth()
 
 # Inicjalizacja bazy danych
 db_path = app.config.get('DATABASE_PATH', os.path.join(os.path.dirname(__file__), "app.db"))

@@ -21,12 +21,30 @@
   function updateClock() {
     const now = new Date();
     const tz = 'Europe/Warsaw';
-    const datePart = now.toLocaleDateString('pl-PL', {
+    
+    // Sprawdź czy to telefon (szerokość < 600px)
+    const isMobile = window.innerWidth < 600;
+    
+    let datePart, timePart;
+    
+    if (isMobile) {
+      // Krótka wersja dla telefonów
+      datePart = now.toLocaleDateString('pl-PL', {
+        day: '2-digit', month: '2-digit', timeZone: tz
+      });
+      timePart = now.toLocaleTimeString('pl-PL', {
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz
+      });
+    } else {
+      // Pełna wersja dla większych ekranów
+      datePart = now.toLocaleDateString('pl-PL', {
       weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: tz
     });
-    const timePart = now.toLocaleTimeString('pl-PL', {
+      timePart = now.toLocaleTimeString('pl-PL', {
       hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz
     });
+    }
+    
     const clockElement = document.getElementById('clock');
     if (clockElement) {
       clockElement.textContent = `${datePart} ${timePart}`;
@@ -36,6 +54,158 @@
   // Inicjalizacja i aktualizacja zegara co sekundę
   updateClock();
   setInterval(updateClock, 1000);
+  
+  // Aktualizuj zegar przy zmianie rozmiaru okna
+  window.addEventListener('resize', updateClock);
+  
+  // PWA Install Banner
+  let deferredPrompt;
+  let installBannerShown = false;
+
+  // Wyświetl banner instalacji PWA
+  function showInstallBanner() {
+    if (installBannerShown || window.matchMedia('(display-mode: standalone)').matches) {
+      return; // Nie pokazuj jeśli już pokazano lub aplikacja jest już zainstalowana
+    }
+
+    const banner = document.createElement('div');
+    banner.id = 'pwa-install-banner';
+    banner.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #d32f2f, #ff5722);
+        color: white;
+        padding: 16px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+          ">📱</div>
+          <div>
+            <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">Zainstaluj aplikację</div>
+            <div style="font-size: 14px; opacity: 0.9;">Dostęp offline i powiadomienia</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="pwa-install-dismiss" style="
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+          ">Później</button>
+          <button id="pwa-install-button" style="
+            background: white;
+            color: #d32f2f;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+          ">Zainstaluj</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(banner);
+    installBannerShown = true;
+
+    // Event listeners
+    document.getElementById('pwa-install-button').addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('Użytkownik zaakceptował instalację PWA');
+          }
+          deferredPrompt = null;
+          banner.remove();
+        });
+      }
+    });
+
+    document.getElementById('pwa-install-dismiss').addEventListener('click', () => {
+      banner.remove();
+    });
+
+    // Auto-hide po 10 sekundach
+    setTimeout(() => {
+      if (banner.parentNode) {
+        banner.remove();
+      }
+    }, 10000);
+  }
+
+  // Event listener dla beforeinstallprompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBanner();
+  });
+
+  // Sprawdź czy aplikacja jest już zainstalowana
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA zostało zainstalowane');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) {
+      banner.remove();
+    }
+    // Ukryj przycisk ręcznej instalacji
+    const manualButton = document.getElementById('pwa-install-manual');
+    if (manualButton) {
+      manualButton.style.display = 'none';
+    }
+  });
+
+  // Obsługa przycisku ręcznej instalacji
+  document.addEventListener('DOMContentLoaded', () => {
+    const manualButton = document.getElementById('pwa-install-manual');
+    if (manualButton) {
+      manualButton.addEventListener('click', () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('Użytkownik zaakceptował instalację PWA');
+            }
+            deferredPrompt = null;
+          });
+        } else {
+          // Fallback - pokaż instrukcje
+          alert('Aby zainstalować aplikację:\n\n1. Kliknij menu (3 kropki) w Chrome\n2. Wybierz "Zainstaluj aplikację"\n3. Kliknij "Zainstaluj"');
+        }
+      });
+    }
+  });
+
+  // Pokaż przycisk ręcznej instalacji jeśli banner się nie pojawił
+  setTimeout(() => {
+    if (!installBannerShown && !window.matchMedia('(display-mode: standalone)').matches) {
+      const manualButton = document.getElementById('pwa-install-manual');
+      if (manualButton) {
+        manualButton.style.display = 'block';
+      }
+    }
+  }, 5000);
   
   // Funkcja podświetlenia dzisiejszego dnia w kolumnach DATA i DZIEŃ
   function highlightToday() {
