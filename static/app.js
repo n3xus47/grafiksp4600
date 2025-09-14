@@ -470,8 +470,15 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/static/sw.js')
       .then(registration => {
         console.log('Service Worker zarejestrowany:', registration);
-        // Inicjalizuj Web Push po rejestracji Service Worker
-        initializeWebPush();
+        // Inicjalizuj Web Push po rejestracji Service Worker TYLKO jeśli użytkownik jest zalogowany
+        // Sprawdź czy użytkownik jest zalogowany (sprawdź czy są elementy admin)
+        const isLoggedIn = document.querySelector('[data-current-user]') !== null;
+        if (isLoggedIn) {
+          console.log('✅ Użytkownik jest zalogowany, inicjalizuję Web Push...');
+          initializeWebPush();
+        } else {
+          console.log('⏳ Użytkownik nie jest zalogowany, pomijam inicjalizację Web Push');
+        }
       })
       .catch(error => {
         console.log('Błąd rejestracji Service Worker:', error);
@@ -789,6 +796,18 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Inicjalizuj responsywny design
   handleResponsiveDesign();
+  
+  // Inicjalizuj Web Push jeśli użytkownik jest zalogowany
+  const isLoggedIn = document.querySelector('[data-current-user]') !== null;
+  if (isLoggedIn) {
+    console.log('✅ Użytkownik jest zalogowany w DOMContentLoaded, inicjalizuję Web Push...');
+    // Poczekaj chwilę żeby Service Worker się zarejestrował
+    setTimeout(() => {
+      initializeWebPush();
+    }, 1000);
+  } else {
+    console.log('⏳ Użytkownik nie jest zalogowany w DOMContentLoaded');
+  }
   
   // Pobierz wszystkie potrzebne elementy DOM
   const table = document.getElementById('grafik');
