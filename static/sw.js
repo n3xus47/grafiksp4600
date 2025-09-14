@@ -4,8 +4,8 @@
 // - Działanie offline
 // - Web Push Notifications (powiadomienia push z serwera)
 
-// Nazwa cache z aktualnym czasem - zapewnia że cache się odświeża przy każdej aktualizacji
-const CACHE_NAME = 'grafiksp4600-v' + new Date().toISOString().replace(/[:.]/g, '-');
+// Nazwa cache z wersją - zapewnia że cache się odświeża przy każdej aktualizacji
+const CACHE_NAME = 'grafiksp4600-v1.1.0';
 
 // Lista plików które mają być cachowane (przechowywane lokalnie)
 const urlsToCache = [
@@ -14,8 +14,13 @@ const urlsToCache = [
   '/static/style.css',    // Arkusz stylów
   '/static/app.js',       // Główny plik JavaScript
   '/static/PKN.WA.D.png', // Logo Orlenu
-  '/static/PKN.WA.D-192.png', // Ikona 192x192
-  '/static/PKN.WA.D-512.png', // Ikona 512x512
+  '/static/icon-48.png',  // Ikona 48x48
+  '/static/icon-72.png',  // Ikona 72x72
+  '/static/icon-96.png',  // Ikona 96x96
+  '/static/icon-144.png', // Ikona 144x144
+  '/static/icon-192.png', // Ikona 192x192
+  '/static/icon-512.png', // Ikona 512x512
+  '/static/favicon.ico',  // Favicon
   '/static/manifest.json' // Manifest PWA
 ];
 

@@ -510,6 +510,8 @@ function installPWA() {
     deferredPrompt.userChoice.then((choiceResult) => {
       if (choiceResult.outcome === 'accepted') {
         console.log('Użytkownik zaakceptował instalację PWA');
+        // Ukryj przycisk po instalacji
+        hideInstallButton();
       } else {
         console.log('Użytkownik odrzucił instalację PWA');
       }
@@ -534,6 +536,27 @@ function installPWA() {
     // Instrukcje dla desktop
     alert('Aby zainstalować aplikację na komputerze:\n\n1. Kliknij ikonę instalacji w pasku adresu przeglądarki\n2. LUB użyj menu przeglądarki → "Zainstaluj aplikację"\n3. Potwierdź instalację\n\nAplikacja zostanie zainstalowana jak zwykły program!');
   }
+}
+
+// Funkcja ukrywania przycisku instalacji PWA
+function hideInstallButton() {
+  const pwaBtn = document.querySelector('.pwa-btn');
+  if (pwaBtn) {
+    pwaBtn.style.display = 'none';
+    console.log('Przycisk PWA ukryty po instalacji');
+  }
+}
+
+// Sprawdź czy PWA jest już zainstalowane
+function checkIfPWAInstalled() {
+  // Sprawdź czy aplikacja działa w trybie standalone (zainstalowana)
+  if (window.matchMedia('(display-mode: standalone)').matches || 
+      window.navigator.standalone === true) {
+    console.log('PWA jest już zainstalowane - ukrywam przycisk');
+    hideInstallButton();
+    return true;
+  }
+  return false;
 }
 
 // ===== WEB PUSH NOTIFICATIONS =====
@@ -739,48 +762,13 @@ function getStatusText(finalStatus) {
 }
 
 // Funkcja do testowania powiadomień (tylko dla adminów)
-async function testPushNotification() {
-  try {
-    console.log('Rozpoczynam test powiadomień push...');
-    
-    const response = await fetch('/api/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: 'Test powiadomienia',
-        body: 'To jest testowe powiadomienie push'
-      }),
-    });
-    
-    console.log('Odpowiedź serwera:', response.status, response.statusText);
-    
-    if (response.ok) {
-      const result = await response.json();
-      console.log('Test powiadomienia:', result);
-      alert('✅ Powiadomienie testowe wysłane pomyślnie!');
-    } else {
-      const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' }));
-      console.error('Błąd wysyłania testowego powiadomienia:', response.status, errorData);
-      
-      if (response.status === 400 && errorData.error === 'Brak subskrypcji push') {
-        alert('❌ Błąd: Brak subskrypcji push!\n\nMusisz najpierw zaakceptować powiadomienia w przeglądarce.\n\n1. Odśwież stronę\n2. Zaakceptuj powiadomienia gdy przeglądarka zapyta\n3. Spróbuj ponownie');
-      } else if (response.status === 302) {
-        alert('❌ Błąd: Nie jesteś zalogowany!\n\nZaloguj się ponownie i spróbuj jeszcze raz.');
-      } else {
-        alert(`❌ Błąd wysyłania powiadomienia (${response.status}):\n${errorData.error || 'Nieznany błąd'}`);
-      }
-    }
-  } catch (error) {
-    console.error('Błąd podczas testowania powiadomień:', error);
-    alert(`❌ Błąd połączenia: ${error.message}\n\nSprawdź połączenie internetowe i spróbuj ponownie.`);
-  }
-}
 
 // Główna funkcja aplikacji
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została załadowana');
+  
+  // Sprawdź czy PWA jest już zainstalowane
+  checkIfPWAInstalled();
   
   // Inicjalizuj responsywny design
   handleResponsiveDesign();
@@ -3249,176 +3237,6 @@ function testNotification() {
 }
 
 // Funkcja do ręcznego testowania subskrypcji push
-async function testPushSubscription() {
-  console.log('🧪 Testowanie subskrypcji push...');
-  
-  try {
-    // Sprawdź czy użytkownik jest zalogowany
-    const isLoggedIn = document.querySelector('[data-current-user]') !== null;
-    if (!isLoggedIn) {
-      alert('❌ Nie jesteś zalogowany! Zaloguj się najpierw.');
-      return;
-    }
-    
-    console.log('✅ Użytkownik jest zalogowany');
-    
-    // Sprawdź czy przeglądarka obsługuje powiadomienia
-    if (!('Notification' in window)) {
-      alert('❌ Ta przeglądarka nie obsługuje powiadomień');
-      return;
-    }
-    
-    // Sprawdź uprawnienia
-    console.log('Aktualny status uprawnień:', Notification.permission);
-    
-    if (Notification.permission === 'default') {
-      console.log('📝 Prośba o uprawnienia...');
-      const permission = await Notification.requestPermission();
-      console.log('Wynik prośby o uprawnienia:', permission);
-      
-      if (permission !== 'granted') {
-        alert('❌ Powiadomienia zostały odrzucone!');
-        return;
-      }
-    } else if (Notification.permission === 'denied') {
-      alert('❌ Powiadomienia są zablokowane!');
-      return;
-    }
-    
-    console.log('✅ Uprawnienia do powiadomień są włączone');
-    
-    // Sprawdź Service Worker
-    if (!('serviceWorker' in navigator)) {
-      alert('❌ Service Worker nie jest obsługiwany');
-      return;
-    }
-    
-    // Sprawdź Push API
-    if (!('PushManager' in window)) {
-      alert('❌ Push API nie jest obsługiwane');
-      return;
-    }
-    
-    console.log('✅ Wszystkie wymagania spełnione');
-    
-    // Pobierz klucz VAPID
-    console.log('📡 Pobieranie klucza VAPID...');
-    const response = await fetch('/api/push/vapid-key');
-    const data = await response.json();
-    
-    if (!data.public_key) {
-      alert('❌ Brak klucza VAPID z serwera');
-      return;
-    }
-    
-    console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
-    
-    // Sprawdź Service Worker
-    console.log('🔧 Sprawdzanie Service Worker...');
-    
-    if (!navigator.serviceWorker) {
-      throw new Error('Service Worker nie jest obsługiwany w tej przeglądarce');
-    }
-    
-    console.log('🔧 Service Worker jest obsługiwany, czekam na gotowość...');
-    
-    // Sprawdź czy Service Worker jest już zarejestrowany
-    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-    console.log('📋 Istniejące rejestracje Service Worker:', existingRegistrations.length);
-    
-    if (existingRegistrations.length > 0) {
-      console.log('ℹ️ Znaleziono istniejące rejestracje:', existingRegistrations);
-      
-      // Sprawdź status każdej rejestracji
-      for (let i = 0; i < existingRegistrations.length; i++) {
-        const reg = existingRegistrations[i];
-        console.log(`📋 Rejestracja ${i}:`, {
-          scope: reg.scope,
-          installing: reg.installing,
-          waiting: reg.waiting,
-          active: reg.active,
-          state: reg.active ? reg.active.state : 'brak aktywnego'
-        });
-      }
-    }
-    
-    let registration;
-    try {
-      // Dodaj timeout dla Service Worker
-      const swPromise = navigator.serviceWorker.ready;
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Service Worker timeout - nie odpowiedział w ciągu 10 sekund')), 10000)
-      );
-      
-      console.log('⏱️ Czekam na Service Worker z timeout 10s...');
-      registration = await Promise.race([swPromise, timeoutPromise]);
-      console.log('✅ Service Worker gotowy:', registration);
-    } catch (swError) {
-      console.error('❌ Błąd Service Worker ready:', swError);
-      
-      // Spróbuj użyć istniejącej rejestracji jako fallback
-      if (existingRegistrations.length > 0) {
-        console.log('🔄 Próbuję użyć istniejącej rejestracji jako fallback...');
-        registration = existingRegistrations[0];
-        console.log('✅ Używam istniejącej rejestracji:', registration);
-      } else {
-        throw swError;
-      }
-    }
-    
-    // Sprawdź istniejącą subskrypcję
-    console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
-    let subscription = await registration.pushManager.getSubscription();
-    console.log('Istniejąca subskrypcja:', subscription);
-    
-    if (!subscription) {
-      console.log('🆕 Tworzenie nowej subskrypcji...');
-      console.log('Klucz VAPID do konwersji:', data.public_key.substring(0, 20) + '...');
-      
-      try {
-        const applicationServerKey = urlB64ToUint8Array(data.public_key);
-        console.log('✅ Klucz VAPID skonwertowany:', applicationServerKey.length, 'bajtów');
-        
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey
-        });
-        console.log('✅ Subskrypcja utworzona:', subscription);
-      } catch (subscribeError) {
-        console.error('❌ Błąd tworzenia subskrypcji:', subscribeError);
-        throw subscribeError;
-      }
-    } else {
-      console.log('ℹ️ Używam istniejącej subskrypcji');
-    }
-    
-    // Zapisz subskrypcję na serwerze
-    console.log('💾 Zapisuję subskrypcję na serwerze...');
-    const saveResponse = await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(subscription),
-    });
-    
-    console.log('Odpowiedź serwera:', saveResponse.status, saveResponse.statusText);
-    
-    if (saveResponse.ok) {
-      const result = await saveResponse.json();
-      console.log('✅ Subskrypcja zapisana:', result);
-      alert('✅ Subskrypcja push została pomyślnie zarejestrowana!\n\nTeraz możesz testować powiadomienia.');
-    } else {
-      const errorData = await saveResponse.json().catch(() => ({ error: 'Nieznany błąd' }));
-      console.error('❌ Błąd zapisywania subskrypcji:', errorData);
-      alert(`❌ Błąd zapisywania subskrypcji: ${errorData.error || 'Nieznany błąd'}`);
-    }
-    
-  } catch (error) {
-    console.error('❌ Błąd testowania subskrypcji:', error);
-    alert(`❌ Błąd testowania subskrypcji: ${error.message}`);
-  }
-}
 
 // Funkcja do ręcznego sprawdzenia statusów (np. po odświeżeniu strony)
 async function checkStatusChanges() {
