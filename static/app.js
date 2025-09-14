@@ -462,17 +462,23 @@ function handleResponsiveDesign() {
 window.addEventListener('resize', handleResponsiveDesign);
 window.addEventListener('orientationchange', handleResponsiveDesign);
 
+// ===== SYSTEM PWA I WEB PUSH NOTIFICATIONS =====
+
 // Rejestracja Service Worker dla PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/static/sw.js')
       .then(registration => {
         console.log('Service Worker zarejestrowany:', registration);
+        // Inicjalizuj Web Push po rejestracji Service Worker
+        initializeWebPush();
       })
       .catch(error => {
         console.log('Błąd rejestracji Service Worker:', error);
       });
   });
+} else {
+  console.log('Service Worker nie jest obsługiwany w tej przeglądarce');
 }
 
 // Przechwyć event instalacji PWA (jeśli dostępny)
@@ -520,6 +526,229 @@ function installPWA() {
   } else {
     // Instrukcje dla desktop
     alert('Aby zainstalować aplikację na komputerze:\n\n1. Kliknij ikonę instalacji w pasku adresu przeglądarki\n2. LUB użyj menu przeglądarki → "Zainstaluj aplikację"\n3. Potwierdź instalację\n\nAplikacja zostanie zainstalowana jak zwykły program!');
+  }
+}
+
+// ===== WEB PUSH NOTIFICATIONS =====
+
+// Inicjalizacja Web Push Notifications
+async function initializeWebPush() {
+  console.log('Inicjalizacja Web Push Notifications...');
+  
+  // Sprawdź czy przeglądarka obsługuje powiadomienia
+  if (!('Notification' in window)) {
+    console.log('Ta przeglądarka nie obsługuje powiadomień');
+    return;
+  }
+  
+  // Sprawdź czy service worker jest dostępny
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service Worker nie jest obsługiwany');
+    return;
+  }
+  
+  // Sprawdź czy Push API jest dostępne
+  if (!('PushManager' in window)) {
+    console.log('Push API nie jest obsługiwane');
+    return;
+  }
+  
+  try {
+    // Pobierz klucz publiczny VAPID z serwera
+    const response = await fetch('/api/push/vapid-key');
+    const data = await response.json();
+    
+    if (!data.public_key) {
+      console.error('Brak klucza VAPID z serwera');
+      return;
+    }
+    
+    // Sprawdź czy powiadomienia są dozwolone
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      console.log('Uprawnienie do powiadomień:', permission);
+      
+      if (permission !== 'granted') {
+        console.log('Użytkownik nie zezwolił na powiadomienia');
+        return;
+      }
+    } else if (Notification.permission === 'denied') {
+      console.log('Powiadomienia są zablokowane');
+      return;
+    }
+    
+    // Sprawdź czy już mamy subskrypcję
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      console.log('Tworzenie nowej subskrypcji push...');
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(data.public_key)
+      });
+      
+      // Zapisz subskrypcję na serwerze
+      await saveSubscriptionToServer(subscription);
+    } else {
+      console.log('Subskrypcja push już istnieje:', subscription);
+    }
+    
+    // Uruchom background sync
+    if ('sync' in window.ServiceWorkerRegistration.prototype) {
+      registration.sync.register('check-notifications');
+    }
+    
+    // Sprawdź nowe prośby co 30 sekund
+    setInterval(checkForNewRequests, 30000);
+    
+    console.log('Web Push Notifications zainicjalizowane pomyślnie');
+    
+  } catch (error) {
+    console.error('Błąd inicjalizacji Web Push:', error);
+  }
+}
+
+// Funkcja do konwersji VAPID public key z base64 na Uint8Array
+function urlB64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Zapisanie subskrypcji na serwerze
+async function saveSubscriptionToServer(subscription) {
+  try {
+    const response = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Subskrypcja zapisana na serwerze:', result);
+      return result;
+    } else {
+      console.error('Błąd zapisywania subskrypcji:', response.status);
+    }
+  } catch (error) {
+    console.error('Błąd podczas zapisywania subskrypcji:', error);
+  }
+}
+
+// Sprawdzanie nowych próśb i zmian statusu
+async function checkForNewRequests() {
+  try {
+    const response = await fetch('/api/swaps/inbox');
+    const data = await response.json();
+    
+    if (data.items && data.items.length > 0) {
+      // Pobierz poprzednie statusy z localStorage
+      const previousStatuses = JSON.parse(localStorage.getItem('previousStatuses') || '{}');
+      const currentStatuses = {};
+      let hasChanges = false;
+      let notificationMessage = '';
+      
+      // Sprawdź każdą prośbę
+      data.items.forEach(item => {
+        currentStatuses[item.id] = item.final_status;
+        
+        // Sprawdź czy status się zmienił
+        if (previousStatuses[item.id] && previousStatuses[item.id] !== item.final_status) {
+          hasChanges = true;
+          const statusText = getStatusText(item.final_status);
+          
+          if (!notificationMessage) {
+            notificationMessage = `Status prośby się zmienił: ${statusText}`;
+          } else {
+            notificationMessage += `, ${statusText}`;
+          }
+        }
+        
+        // Sprawdź nowe prośby
+        if (!previousStatuses[item.id] && (item.final_status === 'OCZEKUJACE' || item.final_status === 'WSTEPNIE_ZATWIERDZONE')) {
+          hasChanges = true;
+          if (!notificationMessage) {
+            notificationMessage = `Masz nową prośbę w skrzynce`;
+          } else {
+            notificationMessage += `, nowa prośba`;
+          }
+        }
+      });
+      
+      // Zapisz aktualne statusy
+      localStorage.setItem('previousStatuses', JSON.stringify(currentStatuses));
+      
+      // Wyślij powiadomienie jeśli są zmiany
+      if (hasChanges && notificationMessage) {
+        showLocalNotification('Grafik SP4600', notificationMessage);
+      }
+    }
+  } catch (error) {
+    console.error('Błąd sprawdzania nowych próśb:', error);
+  }
+}
+
+// Funkcja do wyświetlania lokalnych powiadomień
+function showLocalNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body: body,
+      icon: '/static/PKN.WA.D-192.png',
+      badge: '/static/PKN.WA.D-192.png',
+      tag: 'grafik-notification'
+    });
+    
+    // Automatycznie zamknij powiadomienie po 5 sekundach
+    setTimeout(() => {
+      notification.close();
+    }, 5000);
+  }
+}
+
+// Funkcja pomocnicza do mapowania statusów
+function getStatusText(finalStatus) {
+  switch (finalStatus) {
+    case 'OCZEKUJACE': return 'Oczekujące';
+    case 'WSTEPNIE_ZATWIERDZONE': return 'Wstępnie zatwierdzone';
+    case 'ZATWIERDZONE': return 'Zatwierdzone';
+    case 'ODRZUCONE': return 'Odrzucone';
+    case 'ODRZUCONE_PRZEZ_SZEFA': return 'Odrzucone przez szefa';
+    default: return finalStatus;
+  }
+}
+
+// Funkcja do testowania powiadomień (tylko dla adminów)
+async function testPushNotification() {
+  try {
+    const response = await fetch('/api/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: 'Test powiadomienia',
+        body: 'To jest testowe powiadomienie push'
+      }),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Test powiadomienia:', result);
+      alert('Powiadomienie testowe wysłane!');
+    } else {
+      console.error('Błąd wysyłania testowego powiadomienia:', response.status);
+    }
+  } catch (error) {
+    console.error('Błąd podczas testowania powiadomień:', error);
   }
 }
 

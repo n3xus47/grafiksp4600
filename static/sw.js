@@ -1,8 +1,8 @@
-// Service Worker dla Grafik SP4600 - PWA (Progressive Web App)
+// Service Worker dla Grafik SP4600 - PWA z Web Push Notifications
 // Service Worker to skrypt który działa w tle przeglądarki i umożliwia:
 // - Cachowanie plików (szybsze ładowanie)
 // - Działanie offline
-// - Powiadomienia push
+// - Web Push Notifications (powiadomienia push z serwera)
 
 // Nazwa cache z aktualnym czasem - zapewnia że cache się odświeża przy każdej aktualizacji
 const CACHE_NAME = 'grafiksp4600-v' + new Date().toISOString().replace(/[:.]/g, '-');
@@ -19,25 +19,46 @@ const urlsToCache = [
   '/static/manifest.json' // Manifest PWA
 ];
 
+// VAPID Public Key - musi być zgodny z kluczem na serwerze
+const VAPID_PUBLIC_KEY = 'BIvhQxAeGQGHEfdZRg8c1DyFQ2i35xL-ZBlfVz8GO4u8UxSVbWeCVACXpBi7_L7nDQJl3nxMoIYSPNJDn8xOsBQ';
+
+// Funkcja do konwersji VAPID public key z base64 na Uint8Array
+const urlB64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
+
 // Instalacja Service Worker - uruchamia się gdy przeglądarka instaluje SW
 self.addEventListener('install', event => {
+  console.log('Service Worker: Instalacja rozpoczęta');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache otwarty');
+        console.log('Service Worker: Cache otwarty');
         return cache.addAll(urlsToCache);  // Dodaj wszystkie pliki do cache
+      })
+      .then(() => {
+        console.log('Service Worker: Wszystkie pliki zostały zacachowane');
+        return self.skipWaiting(); // Wymuś natychmiastową aktywację
       })
   );
 });
 
 // Aktywacja Service Worker - uruchamia się gdy SW staje się aktywny
 self.addEventListener('activate', event => {
+  console.log('Service Worker: Aktywacja rozpoczęta');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Usuwam stary cache:', cacheName);
+            console.log('Service Worker: Usuwam stary cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -45,9 +66,49 @@ self.addEventListener('activate', event => {
     }).then(() => {
       // Wymuś natychmiastowe przejęcie kontroli nad wszystkimi klientami
       return self.clients.claim();
+    }).then(() => {
+      // Zarejestruj się do Web Push po aktywacji
+      return self.registration.pushManager.getSubscription().then(subscription => {
+        if (!subscription) {
+          console.log('Service Worker: Brak subskrypcji push, rejestruję...');
+          return self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+          }).then(subscription => {
+            console.log('Service Worker: Subskrypcja push utworzona:', subscription);
+            return saveSubscriptionToServer(subscription);
+          });
+        } else {
+          console.log('Service Worker: Subskrypcja push już istnieje:', subscription);
+          return subscription;
+        }
+      });
     })
   );
 });
+
+// Funkcja do zapisania subskrypcji na serwerze
+const saveSubscriptionToServer = async (subscription) => {
+  try {
+    const response = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Service Worker: Subskrypcja zapisana na serwerze:', result);
+      return result;
+    } else {
+      console.error('Service Worker: Błąd zapisywania subskrypcji:', response.status);
+    }
+  } catch (error) {
+    console.error('Service Worker: Błąd podczas zapisywania subskrypcji:', error);
+  }
+};
 
 // Interceptowanie żądań
 self.addEventListener('fetch', event => {
@@ -88,30 +149,69 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Obsługa wiadomości
+// Obsługa wiadomości z głównego wątku
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event.data && event.data.type === 'GET_SUBSCRIPTION') {
+    // Zwróć aktualną subskrypcję do głównego wątku
+    self.registration.pushManager.getSubscription().then(subscription => {
+      event.ports[0].postMessage({ subscription: subscription });
+    });
+  } else if (event.data && event.data.type === 'SUBSCRIBE_PUSH') {
+    // Zarejestruj się do push notifications
+    self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+    }).then(subscription => {
+      saveSubscriptionToServer(subscription);
+      event.ports[0].postMessage({ success: true, subscription: subscription });
+    }).catch(error => {
+      console.error('Service Worker: Błąd subskrypcji push:', error);
+      event.ports[0].postMessage({ success: false, error: error.message });
+    });
   }
 });
 
-// Obsługa powiadomień push
+// Obsługa powiadomień push z serwera
 self.addEventListener('push', event => {
-  console.log('Push event received:', event);
+  console.log('Service Worker: Otrzymano push event:', event);
   
-  const options = {
-    body: event.data ? event.data.text() : 'Nowa prośba w skrzynce',
+  let notificationData = {
+    title: 'Grafik SP4600',
+    body: 'Masz nową prośbę w skrzynce',
     icon: '/static/PKN.WA.D-192.png',
     badge: '/static/PKN.WA.D-192.png',
-    vibrate: [200, 100, 200],
     data: {
       url: '/',
       timestamp: Date.now()
-    },
+    }
+  };
+  
+  // Jeśli push event zawiera dane, użyj ich
+  if (event.data) {
+    try {
+      const pushData = event.data.json();
+      notificationData = {
+        ...notificationData,
+        ...pushData
+      };
+    } catch (error) {
+      console.error('Service Worker: Błąd parsowania danych push:', error);
+      // Użyj domyślnych danych
+    }
+  }
+  
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    vibrate: [200, 100, 200],
+    data: notificationData.data,
     actions: [
       {
         action: 'open',
-        title: 'Otwórz skrzynkę',
+        title: 'Otwórz aplikację',
         icon: '/static/PKN.WA.D-192.png'
       },
       {
@@ -125,13 +225,13 @@ self.addEventListener('push', event => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('Grafik SP4600', options)
+    self.registration.showNotification(notificationData.title, options)
   );
 });
 
 // Obsługa kliknięć w powiadomienia
 self.addEventListener('notificationclick', event => {
-  console.log('Notification click received:', event);
+  console.log('Service Worker: Kliknięto w powiadomienie:', event);
   
   event.notification.close();
   
@@ -217,7 +317,7 @@ async function checkForNewRequests() {
       }
     }
   } catch (error) {
-    console.error('Error checking for new requests:', error);
+    console.error('Service Worker: Błąd sprawdzania nowych próśb:', error);
   }
 }
 
@@ -230,7 +330,7 @@ async function getPreviousStatuses() {
       return await response.json();
     }
   } catch (error) {
-    console.error('Error getting previous statuses:', error);
+    console.error('Service Worker: Błąd pobierania poprzednich statusów:', error);
   }
   return {};
 }
@@ -240,7 +340,7 @@ async function savePreviousStatuses(statuses) {
     const cache = await caches.open('grafiksp4600-statuses');
     await cache.put('/statuses', new Response(JSON.stringify(statuses)));
   } catch (error) {
-    console.error('Error saving previous statuses:', error);
+    console.error('Service Worker: Błąd zapisywania statusów:', error);
   }
 }
 

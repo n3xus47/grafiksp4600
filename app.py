@@ -17,6 +17,7 @@ from flask import Flask, g, render_template, jsonify, request, redirect, url_for
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
 import calendar
+import json
 
 # Konfiguracja logowania
 logging.basicConfig(
@@ -27,6 +28,14 @@ logger = logging.getLogger(__name__)
 
 # Ładowanie zmiennych środowiskowych
 load_dotenv()
+
+# Web Push Notifications
+try:
+    from pywebpush import webpush, WebPushException
+    WEB_PUSH_AVAILABLE = True
+except ImportError:
+    WEB_PUSH_AVAILABLE = False
+    logger.warning("pywebpush nie jest zainstalowane. Web Push Notifications będą niedostępne.")
 
 # Inicjalizacja aplikacji
 app = Flask(__name__)
@@ -76,6 +85,108 @@ def add_security_headers(response):
 
 # Initialize OAuth (po załadowaniu zmiennych środowiskowych)
 oauth = OAuth(app)
+
+# Web Push Notifications - funkcje pomocnicze
+def send_push_notification(subscription, title, body, data=None):
+    """
+    Wysyła powiadomienie push do subskrybenta
+    """
+    if not WEB_PUSH_AVAILABLE:
+        logger.warning("Web Push nie jest dostępne - pywebpush nie zainstalowane")
+        return False
+    
+    try:
+        vapid_private_key = app.config.get('VAPID_PRIVATE_KEY')
+        vapid_claim_email = app.config.get('VAPID_CLAIM_EMAIL')
+        
+        if not vapid_private_key or not vapid_claim_email:
+            logger.error("Brak konfiguracji VAPID")
+            return False
+        
+        notification_data = {
+            'title': title,
+            'body': body,
+            'icon': '/static/PKN.WA.D-192.png',
+            'badge': '/static/PKN.WA.D-192.png',
+            'data': data or {}
+        }
+        
+        webpush(
+            subscription_info=subscription,
+            data=json.dumps(notification_data),
+            vapid_private_key=vapid_private_key,
+            vapid_claims={"sub": vapid_claim_email}
+        )
+        
+        logger.info(f"Powiadomienie push wysłane: {title}")
+        return True
+        
+    except WebPushException as e:
+        logger.error(f"Błąd wysyłania powiadomienia push: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Nieoczekiwany błąd podczas wysyłania powiadomienia: {e}")
+        return False
+
+def save_push_subscription(user_id, subscription):
+    """
+    Zapisuje subskrypcję push w bazie danych
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Sprawdź czy użytkownik już ma subskrypcję
+        cursor.execute("SELECT id FROM push_subscriptions WHERE user_id = ?", (user_id,))
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Aktualizuj istniejącą subskrypcję
+            cursor.execute("""
+                UPDATE push_subscriptions 
+                SET subscription_data = ?, updated_at = CURRENT_TIMESTAMP 
+                WHERE user_id = ?
+            """, (json.dumps(subscription), user_id))
+        else:
+            # Utwórz nową subskrypcję
+            cursor.execute("""
+                INSERT INTO push_subscriptions (user_id, subscription_data, created_at, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, (user_id, json.dumps(subscription)))
+        
+        conn.commit()
+        conn.close()
+        logger.info(f"Subskrypcja push zapisana dla użytkownika {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Błąd zapisywania subskrypcji push: {e}")
+        return False
+
+def get_push_subscriptions(user_id=None):
+    """
+    Pobiera subskrypcje push z bazy danych
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if user_id:
+            cursor.execute("SELECT subscription_data FROM push_subscriptions WHERE user_id = ?", (user_id,))
+        else:
+            cursor.execute("SELECT user_id, subscription_data FROM push_subscriptions")
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        if user_id:
+            return json.loads(results[0][0]) if results else None
+        else:
+            return [(row[0], json.loads(row[1])) for row in results]
+            
+    except Exception as e:
+        logger.error(f"Błąd pobierania subskrypcji push: {e}")
+        return None
 
 # Konfiguracja Google OAuth - lazy loading (ładowanie na żądanie)
 def get_google_oauth():
@@ -621,6 +732,39 @@ def ensure_schedule_changes_table():
         
     except sqlite3.Error as e:
         logger.error(f"Błąd podczas tworzenia tabeli schedule_changes: {e}")
+        db.rollback()
+
+def ensure_push_subscriptions_table():
+    """Tworzy tabelę push_subscriptions jeśli nie istnieje"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        table_exists = db.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='push_subscriptions'
+        """).fetchone()
+        
+        if not table_exists:
+            # Utwórz nową tabelę
+            db.executescript("""
+                CREATE TABLE push_subscriptions (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  user_id TEXT NOT NULL,
+                  subscription_data TEXT NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+                CREATE INDEX IF NOT EXISTS idx_push_subscriptions_created_at ON push_subscriptions(created_at);
+            """)
+            db.commit()
+            logger.info("Utworzono tabelę push_subscriptions z indeksami")
+        else:
+            logger.info("Tabela push_subscriptions już istnieje")
+        
+    except sqlite3.Error as e:
+        logger.error(f"Błąd podczas tworzenia tabeli push_subscriptions: {e}")
         db.rollback()
         raise
 
@@ -1574,6 +1718,95 @@ def api_employees_link():
         logger.error(f"Błąd linkowania pracownika: {e}")
         return jsonify(error="database error"), 500
 
+# Web Push Notifications API
+@app.post("/api/push/subscribe")
+@login_required
+def subscribe_push():
+    """Zapisuje subskrypcję push dla użytkownika"""
+    try:
+        subscription = request.get_json()
+        user_id = session.get("user_email")
+        
+        if not subscription:
+            return jsonify(error="Brak danych subskrypcji"), 400
+        
+        if save_push_subscription(user_id, subscription):
+            return jsonify(message="Subskrypcja zapisana pomyślnie")
+        else:
+            return jsonify(error="Błąd zapisywania subskrypcji"), 500
+            
+    except Exception as e:
+        logger.error(f"Błąd subskrypcji push: {e}")
+        return jsonify(error="Błąd serwera"), 500
+
+@app.get("/api/push/vapid-key")
+def get_vapid_key():
+    """Zwraca klucz publiczny VAPID dla frontendu"""
+    try:
+        public_key = app.config.get('VAPID_PUBLIC_KEY')
+        if not public_key:
+            return jsonify(error="Brak konfiguracji VAPID"), 500
+        
+        return jsonify(public_key=public_key)
+    except Exception as e:
+        logger.error(f"Błąd pobierania klucza VAPID: {e}")
+        return jsonify(error="Błąd serwera"), 500
+
+@app.post("/api/push/send")
+@login_required
+def send_push_notification_api():
+    """Wysyła powiadomienie push do użytkownika (test)"""
+    try:
+        data = request.get_json()
+        title = data.get('title', 'Test powiadomienia')
+        body = data.get('body', 'To jest testowe powiadomienie')
+        
+        user_id = session.get("user_email")
+        subscription = get_push_subscriptions(user_id)
+        
+        if not subscription:
+            return jsonify(error="Brak subskrypcji push"), 400
+        
+        if send_push_notification(subscription, title, body):
+            return jsonify(message="Powiadomienie wysłane pomyślnie")
+        else:
+            return jsonify(error="Błąd wysyłania powiadomienia"), 500
+            
+    except Exception as e:
+        logger.error(f"Błąd wysyłania powiadomienia push: {e}")
+        return jsonify(error="Błąd serwera"), 500
+
+@app.post("/api/push/send-to-all")
+@login_required
+def send_push_to_all():
+    """Wysyła powiadomienie push do wszystkich użytkowników (tylko admin)"""
+    try:
+        # Sprawdź czy użytkownik jest administratorem
+        user_email = session.get("user_email")
+        if not is_admin_user(user_email):
+            return jsonify(error="Brak uprawnień"), 403
+        
+        data = request.get_json()
+        title = data.get('title', 'Ogłoszenie')
+        body = data.get('body', 'Nowe ogłoszenie w systemie')
+        
+        subscriptions = get_push_subscriptions()
+        success_count = 0
+        
+        for user_id, subscription in subscriptions:
+            if send_push_notification(subscription, title, body):
+                success_count += 1
+        
+        return jsonify(
+            message=f"Powiadomienia wysłane do {success_count} użytkowników",
+            sent_count=success_count,
+            total_count=len(subscriptions)
+        )
+        
+    except Exception as e:
+        logger.error(f"Błąd wysyłania powiadomień do wszystkich: {e}")
+        return jsonify(error="Błąd serwera"), 500
+
 # Authentication routes
 @app.get("/signin")
 def signin():
@@ -2256,6 +2489,7 @@ if __name__ == "__main__":
             ensure_swaps_table()
             ensure_unavailability_table()
             ensure_schedule_changes_table()
+            ensure_push_subscriptions_table()
             logger.info("Wszystkie tabele bazy danych zostały zainicjalizowane")
         except Exception as e:
             logger.error(f"Błąd podczas inicjalizacji tabel: {e}")
