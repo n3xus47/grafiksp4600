@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 from datetime import timedelta
 from functools import wraps
 
-from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response
+from flask import Flask, g, render_template, jsonify, request, redirect, url_for, session, abort, make_response, send_file
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
 import calendar
@@ -1977,6 +1977,254 @@ def debug_env():
         has_secret_key=bool(os.environ.get("SECRET_KEY")),
         environment=os.environ.get("FLASK_ENV", "development")
     )
+
+# --- Excel Export API -------------------------------------------------------------
+@app.get("/api/export/excel")
+def api_export_excel():
+    """Eksportuje grafik do pliku Excel - imiona u góry, dni po lewej"""
+    try:
+        logger.info(f"Excel export - user_id: {session.get('user_id')}, user_email: {session.get('user_email')}")
+        logger.info(f"Excel export - session data: {dict(session)}")
+        
+        # Sprawdź czy użytkownik jest zalogowany
+        if not session.get("user_id"):
+            logger.warning("Excel export - użytkownik nie jest zalogowany")
+            return redirect(url_for("signin"))
+        
+        # Sprawdź uprawnienia admin
+        db = get_db()
+        user_role_row = db.execute("SELECT role FROM users WHERE id=?", (session["user_id"],)).fetchone()
+        user_role = user_role_row["role"] if user_role_row and user_role_row["role"] else "USER"
+        
+        if user_role != "ADMIN":
+            logger.warning(f"Excel export - użytkownik {session['user_id']} nie ma uprawnień admin (rola: {user_role})")
+            return jsonify(error="Brak uprawnień administratora"), 403
+        
+        logger.info(f"Excel export - użytkownik {session['user_id']} ma uprawnienia admin")
+        
+        # Import bibliotek
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from datetime import datetime
+        import io
+        import calendar
+        
+        # Pobierz parametry miesiąca z URL
+        year = int(request.args.get('year', datetime.now().year))
+        month = int(request.args.get('month', datetime.now().month))
+        
+        db = get_db()
+        
+        # Pobierz listę pracowników z licznikami zmian
+        employees = db.execute("SELECT id, name FROM employees ORDER BY name").fetchall()
+        
+        # Dodaj liczniki zmian dla każdego pracownika
+        employees_with_counts = []
+        for employee in employees:
+            # Policz zmiany dla tego pracownika w bieżącym miesiącu
+            shift_count = db.execute("""
+                SELECT COUNT(*) as count 
+                FROM shifts 
+                WHERE employee_id = ? 
+                AND date LIKE ?
+            """, (employee["id"], f"{year:04d}-{month:02d}-%")).fetchone()
+            
+            count = shift_count["count"] if shift_count else 0
+            display_name = f"{employee['name']} ({count})" if employee["name"] else ""
+            
+            employees_with_counts.append({
+                "id": employee["id"],
+                "name": employee["name"],
+                "display_name": display_name,
+                "shift_count": count
+            })
+        
+        # Pobierz wszystkie zmiany dla danego miesiąca
+        month_pattern = f"{year:04d}-{month:02d}-%"
+        shifts_data = db.execute("""
+            SELECT s.date, s.shift_type, e.name as employee_name, e.id as employee_id
+            FROM shifts s
+            JOIN employees e ON s.employee_id = e.id
+            WHERE s.date LIKE ?
+            ORDER BY s.date, e.name
+        """, (month_pattern,)).fetchall()
+        
+        # Utwórz słownik zmian dla łatwego dostępu
+        shifts_dict = {}
+        for shift in shifts_data:
+            date = shift['date']
+            employee_name = shift['employee_name']
+            if date not in shifts_dict:
+                shifts_dict[date] = {}
+            shifts_dict[date][employee_name] = shift['shift_type']
+        
+        # Utwórz nowy skoroszyt
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Grafik SP4600"
+        
+        # Style
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_fill = PatternFill(start_color="2E7D32", end_color="2E7D32", fill_type="solid")
+        date_font = Font(bold=True, size=11)
+        date_fill = PatternFill(start_color="E8F5E8", end_color="E8F5E8", fill_type="solid")
+        border = Border(
+            left=Side(style='thin', color='000000'),
+            right=Side(style='thin', color='000000'),
+            top=Side(style='thin', color='000000'),
+            bottom=Side(style='thin', color='000000')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Nazwy miesięcy po polsku
+        month_names = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+                      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień']
+        month_label = f"{month_names[month]} {year}"
+        
+        # Tytuł główny
+        ws['A1'] = f"Grafik zmian pracowników SP4600 - {month_label}"
+        ws['A1'].font = Font(bold=True, size=16)
+        
+        # Scal komórki dla tytułu
+        total_cols = len(employees_with_counts) + 3  # +3 dla DZIEŃ, DATA, LICZNIK
+        ws.merge_cells(f'A1:{get_column_letter(total_cols)}1')
+        
+        # Nagłówek pierwszej kolumny (dni)
+        ws['A3'] = "DZIEŃ"
+        ws['A3'].font = header_font
+        ws['A3'].fill = header_fill
+        ws['A3'].alignment = center_alignment
+        ws['A3'].border = border
+        
+        # Nagłówek drugiej kolumny (data)
+        ws['B3'] = "DATA"
+        ws['B3'].font = header_font
+        ws['B3'].fill = header_fill
+        ws['B3'].alignment = center_alignment
+        ws['B3'].border = border
+        
+        # Nagłówek trzeciej kolumny (licznik - tylko dla admin)
+        ws['C3'] = "LICZNIK"
+        ws['C3'].font = header_font
+        ws['C3'].fill = header_fill
+        ws['C3'].alignment = center_alignment
+        ws['C3'].border = border
+        
+        # Nagłówki kolumn - imiona pracowników z licznikami
+        col = 4  # Zaczynamy od kolumny D (4)
+        for employee in employees_with_counts:
+            cell = ws.cell(row=3, column=col, value=employee['display_name'])
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+            col += 1
+        
+        # Generuj wszystkie dni miesiąca
+        days_in_month = calendar.monthrange(year, month)[1]
+        day_names = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie']
+        
+        # Wypełnij dane - każdy wiersz to jeden dzień
+        row = 4
+        for day in range(1, days_in_month + 1):
+            date_str = f"{year:04d}-{month:02d}-{day:02d}"
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            day_name = day_names[date_obj.weekday()]
+            
+            # Pierwsza kolumna - dzień miesiąca
+            cell = ws.cell(row=row, column=1, value=f"{day:02d} ({day_name})")
+            cell.font = date_font
+            cell.fill = date_fill
+            cell.alignment = center_alignment
+            cell.border = border
+            
+            # Druga kolumna - data
+            cell = ws.cell(row=row, column=2, value=date_str)
+            cell.font = date_font
+            cell.fill = date_fill
+            cell.alignment = center_alignment
+            cell.border = border
+            
+            # Trzecia kolumna - licznik zmian (tylko dla admin)
+            # Policz zmiany dla tego dnia
+            day_shifts = shifts_dict.get(date_str, {})
+            dniowka_count = sum(1 for shift in day_shifts.values() if 'DNIOWKA' in shift)
+            popoludniowka_count = sum(1 for shift in day_shifts.values() if 'POPOLUDNIOWKA' in shift or shift.startswith('P '))
+            nocka_count = sum(1 for shift in day_shifts.values() if 'NOCKA' in shift)
+            
+            licznik_text = f"D:{dniowka_count} P:{popoludniowka_count} N:{nocka_count}"
+            cell = ws.cell(row=row, column=3, value=licznik_text)
+            cell.font = date_font
+            cell.fill = date_fill
+            cell.alignment = center_alignment
+            cell.border = border
+            
+            # Wypełnij zmiany dla każdego pracownika w tym dniu
+            col = 4  # Zaczynamy od kolumny D (4)
+            for employee in employees_with_counts:
+                employee_name = employee['name']
+                
+                # Sprawdź czy pracownik ma zmianę w tym dniu
+                shift_type = shifts_dict.get(date_str, {}).get(employee_name, "")
+                
+                # Kolorowanie w zależności od typu zmiany
+                if shift_type:
+                    if 'DNIOWKA' in shift_type:
+                        fill_color = "E3F2FD"  # Jasny niebieski
+                    elif 'NOCKA' in shift_type:
+                        fill_color = "F3E5F5"  # Jasny fioletowy
+                    elif 'POPOLUDNIOWKA' in shift_type or shift_type.startswith('P '):
+                        fill_color = "E8F5E8"  # Jasny zielony
+                    else:
+                        fill_color = "FFF3E0"  # Jasny pomarańczowy
+                else:
+                    fill_color = "FFFFFF"  # Biały
+                
+                cell = ws.cell(row=row, column=col, value=shift_type)
+                cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                cell.border = border
+                cell.alignment = center_alignment
+                col += 1
+            
+            row += 1
+        
+        # Dostosuj szerokość kolumn
+        ws.column_dimensions['A'].width = 18  # Kolumna z datami
+        ws.column_dimensions['B'].width = 12  # Kolumna z datą
+        ws.column_dimensions['C'].width = 15  # Kolumna z licznikiem
+        for col in range(4, len(employees_with_counts) + 4):
+            ws.column_dimensions[get_column_letter(col)].width = 15
+        
+        # Zamroź pierwsze wiersze (tytuł i nagłówki)
+        ws.freeze_panes = 'D4'  # Zamroź kolumny A, B, C
+        
+        # Zapisz do BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        # Przygotuj nazwę pliku (bez polskich znaków)
+        safe_month_label = month_label.replace('ą', 'a').replace('ć', 'c').replace('ę', 'e').replace('ł', 'l').replace('ń', 'n').replace('ó', 'o').replace('ś', 's').replace('ź', 'z').replace('ż', 'z')
+        filename = f"grafik_sp4600_{safe_month_label.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        logger.info(f"Excel export completed: {filename}")
+        
+        response = make_response(excel_buffer.getvalue())
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{filename}'
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
+        
+    except ImportError:
+        logger.error("Biblioteka openpyxl nie jest zainstalowana")
+        return jsonify(error="Biblioteka openpyxl nie jest zainstalowana. Zainstaluj: pip install openpyxl"), 500
+    except Exception as e:
+        logger.error(f"Błąd podczas eksportu do Excel: {e}")
+        return jsonify(error=f"Wystąpił błąd podczas eksportu do Excel: {str(e)}"), 500
 
 # --- Main --------------------------------------------------------------------
 if __name__ == "__main__":

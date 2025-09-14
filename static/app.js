@@ -785,7 +785,8 @@ document.addEventListener('DOMContentLoaded', function() {
           fetch('/api/swaps', { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }) 
+            body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }),
+            credentials: 'include'
           })
           .then(r => r.json())
           .then(data => { 
@@ -827,7 +828,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/swaps', { 
           method: 'POST', 
           headers: {'Content-Type': 'application/json'}, 
-          body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }) 
+          body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }),
+          credentials: 'include'
         })
         .then(r => r.json())
         .then(data => { 
@@ -1032,7 +1034,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/save', {
       method: 'POST', 
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ changes })
+      body: JSON.stringify({ changes }),
+      credentials: 'include'
     })
     .then(response => response.json())
     .then(data => {
@@ -1224,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function loadEmployees() {
-    fetch('/api/employees')
+    fetch('/api/employees', { credentials: 'include' })
       .then(response => response.json())
       .then(data => { 
         if (data.error) {
@@ -1282,7 +1285,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/employees', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ code, name }) 
+      body: JSON.stringify({ code, name }),
+      credentials: 'include'
     })
     .then(async r => { 
       const data = await r.json().catch(() => ({})); 
@@ -1335,8 +1339,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadSwaps() {
     // Ładuj zarówno prośby o zamianę jak i niedyspozycje
     Promise.all([
-      fetch('/api/swaps/inbox').then(r => r.json()),
-      fetch('/api/unavailability/inbox').then(r => r.json())
+      fetch('/api/swaps/inbox', { credentials: 'include' }).then(r => r.json()),
+      fetch('/api/unavailability/inbox', { credentials: 'include' }).then(r => r.json())
     ])
     .then(([swapsData, unavailData]) => {
       if (swapsData.error) {
@@ -1483,7 +1487,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps/respond', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ id, status }) 
+      body: JSON.stringify({ id, status }),
+      credentials: 'include'
     })
     .then(response => response.json())
     .then(data => {
@@ -1504,7 +1509,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps/boss', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ id, status }) 
+      body: JSON.stringify({ id, status }),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -1555,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (swapEditor) swapEditor.addEventListener('click', (e) => { if (e.target === swapEditor) closeSwaps(); });
   if (swapClear) swapClear.addEventListener('click', () => { 
     if (confirm('Czy na pewno chcesz wyczyścić wszystkie prośby o zamianę?')) {
-      fetch('/api/swaps/clear', { method: 'POST' })
+      fetch('/api/swaps/clear', { method: 'POST', credentials: 'include' })
         .then(response => response.json())
         .then(data => {
           if (data.error) {
@@ -1890,7 +1896,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       const data = await r.json().catch(() => ({})); 
@@ -1970,7 +1977,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -2081,7 +2089,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -2163,7 +2172,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -2247,7 +2257,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -2612,7 +2623,8 @@ document.addEventListener('DOMContentLoaded', function() {
           month_year: monthInput.value,
           selected_days: selectedDays,
           comment: ''
-        })
+        }),
+        credentials: 'include'
       });
       
       const result = await response.json();
@@ -2647,7 +2659,8 @@ document.addEventListener('DOMContentLoaded', function() {
           id: id,
           status: status,
           boss_comment: ''
-        })
+        }),
+        credentials: 'include'
       });
       
       const result = await response.json();
@@ -2717,15 +2730,15 @@ async function initializeNotifications() {
 async function checkForNewRequests() {
   try {
     // Sprawdź prośby o zamianę
-    const swapsResponse = await fetch('/api/swaps/inbox');
+    const swapsResponse = await fetch('/api/swaps/inbox', { credentials: 'include' });
     const swapsData = await swapsResponse.json();
     
     // Sprawdź niedyspozycje
-    const unavailabilityResponse = await fetch('/api/unavailability/inbox');
+    const unavailabilityResponse = await fetch('/api/unavailability/inbox', { credentials: 'include' });
     const unavailabilityData = await unavailabilityResponse.json();
     
     // Sprawdź zmiany w grafiku
-    const scheduleResponse = await fetch('/api/schedule/changes');
+    const scheduleResponse = await fetch('/api/schedule/changes', { credentials: 'include' });
     const scheduleData = await scheduleResponse.json();
     
     let hasChanges = false;
@@ -2976,6 +2989,110 @@ function testNotification() {
 async function checkStatusChanges() {
   console.log('Sprawdzam zmiany statusów...');
   await checkForNewRequests();
+}
+
+// Funkcja eksportu do Excel (tylko dla adminów)
+function exportToExcel(event) {
+  console.log('Rozpoczynam eksport do Excel...');
+  
+  // Pokaż loading
+  const button = event ? event.target : document.querySelector('button[onclick*="exportToExcel"]');
+  if (!button) {
+    console.error('Nie znaleziono przycisku eksportu');
+    return;
+  }
+  
+  const originalText = button.textContent;
+  button.textContent = '⏳ EKSPORTUJĘ...';
+  button.disabled = true;
+  
+  // Pobierz aktualny miesiąc i rok z URL lub użyj bieżący miesiąc
+  const urlParams = new URLSearchParams(window.location.search);
+  const year = urlParams.get('year') ? parseInt(urlParams.get('year')) : new Date().getFullYear();
+  const month = urlParams.get('month') ? parseInt(urlParams.get('month')) : new Date().getMonth() + 1;
+  
+  console.log(`Eksportuję dla roku: ${year}, miesiąca: ${month}`);
+  
+  // Wywołaj API eksportu z parametrami miesiąca
+  fetch(`/api/export/excel?year=${year}&month=${month}`, {
+    method: 'GET',
+    credentials: 'include',  // Wysyłaj cookies sesji
+    headers: {
+      'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+  })
+    .then(response => {
+      console.log('Response status:', response.status);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
+      if (!response.ok) {
+        return response.text().then(text => {
+          console.error('Error response body:', text);
+          throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+        });
+      }
+      
+      // Sprawdź czy to jest plik Excel
+      const contentType = response.headers.get('Content-Type');
+      console.log('Content-Type:', contentType);
+      
+      if (!contentType || !contentType.includes('spreadsheetml')) {
+        return response.text().then(text => {
+          console.error('Unexpected content type:', contentType);
+          console.error('Response body:', text);
+          throw new Error(`Oczekiwano pliku Excel, otrzymano: ${contentType}`);
+        });
+      }
+      
+      // Pobierz nazwę pliku z nagłówka Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `grafik_sp4600_${year}_${month}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      console.log('Nazwa pliku:', filename);
+      
+      return response.blob().then(blob => {
+        console.log('Rozmiar blob:', blob.size, 'bytes');
+        return { blob, filename };
+      });
+    })
+    .then(({ blob, filename }) => {
+      if (blob.size === 0) {
+        throw new Error('Pobrany plik jest pusty');
+      }
+      
+      // Utwórz link do pobrania
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Wyczyść
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+      
+      console.log('Eksport do Excel zakończony pomyślnie, plik:', filename);
+      alert(`Plik ${filename} został pobrany pomyślnie!`);
+    })
+    .catch(error => {
+      console.error('Błąd podczas eksportu do Excel:', error);
+      alert(`Wystąpił błąd podczas eksportu do Excel: ${error.message}`);
+    })
+    .finally(() => {
+      // Przywróć przycisk
+      button.textContent = originalText;
+      button.disabled = false;
+    });
 }
 
 // Sprawdź zmiany statusów po załadowaniu strony
