@@ -133,15 +133,19 @@ def save_push_subscription(user_id, subscription):
     Zapisuje subskrypcję push w bazie danych
     """
     try:
+        logger.info(f"Zapisywanie subskrypcji push - user_id: {user_id}, subscription: {subscription}")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Sprawdź czy użytkownik już ma subskrypcję
         cursor.execute("SELECT id FROM push_subscriptions WHERE user_id = ?", (user_id,))
         existing = cursor.fetchone()
+        logger.info(f"Istniejąca subskrypcja: {existing}")
         
         if existing:
             # Aktualizuj istniejącą subskrypcję
+            logger.info("Aktualizuję istniejącą subskrypcję")
             cursor.execute("""
                 UPDATE push_subscriptions 
                 SET subscription_data = ?, updated_at = CURRENT_TIMESTAMP 
@@ -149,6 +153,7 @@ def save_push_subscription(user_id, subscription):
             """, (json.dumps(subscription), user_id))
         else:
             # Utwórz nową subskrypcję
+            logger.info("Tworzę nową subskrypcję")
             cursor.execute("""
                 INSERT INTO push_subscriptions (user_id, subscription_data, created_at, updated_at)
                 VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -161,6 +166,7 @@ def save_push_subscription(user_id, subscription):
         
     except Exception as e:
         logger.error(f"Błąd zapisywania subskrypcji push: {e}")
+        logger.error(f"Szczegóły błędu: {type(e).__name__}: {str(e)}")
         return False
 
 def get_push_subscriptions(user_id=None):
@@ -1775,8 +1781,15 @@ def subscribe_push():
         subscription = request.get_json()
         user_id = session.get("user_id")
         
+        logger.info(f"Push subscribe - user_id: {user_id}, subscription: {subscription}")
+        
         if not subscription:
+            logger.error("Brak danych subskrypcji")
             return jsonify(error="Brak danych subskrypcji"), 400
+        
+        if not user_id:
+            logger.error("Brak user_id w sesji")
+            return jsonify(error="Brak user_id w sesji"), 400
         
         # Walidacja danych subskrypcji
         required_fields = ['endpoint', 'keys']
