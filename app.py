@@ -2644,14 +2644,15 @@ def send_schedule_change_notifications(changes, changed_by_email):
         
         # Wyślij powiadomienia do każdego pracownika
         for employee_name, employee_changes in changes_by_employee.items():
-            # Znajdź user_id pracownika
+            # Znajdź user_id pracownika - używamy employees.user_id zamiast users.id
             db = get_db()
             cursor = db.cursor()
-            cursor.execute("SELECT id FROM users WHERE name = ?", (employee_name,))
+            cursor.execute("SELECT user_id FROM employees WHERE name = ?", (employee_name,))
             result = cursor.fetchone()
             
             if result:
                 user_id = result[0]
+                logger.info(f"Szukam subskrypcji push dla {employee_name} (user_id={user_id})")
                 subscription = get_push_subscriptions(user_id)
                 
                 if subscription:
