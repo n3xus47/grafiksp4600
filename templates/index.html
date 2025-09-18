@@ -190,6 +190,41 @@
         </div>
       </section>
 
+      <!-- Pasek z informacjami o jutrzejszych zmianach (pod tabelą) -->
+      <section class="tomorrow-bar">
+        <div class="tomorrow-content">
+          <div class="tomorrow-section">
+            <h3>DNIÓWKA</h3>
+            <div id="list-d-tomorrow">
+              {% if shifts_tomorrow.dniowka %}
+                <ul>{% for name in shifts_tomorrow.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+          <div class="tomorrow-section">
+            <h3>POPOŁUDNIÓWKA</h3>
+            <div id="list-p-tomorrow">
+              {% if shifts_tomorrow.popoludniowka %}
+                <ul>{% for name in shifts_tomorrow.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+          <div class="tomorrow-section">
+            <h3>NOCKA</h3>
+            <div id="list-n-tomorrow">
+              {% if shifts_tomorrow.nocka %}
+                <ul>{% for name in shifts_tomorrow.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
+              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+            </div>
+          </div>
+        </div>
+        <!-- Kontener dla przycisków akcji w trybie edycji -->
+        <div id="tomorrow-actions" class="tomorrow-actions hidden">
+          <button id="save-tomorrow" class="btn">Zapisz</button>
+          <button id="cancel-tomorrow" class="btn">Anuluj</button>
+        </div>
+      </section>
+
       <!-- Prawy panel (rozszerzony na całą szerokość) -->
       <section class="card right-panel full-width">
         <h2 class="center">Funkcje</h2>
