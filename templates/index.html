@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Grafik zmian pracowników</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="manifest" href="/static/manifest.json">
+  <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}">
+  <link rel="manifest" href="/static/manifest.json?v={{ range(1000000, 9999999) | random }}">
   <meta name="theme-color" content="#d32f2f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -36,6 +36,11 @@
 
   <main class="wrap">
     <div class="grid3-vertical">
+      <!-- Nagłówek dla dzisiejszych zmian -->
+      <div class="shift-header today-header">
+        <h2>DZISIAJ</h2>
+      </div>
+      
       <!-- Pasek z informacjami o dzisiejszych zmianach (na górze) -->
       <section class="today-bar">
         <div class="today-content">
@@ -190,7 +195,12 @@
         </div>
       </section>
 
-      <!-- Pasek z informacjami o jutrzejszych zmianach (pod tabelą) -->
+      <!-- Nagłówek dla jutrzejszych zmian -->
+      <div class="shift-header tomorrow-header">
+        <h2>JUTRO</h2>
+      </div>
+      
+      <!-- Panel jutrzejszych zmian (pod tabelą, nad funkcjami) -->
       <section class="tomorrow-bar">
         <div class="tomorrow-content">
           <div class="tomorrow-section">
@@ -230,14 +240,17 @@
         <h2 class="center">Funkcje</h2>
         <div class="stack">
           {% if is_admin %}
-          <button id="btn-swaps-admin" class="btn w100">SKRZYNKA PRÓŚB</button>
+          <button id="btn-swaps-admin" class="btn w100">SKRZYNKA</button>
           <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
           <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
           <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
+          <button onclick="exportToExcel(event)" class="btn w100" style="background: #4caf50;">📊 EKSPORT DO EXCEL</button>
+          <button onclick="forcePageRefresh()" class="btn w100" style="background: #ff9800;">🔄 ODŚWIEŻ CACHE</button>
           {% else %}
-          <button id="btn-swaps-user" class="btn w100">SKRZYNKA PRÓŚB</button>
-          <button id="btn-compose" class="btn w100">WYŚLIJ PROŚBĘ O ZAMIANĘ</button>
-          <button id="btn-give" class="btn w100">ODDAJ SWOJĄ ZMIANĘ</button>
+          <button id="btn-swaps-user" class="btn w100">SKRZYNKA</button>
+          <button id="btn-unavailability" class="btn w100">ZGŁOŚ NIEDYSPOZYCJE</button>
+          <button id="btn-shifts" class="btn w100">ZMIANY</button>
+          <button onclick="forcePageRefresh()" class="btn w100" style="background: #ff9800;">🔄 ODŚWIEŻ CACHE</button>
           {% endif %}
         </div>
 
@@ -270,7 +283,7 @@
   <div id="swap-editor" class="emp-editor">
     <div class="emp-container">
       <button type="button" id="swap-close" class="emp-close" aria-label="Zamknij">✕</button>
-      <div class="emp-head">Skrzynka próśb</div>
+      <div class="emp-head">Skrzynka</div>
       <div class="emp-add emp-add-right">
         <button id="swap-clear" class="btn swap-clear-btn">Wyczyść</button>
       </div>
@@ -278,102 +291,139 @@
     </div>
   </div>
 
-  <!-- Formularz składania prośby o zamianę -->
-  <div id="compose-editor" class="emp-editor">
+  <!-- Zunifikowany panel zmian -->
+  <div id="shifts-editor" class="emp-editor">
     <div class="emp-container">
-      <button type="button" id="compose-close" class="emp-close" aria-label="Zamknij">✕</button>
-      <div class="emp-head">Wyślij prośbę o zamianę</div>
+      <button type="button" id="shifts-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Zarządzanie zmianami</div>
       
-      <div class="compose-section">
-        <h4>Twoja zmiana</h4>
-        <div class="emp-add">
-          <input id="compose-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-          <select id="compose-from-date">
-            <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-          </select>
+      <!-- Wybór typu operacji -->
+      <div class="shift-type-selector">
+        <div class="shift-type-options">
+          <label class="shift-type-option">
+            <input type="radio" name="shift-type" value="swap" checked>
+            <span class="shift-type-label">
+              <strong>Zamiana</strong>
+              <small>Wymień się zmianami z innym pracownikiem</small>
+            </span>
+          </label>
+          <label class="shift-type-option">
+            <input type="radio" name="shift-type" value="give">
+            <span class="shift-type-label">
+              <strong>Oddanie</strong>
+              <small>Oddaj swoją zmianę innemu pracownikowi</small>
+            </span>
+          </label>
+          <label class="shift-type-option">
+            <input type="radio" name="shift-type" value="take">
+            <span class="shift-type-label">
+              <strong>Zabranie</strong>
+              <small>Poproś o przejęcie czyjejś zmiany</small>
+            </span>
+          </label>
         </div>
       </div>
       
-      <div class="compose-section">
-        <h4>Zmiana do przejęcia</h4>
-        <div class="emp-add">
-          <select id="compose-to-name">
-            <option value="" disabled selected>Wybierz osobę</option>
-            {% for emp in employees %}
-              {% if emp.name != (current_emp_name or current_user) %}
-                <option value="{{ emp.name }}">{{ emp.name }}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
-          <select id="compose-to-date">
-            <option value="" disabled selected>Najpierw wybierz osobę</option>
-          </select>
+      <!-- Formularz zamiany -->
+      <div id="swap-form" class="shift-form active">
+        <div class="compose-section">
+          <h4>Twoja zmiana</h4>
+          <div class="emp-add">
+            <input id="shifts-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+            <select id="shifts-from-date">
+              <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="compose-section">
+          <h4>Zmiana do przejęcia</h4>
+          <div class="emp-add">
+            <select id="shifts-to-name">
+              <option value="" disabled selected>Wybierz osobę</option>
+              {% for emp in employees %}
+                {% if emp.name != (current_emp_name or current_user) %}
+                  <option value="{{ emp.name }}">{{ emp.name }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <select id="shifts-to-date">
+              <option value="" disabled selected>Najpierw wybierz osobę</option>
+            </select>
+          </div>
         </div>
       </div>
       
+      <!-- Formularz oddania -->
+      <div id="give-form" class="shift-form">
+        <div class="compose-section">
+          <h4>Twoja zmiana do oddania</h4>
+          <div class="emp-add">
+            <input id="shifts-give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
+            <select id="shifts-give-from-date">
+              <option value="" disabled selected>Wybierz datę swojej zmiany</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="compose-section">
+          <h4>Osoba do której oddajesz</h4>
+          <div class="emp-add">
+            <select id="shifts-give-to-name">
+              <option value="" disabled selected>Wybierz osobę</option>
+              {% for emp in employees %}
+                {% if emp.name != (current_emp_name or current_user) %}
+                  <option value="{{ emp.name }}">{{ emp.name }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Formularz zabrania -->
+      <div id="take-form" class="shift-form">
+        <div class="compose-section">
+          <h4>Osoba od której chcesz zabrać zmianę</h4>
+          <div class="emp-add">
+            <select id="shifts-take-from-name">
+              <option value="" disabled selected>Wybierz osobę</option>
+              {% for emp in employees %}
+                {% if emp.name != (current_emp_name or current_user) %}
+                  <option value="{{ emp.name }}">{{ emp.name }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <select id="shifts-take-from-date">
+              <option value="" disabled selected>Najpierw wybierz osobę</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Komentarz (wspólny dla wszystkich formularzy) -->
       <div class="compose-section">
         <h4>Komentarz (opcjonalny)</h4>
         <div class="emp-add">
-          <textarea id="compose-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
+          <textarea id="shifts-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
         </div>
       </div>
       
+      <!-- Przyciski akcji -->
       <div class="compose-actions">
-        <button id="compose-send" class="btn btn-primary">Wyślij prośbę</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Formularz oddawania zmiany -->
-  <div id="give-editor" class="emp-editor">
-    <div class="emp-container">
-      <button type="button" id="give-close" class="emp-close" aria-label="Zamknij">✕</button>
-      <div class="emp-head">Oddaj swoją zmianę</div>
-      
-      <div class="compose-section">
-        <h4>Twoja zmiana do oddania</h4>
-        <div class="emp-add">
-          <input id="give-from-name" placeholder="Twoje imię" value="{{ current_emp_name or current_user }}" readonly />
-          <select id="give-from-date">
-            <option value="" disabled selected>Wybierz datę swojej zmiany</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="compose-section">
-        <h4>Osoba do której oddajesz</h4>
-        <div class="emp-add">
-          <select id="give-to-name">
-            <option value="" disabled selected>Wybierz osobę</option>
-            {% for emp in employees %}
-              {% if emp.name != (current_emp_name or current_user) %}
-                <option value="{{ emp.name }}">{{ emp.name }}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      
-      <div class="compose-section">
-        <h4>Komentarz (opcjonalny)</h4>
-        <div class="emp-add">
-          <textarea id="give-comment" placeholder="Dodaj komentarz do prośby..." rows="3"></textarea>
-        </div>
-      </div>
-      
-      <div class="compose-actions">
-        <button id="give-send" class="btn btn-primary">Oddaj zmianę</button>
+        <button id="shifts-send" class="btn">Wyślij prośbę</button>
+        <button id="shifts-cancel" class="btn btn-secondary">Anuluj</button>
       </div>
     </div>
   </div>
 
   <!-- Skrypt JavaScript -->
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v={{ range(1000000, 9999999) | random }}"></script>
   
   <!-- Inicjalizacja danych o zmianach -->
   <script>
     // Załaduj dane o zmianach z backendu
-    const shiftsData = {{ shifts_by_date | tojson }};
+    const shiftsData = {{ shifts_by_date | tojson | safe }};
     
     // Przetwórz każdą datę
     Object.keys(shiftsData).forEach(date => {
@@ -406,5 +456,38 @@
       });
     });
   </script>
+
+  <!-- Modal do zgłaszania niedyspozycji -->
+  <div id="unavailability-modal" class="emp-editor" tabindex="-1">
+    <div class="emp-container">
+      <button type="button" id="unavailability-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Zgłoś niedyspozycje</div>
+      
+      <div class="unavailability-content">
+        <div class="month-selector">
+          <div class="month-navigation">
+            <button type="button" id="unavailability-prev-month" class="nav-btn" aria-label="Poprzedni miesiąc">&#x25C0;</button>
+            <span id="unavailability-month-label" class="month-label">Styczeń 2024</span>
+            <button type="button" id="unavailability-next-month" class="nav-btn" aria-label="Następny miesiąc">&#x25B6;</button>
+          </div>
+          <input type="month" id="unavailability-month" readonly style="display: none;" />
+        </div>
+        
+        <div class="calendar-container">
+          <div id="unavailability-calendar" class="mini-calendar"></div>
+        </div>
+        
+        <div class="selected-days">
+          <h4>Wybrane dni:</h4>
+          <div id="selected-days-list"></div>
+        </div>
+        
+        <div class="unavailability-actions">
+          <button id="unavailability-submit" class="btn">Wyślij zgłoszenie</button>
+          <button id="unavailability-cancel" class="btn btn-secondary">Anuluj</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

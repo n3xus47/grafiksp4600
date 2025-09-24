@@ -1269,47 +1269,6 @@ def index():
         shifts_today["nocka"] = shifts_today.get("NOCKA", [])
         shifts_today["popoludniowka"] = shifts_today.get("POPOLUDNIOWKA", [])
         
-        # Get tomorrow's shifts
-        tomorrow = (dt.datetime.now() + dt.timedelta(days=1)).strftime('%Y-%m-%d')
-        tomorrow_shifts = db.execute("""
-            SELECT e.name, s.shift_type
-            FROM shifts s 
-            JOIN employees e ON s.employee_id = e.id 
-            WHERE s.date = ?
-        """, (tomorrow,)).fetchall()
-        
-        # Przygotuj shifts_tomorrow dynamicznie dla wszystkich typów zmian
-        shifts_tomorrow = {}
-        for shift in tomorrow_shifts:
-            shift_type = shift["shift_type"]
-            
-            # Mapuj międzyzmiany (P 10-22) do kategorii POPOLUDNIOWKA
-            if shift_type and shift_type.startswith('P '):
-                category = "POPOLUDNIOWKA"
-                # Wyciągnij godziny z międzyzmiany (P 10-22 -> 10-22)
-                hours = shift_type[2:] if len(shift_type) > 2 else ""
-                display_name = f"{shift['name']} ({hours})" if hours else shift['name']
-            else:
-                category = shift_type
-                display_name = shift["name"]
-                
-            if category not in shifts_tomorrow:
-                shifts_tomorrow[category] = []
-            shifts_tomorrow[category].append(display_name)
-        
-        # Upewnij się, że standardowe typy istnieją (dla kompatybilności z frontendem)
-        if "DNIOWKA" not in shifts_tomorrow:
-            shifts_tomorrow["DNIOWKA"] = []
-        if "NOCKA" not in shifts_tomorrow:
-            shifts_tomorrow["NOCKA"] = []
-        if "POPOLUDNIOWKA" not in shifts_tomorrow:
-            shifts_tomorrow["POPOLUDNIOWKA"] = []
-        
-        # Dodaj małe litery dla template (kompatybilność z frontendem)
-        shifts_tomorrow["dniowka"] = shifts_tomorrow.get("DNIOWKA", [])
-        shifts_tomorrow["nocka"] = shifts_tomorrow.get("NOCKA", [])
-        shifts_tomorrow["popoludniowka"] = shifts_tomorrow.get("POPOLUDNIOWKA", [])
-        
         # Generate calendar days for the month with proper structure
         import datetime as dt_module
         
@@ -1471,7 +1430,6 @@ def index():
         
         response = make_response(render_template("index.html", 
             shifts_today=shifts_today,
-            shifts_tomorrow=shifts_tomorrow,
             month_label=str(month_label),
             prev_year=int(prev_year), prev_month=int(prev_month),
             next_year=int(next_year), next_month=int(next_month),
