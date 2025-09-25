@@ -1,10 +1,14 @@
 /**
  * Aplikacja do zarządzania grafikiem zmian pracowników
  * Główny plik JavaScript z funkcjonalnością edycji, zarządzania pracownikami i próśbami o zamianę
+ * 
+ * Ten plik zawiera całą logikę frontend - edycję grafików, zarządzanie pracownikami,
+ * system wymian, powiadomienia PWA i inne funkcje interfejsu użytkownika.
  */
 
 (function(){
-  // Debouncing utility
+  // Funkcja debounce - opóźnia wykonanie funkcji o określony czas
+  // Używana żeby nie wykonywać funkcji zbyt często (np. przy wpisywaniu w pole tekstowe)
   function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -17,16 +21,35 @@
     };
   }
 
-  // Funkcja aktualizacji zegara
+  // Funkcja aktualizacji zegara - pokazuje aktualną datę i czas
   function updateClock() {
     const now = new Date();
-    const tz = 'Europe/Warsaw';
-    const datePart = now.toLocaleDateString('pl-PL', {
+    const tz = 'Europe/Warsaw';  // Strefa czasowa Polski
+    
+    // Sprawdź czy to telefon (szerokość < 600px) - na telefonach mniej miejsca
+    const isMobile = window.innerWidth < 600;
+    
+    let datePart, timePart;
+    
+    if (isMobile) {
+      // Krótka wersja dla telefonów - tylko dzień, miesiąc i godzina
+      datePart = now.toLocaleDateString('pl-PL', {
+        day: '2-digit', month: '2-digit', timeZone: tz
+      });
+      timePart = now.toLocaleTimeString('pl-PL', {
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz
+      });
+    } else {
+      // Pełna wersja dla większych ekranów - dzień tygodnia, data i godzina
+      datePart = now.toLocaleDateString('pl-PL', {
       weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: tz
     });
-    const timePart = now.toLocaleTimeString('pl-PL', {
+      timePart = now.toLocaleTimeString('pl-PL', {
       hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz
     });
+    }
+    
+    // Znajdź element zegara na stronie i zaktualizuj go
     const clockElement = document.getElementById('clock');
     if (clockElement) {
       clockElement.textContent = `${datePart} ${timePart}`;
@@ -37,16 +60,134 @@
   updateClock();
   setInterval(updateClock, 1000);
   
+  // Aktualizuj zegar przy zmianie rozmiaru okna
+  window.addEventListener('resize', updateClock);
+  
+  // PWA Install Banner
+  let deferredPrompt;
+  let installBannerShown = false;
+
+  // Wyświetl banner instalacji PWA
+  function showInstallBanner() {
+    if (installBannerShown || window.matchMedia('(display-mode: standalone)').matches) {
+      return; // Nie pokazuj jeśli już pokazano lub aplikacja jest już zainstalowana
+    }
+
+    const banner = document.createElement('div');
+    banner.id = 'pwa-install-banner';
+    banner.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #d32f2f, #ff5722);
+        color: white;
+        padding: 16px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+          ">📱</div>
+          <div>
+            <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">Zainstaluj aplikację</div>
+            <div style="font-size: 14px; opacity: 0.9;">Dostęp offline i powiadomienia</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="pwa-install-dismiss" style="
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+          ">Później</button>
+          <button id="pwa-install-button" style="
+            background: white;
+            color: #d32f2f;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+          ">Zainstaluj</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(banner);
+    installBannerShown = true;
+
+    // Event listeners
+    document.getElementById('pwa-install-button').addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('Użytkownik zaakceptował instalację PWA');
+          }
+          deferredPrompt = null;
+          banner.remove();
+        });
+      }
+    });
+
+    document.getElementById('pwa-install-dismiss').addEventListener('click', () => {
+      banner.remove();
+    });
+
+    // Auto-hide po 10 sekundach
+    setTimeout(() => {
+      if (banner.parentNode) {
+        banner.remove();
+      }
+    }, 10000);
+  }
+
+  // Event listener dla beforeinstallprompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBanner();
+  });
+
+  // Sprawdź czy aplikacja jest już zainstalowana
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA zostało zainstalowane');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) {
+      banner.remove();
+    }
+  });
+
+  
   // Funkcja podświetlenia dzisiejszego dnia w kolumnach DATA i DZIEŃ
   function highlightToday() {
     const now = new Date();
+    const todayISO = now.toISOString().split('T')[0]; // Format YYYY-MM-DD
     const todayDay = now.getDate().toString().padStart(2, '0'); // Format DD
     
     // Mapowanie dni tygodnia - Python używa 'Czw', JavaScript 'czw'
     const dayNames = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
     const todayDayName = dayNames[now.getDay() - 1]; // getDay() zwraca 1-7, ale array ma 0-6
     
-    console.log('Szukam dnia:', todayDay, 'i nazwy:', todayDayName);
+    console.log('Szukam pełnej daty:', todayISO, 'i dnia:', todayDay, 'i nazwy:', todayDayName);
     
     // Usuń klasy 'today', 'dniowka', 'nocka' ze wszystkich elementów
     document.querySelectorAll('.col-date, .col-day, .slot').forEach(element => {
@@ -58,10 +199,10 @@
     if (table) {
       const rows = table.querySelectorAll('tr');
       rows.forEach(row => {
-        const dateCell = row.querySelector('.col-date');
-        const dayCell = row.querySelector('.col-day');
+        // Sprawdź czy wiersz ma slot z dzisiejszą datą
+        const todaySlot = row.querySelector(`[data-date="${todayISO}"]`);
         
-        if (dateCell && dayCell && dateCell.textContent.trim() === todayDay) {
+        if (todaySlot) {
           // To jest wiersz z dzisiejszą datą - podświetl WSZYSTKIE kolumny DATA, DZIEŃ i PODSUMOWANIE w tym wierszu
           const allDateCells = row.querySelectorAll('.col-date');
           const allDayCells = row.querySelectorAll('.col-day');
@@ -71,7 +212,7 @@
           allDayCells.forEach(cell => cell.classList.add('today'));
           if (summaryCell) summaryCell.classList.add('today');
           
-          console.log('Podświetlono dzisiejszy wiersz - data:', dateCell.textContent.trim(), 'dzień:', dayCell.textContent.trim());
+          console.log('Podświetlono dzisiejszy wiersz - data:', todayISO, 'dzień:', todayDay);
           
           // Podświetl komórki z pracownikami w tym wierszu
           const slots = row.querySelectorAll('.slot');
@@ -287,17 +428,30 @@ function handleResponsiveDesign() {
 window.addEventListener('resize', handleResponsiveDesign);
 window.addEventListener('orientationchange', handleResponsiveDesign);
 
+// ===== SYSTEM PWA I WEB PUSH NOTIFICATIONS =====
+
 // Rejestracja Service Worker dla PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/static/sw.js')
       .then(registration => {
         console.log('Service Worker zarejestrowany:', registration);
+        // Inicjalizuj Web Push po rejestracji Service Worker TYLKO jeśli użytkownik jest zalogowany
+        // Sprawdź czy użytkownik jest zalogowany (sprawdź czy są elementy admin)
+        const isLoggedIn = document.querySelector('[data-current-user]') !== null;
+        if (isLoggedIn) {
+          console.log('✅ Użytkownik jest zalogowany, inicjalizuję Web Push...');
+          initializePushSubscription();
+        } else {
+          console.log('⏳ Użytkownik nie jest zalogowany, pomijam inicjalizację Web Push');
+        }
       })
       .catch(error => {
         console.log('Błąd rejestracji Service Worker:', error);
       });
   });
+} else {
+  console.log('Service Worker nie jest obsługiwany w tej przeglądarce');
 }
 
 // Przechwyć event instalacji PWA (jeśli dostępny)
@@ -322,6 +476,8 @@ function installPWA() {
     deferredPrompt.userChoice.then((choiceResult) => {
       if (choiceResult.outcome === 'accepted') {
         console.log('Użytkownik zaakceptował instalację PWA');
+        // Ukryj przycisk po instalacji
+        hideInstallButton();
       } else {
         console.log('Użytkownik odrzucił instalację PWA');
       }
@@ -348,21 +504,333 @@ function installPWA() {
   }
 }
 
+// Funkcja ukrywania przycisku instalacji PWA
+function hideInstallButton() {
+  const pwaBtn = document.querySelector('.pwa-btn');
+  if (pwaBtn) {
+    pwaBtn.style.display = 'none';
+    console.log('Przycisk PWA ukryty po instalacji');
+  }
+}
+
+// Sprawdź czy PWA jest już zainstalowane
+function checkIfPWAInstalled() {
+  // Sprawdź czy aplikacja działa w trybie standalone (zainstalowana)
+  if (window.matchMedia('(display-mode: standalone)').matches || 
+      window.navigator.standalone === true) {
+    console.log('PWA jest już zainstalowane - ukrywam przycisk');
+    hideInstallButton();
+    return true;
+  }
+  return false;
+}
+
+// ===== WEB PUSH NOTIFICATIONS =====
+
+// Funkcja do konwersji VAPID public key z base64 na Uint8Array
+function urlB64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Zapisanie subskrypcji na serwerze
+async function saveSubscriptionToServer(subscription) {
+  try {
+    const response = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Subskrypcja zapisana na serwerze:', result);
+      return result;
+    } else {
+      console.error('Błąd zapisywania subskrypcji:', response.status);
+    }
+  } catch (error) {
+    console.error('Błąd podczas zapisywania subskrypcji:', error);
+  }
+}
+
+// Inicjalizacja subskrypcji push
+async function initializePushSubscription() {
+  try {
+    console.log('🚀 Inicjalizacja Web Push Notifications...');
+    
+    // Pobierz klucz VAPID z serwera
+    console.log('📡 Pobieranie klucza VAPID z serwera...');
+    const response = await fetch('/api/push/vapid-key');
+    const data = await response.json();
+    console.log('✅ Klucz VAPID pobrany:', data.public_key.substring(0, 20) + '...');
+    
+    // Sprawdź uprawnienia do powiadomień
+    console.log('🔔 Sprawdzanie uprawnień do powiadomień...');
+    console.log('Aktualny status uprawnień:', Notification.permission);
+    
+    if (Notification.permission !== 'granted') {
+      console.log('❌ Uprawnienia do powiadomień nie są włączone');
+      return;
+    }
+    
+    console.log('✅ Uprawnienia do powiadomień są włączone');
+    
+    // Sprawdź czy Service Worker jest gotowy
+    if (!('serviceWorker' in navigator)) {
+      console.log('❌ Service Worker nie jest obsługiwany');
+      return;
+    }
+    
+    console.log('🔧 Sprawdzanie Service Worker...');
+    console.log('🔧 Service Worker jest obsługiwany, czekam na gotowość...');
+    
+    // Sprawdź istniejące rejestracje
+    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+    console.log('📋 Istniejące rejestracje Service Worker:', existingRegistrations.length);
+    
+    if (existingRegistrations.length > 0) {
+      console.log('ℹ️ Znaleziono istniejące rejestracje:', existingRegistrations);
+      for (let i = 0; i < existingRegistrations.length; i++) {
+        const reg = existingRegistrations[i];
+        console.log(`📋 Rejestracja ${i}:`, {
+          scope: reg.scope,
+          installing: reg.installing,
+          waiting: reg.waiting,
+          active: reg.active,
+          state: reg.active ? reg.active.state : 'unknown'
+        });
+      }
+    }
+    
+    // Czekaj na gotowość Service Worker z timeout
+    const readyPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Service Worker timeout - nie odpowiedział w ciągu 10 sekund')), 10000)
+    );
+    
+    console.log('⏱️ Czekam na Service Worker z timeout 10s...');
+    let registration;
+    try {
+      registration = await Promise.race([readyPromise, timeoutPromise]);
+      console.log('✅ Service Worker gotowy:', registration);
+    } catch (error) {
+      console.log('❌ Błąd Service Worker ready:', error);
+      console.log('🔄 Próbuję użyć istniejącej rejestracji jako fallback...');
+      
+      if (existingRegistrations.length > 0) {
+        registration = existingRegistrations[0];
+        console.log('✅ Używam istniejącej rejestracji:', registration);
+      } else {
+        console.log('❌ Brak dostępnych rejestracji Service Worker');
+        return;
+      }
+    }
+    
+    // Sprawdź istniejącą subskrypcję
+    console.log('🔍 Sprawdzanie istniejącej subskrypcji...');
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (subscription) {
+      console.log('Istniejąca subskrypcja:', subscription);
+      console.log('ℹ️ Używam istniejącej subskrypcji');
+    } else {
+      console.log('🆕 Tworzenie nowej subskrypcji push...');
+      try {
+        const applicationServerKey = urlB64ToUint8Array(data.public_key);
+        console.log('✅ Klucz VAPID skonwertowany:', applicationServerKey.length, 'bajtów');
+        
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
+        });
+        console.log('✅ Subskrypcja utworzona:', subscription);
+      } catch (subscribeError) {
+        console.error('❌ Błąd tworzenia subskrypcji:', subscribeError);
+        return;
+      }
+    }
+    
+    // Zapisz subskrypcję na serwerze
+    console.log('💾 Zapisuję subskrypcję na serwerze...');
+    const saveResponse = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+      credentials: 'include'
+    });
+    
+    console.log('Odpowiedź serwera:', saveResponse.status);
+    
+    if (saveResponse.ok) {
+      const result = await saveResponse.json();
+      console.log('✅ Subskrypcja zapisana pomyślnie:', result);
+      
+      // Uruchom background sync
+      if ('sync' in window.ServiceWorkerRegistration.prototype) {
+        console.log('🔄 Rejestruję background sync...');
+        registration.sync.register('check-notifications');
+      }
+      
+      // Sprawdź nowe prośby co 30 sekund
+      console.log('⏰ Uruchamiam sprawdzanie nowych prośb co 30 sekund...');
+      setInterval(checkForNewRequests, 30000);
+      
+      console.log('🎉 Web Push Notifications zainicjalizowane pomyślnie!');
+    } else {
+      const error = await saveResponse.json();
+      console.error('❌ Błąd zapisywania subskrypcji:', error);
+    }
+    
+  } catch (error) {
+    console.error('❌ Błąd inicjalizacji subskrypcji push:', error);
+  }
+}
+
+
+// Funkcja do wyświetlania lokalnych powiadomień
+function showLocalNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body: body,
+      icon: '/static/PKN.WA.D-192.png',
+      badge: '/static/PKN.WA.D-192.png',
+      tag: 'grafik-notification'
+    });
+    
+    // Automatycznie zamknij powiadomienie po 5 sekundach
+    setTimeout(() => {
+      notification.close();
+    }, 5000);
+  }
+}
+
+// Funkcja pomocnicza do mapowania statusów
+function getStatusText(finalStatus) {
+  switch (finalStatus) {
+    case 'OCZEKUJACE': return 'Oczekujące';
+    case 'WSTEPNIE_ZATWIERDZONE': return 'Wstępnie zatwierdzone';
+    case 'ZATWIERDZONE': return 'Zatwierdzone';
+    case 'ODRZUCONE': return 'Odrzucone';
+    case 'ODRZUCONE_PRZEZ_SZEFA': return 'Odrzucone przez szefa';
+    default: return finalStatus;
+  }
+}
+
+// Funkcja do testowania powiadomień (tylko dla adminów)
+
+// ===== SYSTEM MOTYWÓW =====
+
+// Inicjalizacja systemu motywów
+function initializeThemeSystem() {
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeIcon = document.getElementById('theme-icon');
+  const body = document.body;
+  
+  if (!themeToggle || !themeIcon) {
+    console.warn('Elementy przełącznika motywu nie zostały znalezione');
+    return;
+  }
+  
+  // Wczytaj zapisany motyw z localStorage
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  // Ustaw domyślny motyw
+  let currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+  
+  // Zastosuj motyw
+  applyTheme(currentTheme);
+  
+  // Event listener dla przełącznika
+  themeToggle.addEventListener('click', () => {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(currentTheme);
+    
+    // Zapisz preferencję
+    localStorage.setItem('theme', currentTheme);
+    
+    // Animacja ikony
+    themeToggle.classList.add('rotating');
+    setTimeout(() => {
+      themeToggle.classList.remove('rotating');
+    }, 500);
+  });
+  
+  // Nasłuchuj zmian preferencji systemu
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!savedTheme) { // Tylko jeśli użytkownik nie ustawił własnej preferencji
+      currentTheme = e.matches ? 'dark' : 'light';
+      applyTheme(currentTheme);
+    }
+  });
+}
+
+// Zastosuj motyw do strony
+function applyTheme(theme) {
+  const body = document.body;
+  const themeIcon = document.getElementById('theme-icon');
+  
+  if (theme === 'light') {
+    body.classList.add('light-mode');
+    // Zmień ikonę na słońce
+    themeIcon.innerHTML = `
+      <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39.39 1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41z"/>
+    `;
+  } else {
+    body.classList.remove('light-mode');
+    // Zmień ikonę na księżyc
+    themeIcon.innerHTML = `
+      <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+    `;
+  }
+  
+  console.log(`Motyw zmieniony na: ${theme}`);
+}
+
 // Główna funkcja aplikacji
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została załadowana');
   
+  // Inicjalizuj system motywów
+  initializeThemeSystem();
+  
+  // Sprawdź czy PWA jest już zainstalowane
+  checkIfPWAInstalled();
+  
   // Inicjalizuj responsywny design
   handleResponsiveDesign();
+  
+  // Inicjalizuj Web Push jeśli użytkownik jest zalogowany
+  const isLoggedIn = document.querySelector('[data-current-user]') !== null;
+  if (isLoggedIn) {
+    console.log('✅ Użytkownik jest zalogowany w DOMContentLoaded, inicjalizuję Web Push...');
+    // Poczekaj chwilę żeby Service Worker się zarejestrował
+    setTimeout(() => {
+      initializePushSubscription();
+    }, 1000);
+  } else {
+    console.log('⏳ Użytkownik nie jest zalogowany w DOMContentLoaded');
+  }
   
   // Pobierz wszystkie potrzebne elementy DOM
   const table = document.getElementById('grafik');
   const btnToggle = document.getElementById('btn-edit');
   const editor = document.getElementById('slot-editor');
-  const todayActions = document.getElementById('today-actions');
+  const todayActions = document.getElementById('shifts-actions');
   const input = document.getElementById('opt-custom');
-  const btnSaveToday = document.getElementById('save-today');
-  const btnCancelToday = document.getElementById('cancel-today');
+  const btnSaveToday = document.getElementById('save-shifts');
+  const btnCancelToday = document.getElementById('cancel-shifts');
   const pHoursPanel = document.getElementById('p-hours-panel');
   const pStartHour = document.getElementById('p-start-hour');
   const pEndHour = document.getElementById('p-end-hour');
@@ -372,32 +840,58 @@ document.addEventListener('DOMContentLoaded', function() {
   const empList = document.getElementById('emp-list');
   const empName = document.getElementById('emp-name');
   const empCode = document.getElementById('emp-code');
+  const empEmail = document.getElementById('emp-email');
   const empAddBtn = document.getElementById('emp-add-btn');
   const empClose = document.getElementById('emp-close');
   const btnSwaps = document.getElementById('btn-swaps-admin') || document.getElementById('btn-swaps-user');
   const swapEditor = document.getElementById('swap-editor');
   const swapClose = document.getElementById('swap-close');
   const swapList = document.getElementById('swap-list');
+  const btnWhitelist = document.getElementById('btn-whitelist');
+  const whitelistEditor = document.getElementById('whitelist-editor');
+  const whitelistClose = document.getElementById('whitelist-close');
+  const whitelistList = document.getElementById('whitelist-list');
+  const whitelistEmail = document.getElementById('whitelist-email');
+  const whitelistAddBtn = document.getElementById('whitelist-add-btn');
   const swapClear = document.getElementById('swap-clear');
-  const btnCompose = document.getElementById('btn-compose');
-  const composeEditor = document.getElementById('compose-editor');
-  const composeClose = document.getElementById('compose-close');
-  const composeFromName = document.getElementById('compose-from-name');
-  const composeFromDate = document.getElementById('compose-from-date');
-  const composeToName = document.getElementById('compose-to-name');
-  const composeToDate = document.getElementById('compose-to-date');
-  const composeComment = document.getElementById('compose-comment');
-  const composeSend = document.getElementById('compose-send');
+  // Elementy dla zunifikowanego panelu zmian
+  const btnShifts = document.getElementById('btn-shifts');
+  const shiftsEditor = document.getElementById('shifts-editor');
+  const shiftsClose = document.getElementById('shifts-close');
+  const shiftsCancel = document.getElementById('shifts-cancel');
+  const shiftsSend = document.getElementById('shifts-send');
+  const shiftsComment = document.getElementById('shifts-comment');
   
-  // Elementy dla oddawania zmian
-  const btnGive = document.getElementById('btn-give');
-  const giveEditor = document.getElementById('give-editor');
-  const giveClose = document.getElementById('give-close');
-  const giveFromName = document.getElementById('give-from-name');
-  const giveFromDate = document.getElementById('give-from-date');
-  const giveToName = document.getElementById('give-to-name');
-  const giveComment = document.getElementById('give-comment');
-  const giveSend = document.getElementById('give-send');
+  // Elementy formularza zamiany
+  const shiftsFromName = document.getElementById('shifts-from-name');
+  const shiftsFromDate = document.getElementById('shifts-from-date');
+  const shiftsToName = document.getElementById('shifts-to-name');
+  const shiftsToDate = document.getElementById('shifts-to-date');
+  
+  // Elementy formularza oddania
+  const shiftsGiveFromName = document.getElementById('shifts-give-from-name');
+  const shiftsGiveFromDate = document.getElementById('shifts-give-from-date');
+  const shiftsGiveToName = document.getElementById('shifts-give-to-name');
+  
+  // Elementy formularza zabrania
+  const shiftsTakeFromName = document.getElementById('shifts-take-from-name');
+  const shiftsTakeFromDate = document.getElementById('shifts-take-from-date');
+  
+  // Radio buttons dla wyboru typu operacji
+  const shiftTypeRadios = document.querySelectorAll('input[name="shift-type"]');
+  
+  // Stare elementy (dla kompatybilności wstecznej)
+  const composeFromName = null;
+  const composeFromDate = null;
+  const composeToName = null;
+  const composeToDate = null;
+  const composeComment = null;
+  const composeEditor = null;
+  const giveFromName = null;
+  const giveFromDate = null;
+  const giveToName = null;
+  const giveComment = null;
+  const giveEditor = null;
 
   const swapCompose = document.getElementById('swap-compose');
   const swapCommentInline = document.getElementById('swap-comment-inline');
@@ -591,7 +1085,8 @@ document.addEventListener('DOMContentLoaded', function() {
           fetch('/api/swaps', { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }) 
+            body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }),
+            credentials: 'include'
           })
           .then(r => r.json())
           .then(data => { 
@@ -633,7 +1128,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/swaps', { 
           method: 'POST', 
           headers: {'Content-Type': 'application/json'}, 
-          body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }) 
+          body: JSON.stringify({ from_date, from_employee, to_date, to_employee, comment }),
+          credentials: 'include'
         })
         .then(r => r.json())
         .then(data => { 
@@ -822,6 +1318,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (todayActions) todayActions.classList.add('hidden');
       document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
       hideEditor();
+      // Odśwież stronę natychmiast
+      window.location.reload();
     };
     
     if (!pending.size) {
@@ -838,7 +1336,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/save', {
       method: 'POST', 
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ changes })
+      body: JSON.stringify({ changes }),
+      credentials: 'include'
     })
     .then(response => response.json())
     .then(data => {
@@ -846,11 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Błąd podczas zapisywania: ' + data.error);
       } else {
         finish();
-        if (data.status === 'partial') {
-          alert(`Zapisano ${data.saved_count} zmian z ${data.errors.length} błędami`);
-        } else {
-          alert('Zmiany zostały zapisane pomyślnie!');
-        }
+        // Zmiany zapisują się cicho bez komunikatu
       }
     })
     .catch(error => {
@@ -871,15 +1366,16 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('Debug - btnToggle:', btnToggle);
   console.log('Debug - btnEmps:', btnEmps);
   console.log('Debug - btnSwaps:', btnSwaps);
-  console.log('Debug - btnCompose:', btnCompose);
-  console.log('Debug - btnGive:', btnGive);
+  console.log('Debug - btnShifts:', btnShifts);
+  console.log('Debug - shiftsEditor:', shiftsEditor);
+  console.log('Debug - btn-shifts element:', document.getElementById('btn-shifts'));
+  console.log('Debug - shifts-editor element:', document.getElementById('shifts-editor'));
   
   // Sprawdź czy wszystkie przyciski funkcji są znalezione
   console.log('Debug - btn-swaps-admin:', document.getElementById('btn-swaps-admin'));
   console.log('Debug - btn-swaps-user:', document.getElementById('btn-swaps-user'));
   console.log('Debug - btn-edit:', document.getElementById('btn-edit'));
-  console.log('Debug - btn-compose:', document.getElementById('btn-compose'));
-  console.log('Debug - btn-give:', document.getElementById('btn-give'));
+  console.log('Debug - btn-shifts:', document.getElementById('btn-shifts'));
   
   if (btnToggle) btnToggle.addEventListener('click', toggleEdit);
   if (table) table.addEventListener('click', onCellClick);
@@ -902,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.createElement('div');
         row.className = 'emp-row';
         row.innerHTML = `
-          <div>${emp.name} <span class="meta">(${emp.code || '-'})</span></div>
+          <div>${emp.name} <span class="meta">(${emp.code || '-'})</span> ${emp.email ? `<br><small class="email-meta">${emp.email}</small>` : ''}</div>
           <div class="emp-actions">
             <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
             <button data-id="${emp.id}" class="btn">Usuń</button>
@@ -958,6 +1454,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="emp-add">
             <input id="edit-emp-name" placeholder="imię" value="${emp.name}" />
             <input id="edit-emp-code" placeholder="id" value="${emp.code || ''}" />
+            <input id="edit-emp-email" placeholder="email" type="email" value="${emp.email || ''}" />
           </div>
           <div class="emp-edit-actions">
             <button id="edit-emp-save" class="btn">Zapisz</button>
@@ -976,6 +1473,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveBtn = dialog.querySelector('#edit-emp-save');
     const nameInput = dialog.querySelector('#edit-emp-name');
     const codeInput = dialog.querySelector('#edit-emp-code');
+    const emailInput = dialog.querySelector('#edit-emp-email');
     
     function closeDialog() {
       dialog.remove();
@@ -991,16 +1489,17 @@ document.addEventListener('DOMContentLoaded', function() {
     saveBtn.addEventListener('click', () => {
       const newName = nameInput.value.trim();
       const newCode = codeInput.value.trim();
+      const newEmail = emailInput.value.trim();
       
-      if (!newName || !newCode) {
-        alert('Imię i ID są wymagane');
+      if (!newName) {
+        alert('Imię jest wymagane');
         return;
       }
       
       fetch(`/api/employees/${emp.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, code: newCode })
+        body: JSON.stringify({ name: newName, code: newCode, email: newEmail })
       })
       .then(async r => {
         const data = await r.json().catch(() => ({}));
@@ -1029,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function loadEmployees() {
-    fetch('/api/employees')
+    fetch('/api/employees', { credentials: 'include' })
       .then(response => response.json())
       .then(data => { 
         if (data.error) {
@@ -1079,15 +1578,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function addEmp() {
-    if (!empName || !empCode) return;
+    if (!empName) return;
     const name = (empName.value || '').trim();
     const code = (empCode.value || '').trim();
-    if (!code || !name) return;
+    const email = (empEmail.value || '').trim();
+    if (!name) return;
     
     fetch('/api/employees', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ code, name }) 
+      body: JSON.stringify({ code, name, email }),
+      credentials: 'include'
     })
     .then(async r => { 
       const data = await r.json().catch(() => ({})); 
@@ -1097,6 +1598,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(() => { 
       empName.value = ''; 
       empCode.value = ''; 
+      empEmail.value = ''; 
       loadEmployees(); 
       alert('Pracownik został dodany!');
     })
@@ -1109,55 +1611,206 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event listeners dla zarządzania pracownikami
   if (empName) empName.addEventListener('keydown', (e) => { if (e.key == 'Enter') addEmp(); });
   if (empCode) empCode.addEventListener('keydown', (e) => { if (e.key == 'Enter') addEmp(); });
+  if (empEmail) empEmail.addEventListener('keydown', (e) => { if (e.key == 'Enter') addEmp(); });
   if (btnEmps) btnEmps.addEventListener('click', toggleEmps);
   if (empAddBtn) empAddBtn.addEventListener('click', addEmp);
   if (empClose) empClose.addEventListener('click', closeEmps);
   if (empEditor) empEditor.addEventListener('click', (e) => { if (e.target === empEditor) closeEmps(); });
 
-  // --- Skrzynka próśb o zamianę ---
-  function loadSwaps() {
-    fetch('/api/swaps/inbox')
-      .then(response => response.json())
+  // --- Zarządzanie whitelistą ---
+  function toggleWhitelist() {
+    if (!whitelistEditor) return;
+    const show = !whitelistEditor.classList.contains('show');
+    
+    if (show) {
+      whitelistEditor.classList.add('show');
+      loadWhitelist();
+    } else {
+      whitelistEditor.classList.remove('show');
+    }
+  }
+  
+  function closeWhitelist() { 
+    if (whitelistEditor) whitelistEditor.classList.remove('show'); 
+  }
+  
+  function loadWhitelist() {
+    fetch('/api/whitelist', { credentials: 'include' })
+      .then(r => r.json())
       .then(data => {
         if (data.error) {
-          throw new Error(data.error);
+          alert('Błąd podczas ładowania whitelisty: ' + data.error);
+          return;
         }
+        renderWhitelist(data.emails);
+      })
+      .catch(err => {
+        console.error('Błąd podczas ładowania whitelisty:', err);
+        alert('Wystąpił błąd podczas ładowania whitelisty');
+      });
+  }
+  
+  function renderWhitelist(emails) {
+    if (!whitelistList) return;
+    
+    const fragment = document.createDocumentFragment();
+    
+    for (const email of emails) {
+      const row = document.createElement('div');
+      row.className = 'emp-row';
+      row.innerHTML = `
+        <div>${email}</div>
+        <div class="emp-actions">
+          <button data-email="${email}" class="btn btn-remove">Usuń</button>
+        </div>
+      `;
+      
+      // Przycisk usuwania
+      row.querySelector('.btn-remove').addEventListener('click', () => {
+        if (confirm(`Czy na pewno chcesz usunąć email "${email}" z whitelisty?`)) {
+          removeFromWhitelist(email);
+        }
+      });
+      
+      fragment.appendChild(row);
+    }
+    
+    whitelistList.innerHTML = '';
+    whitelistList.appendChild(fragment);
+  }
+  
+  function addToWhitelist() {
+    if (!whitelistEmail) return;
+    const email = whitelistEmail.value.trim();
+    if (!email) return;
+    
+    fetch('/api/whitelist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include'
+    })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw data;
+      return data;
+    })
+    .then(() => {
+      whitelistEmail.value = '';
+      loadWhitelist();
+      alert('Email został dodany do whitelisty!');
+    })
+    .catch(err => {
+      console.warn('Dodawanie do whitelisty nie powiodło się', err);
+      alert('Błąd podczas dodawania do whitelisty: ' + (err.error || 'Nieznany błąd'));
+    });
+  }
+  
+  function removeFromWhitelist(email) {
+    fetch('/api/whitelist', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include'
+    })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw data;
+      return data;
+    })
+    .then(() => {
+      loadWhitelist();
+      alert('Email został usunięty z whitelisty!');
+    })
+    .catch(err => {
+      console.warn('Usuwanie z whitelisty nie powiodło się', err);
+      alert('Błąd podczas usuwania z whitelisty: ' + (err.error || 'Nieznany błąd'));
+    });
+  }
+  
+  // Event listeners dla zarządzania whitelistą
+  if (btnWhitelist) btnWhitelist.addEventListener('click', toggleWhitelist);
+  if (whitelistClose) whitelistClose.addEventListener('click', closeWhitelist);
+  if (whitelistAddBtn) whitelistAddBtn.addEventListener('click', addToWhitelist);
+  if (whitelistEmail) whitelistEmail.addEventListener('keydown', (e) => { if (e.key == 'Enter') addToWhitelist(); });
+  if (whitelistEditor) whitelistEditor.addEventListener('click', (e) => { if (e.target === whitelistEditor) closeWhitelist(); });
+
+  // --- Skrzynka próśb o zamianę ---
+  function getStatusClass(finalStatus) {
+    switch(finalStatus) {
+      case 'ZATWIERDZONE': return 'status-approved';
+      case 'WSTEPNIE_ZATWIERDZONE': return 'status-pending';
+      case 'ODRZUCONE': return 'status-rejected';
+      case 'ODRZUCONE_PRZEZ_SZEFA': return 'status-rejected';
+      case 'OCZEKUJACE': return 'status-waiting';
+      default: return 'status-waiting';
+    }
+  }
+  
+
+  function loadSwaps() {
+    // Ładuj zarówno prośby o zamianę jak i niedyspozycje
+    Promise.all([
+      fetch('/api/swaps/inbox', { credentials: 'include' }).then(r => r.json()),
+      fetch('/api/unavailability/inbox', { credentials: 'include' }).then(r => r.json())
+    ])
+    .then(([swapsData, unavailData]) => {
+      if (swapsData.error) {
+        throw new Error(swapsData.error);
+      }
+      if (unavailData.error) {
+        throw new Error(unavailData.error);
+      }
         
-        const items = data.items || []; 
-        const isBoss = !!data.is_boss;
+        const swapItems = swapsData.items || []; 
+        const unavailItems = unavailData.items || [];
+        const isBoss = !!swapsData.is_boss;
         
         if (swapList) swapList.innerHTML = '';
         if (swapClear) swapClear.style.display = isBoss ? 'inline-flex' : 'none';
         
         const me = (table && table.getAttribute('data-current-user')) || '';
         
-        for (const item of items) {
+        // Połącz wszystkie elementy z odpowiednimi typami
+        const allItems = [
+          ...swapItems.map(item => ({...item, type: 'swap'})),
+          ...unavailItems.map(item => ({...item, type: 'unavailability'}))
+        ];
+        
+        // Sortuj po dacie utworzenia (najnowsze na górze)
+        allItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        for (const item of allItems) {
           const row = document.createElement('div');
           row.className = 'emp-row';
           const title = document.createElement('div');
-          const fromS = item.from_shift ? ` (${item.from_shift})` : '';
-          const toS = item.to_shift ? ` (${item.to_shift})` : '';
           
-          // Sprawdź typ prośby i wyświetl odpowiednio
-          if (item.is_give_request) {
-            // Prośba o oddanie zmiany
-            title.textContent = `${item.from_employee} oddaje zmianę ${item.from_date}${fromS} → ${item.to_employee}`;
+          // Sprawdź typ zgłoszenia i wyświetl odpowiednio
+          if (item.type === 'unavailability') {
+            // Zgłoszenie niedyspozycji
+            const days = JSON.parse(item.selected_days || '[]');
+            const daysText = days.length > 0 ? days.join(', ') : 'Brak dni';
+            title.innerHTML = `📅 <strong>Niedyspozycja:</strong> ${item.employee_name} - ${item.month_year}<br>
+                              <small>Dni: ${daysText}</small>`;
           } else {
-            // Regularna zamiana
-            title.textContent = `${item.from_employee} ${item.from_date}${fromS} ⇄ ${item.to_employee} ${item.to_date}${toS}`;
+            // Prośba o zamianę
+            const fromS = item.from_shift ? ` (${item.from_shift})` : '';
+            const toS = item.to_shift ? ` (${item.to_shift})` : '';
+            
+            if (item.is_give_request) {
+              // Prośba o oddanie zmiany
+              title.textContent = `🔄 ${item.from_employee} oddaje zmianę ${item.from_date}${fromS} → ${item.to_employee}`;
+            } else {
+              // Regularna zamiana
+              title.textContent = `🔄 ${item.from_employee} ${item.from_date}${fromS} ⇄ ${item.to_employee} ${item.to_date}${toS}`;
+            }
           }
           
-          // Dodaj wyświetlanie statusu
-          if (item.boss_status === 'APPROVED') {
+          // Dodaj wyświetlanie finalnego statusu
+          if (item.final_status) {
             const status = document.createElement('div');
-            status.className = 'status-approved';
-            status.textContent = 'Zatwierdzone';
-            title.appendChild(document.createElement('br'));
-            title.appendChild(status);
-          } else if (item.boss_status === 'REJECTED') {
-            const status = document.createElement('div');
-            status.className = 'status-rejected';
-            status.textContent = 'Odrzucone';
+            status.className = getStatusClass(item.final_status);
+            status.textContent = getStatusText(item.final_status);
             title.appendChild(document.createElement('br'));
             title.appendChild(status);
           } else if (item.recipient_status === 'ACCEPTED' && item.to_employee === me) {
@@ -1182,31 +1835,47 @@ document.addEventListener('DOMContentLoaded', function() {
           
           const actions = document.createElement('div');
           
-          // Obsługa regularnych próśb o zamianę - tylko konkretny odbiorca może odpowiedzieć
-          if (item.recipient_status === 'PENDING' && item.to_employee === me) {
-            const acc = document.createElement('button'); 
-            acc.className = 'btn'; 
-            acc.textContent = 'Akceptuj'; 
-            acc.onclick = () => respondSwap(item.id, 'ACCEPTED');
-            const dec = document.createElement('button'); 
-            dec.className = 'btn'; 
-            dec.textContent = 'Odrzuć'; 
-            dec.onclick = () => respondSwap(item.id, 'DECLINED');
-            actions.appendChild(acc); 
-            actions.appendChild(dec);
-          }
-          
-          if (isBoss && item.recipient_status !== 'PENDING' && item.boss_status === 'PENDING') {
-            const ap = document.createElement('button'); 
-            ap.className = 'btn'; 
-            ap.textContent = 'Zatwierdź'; 
-            ap.onclick = () => bossSwap(item.id, 'APPROVED');
-            const rj = document.createElement('button'); 
-            rj.className = 'btn'; 
-            rj.textContent = 'Odrzuć'; 
-            rj.onclick = () => bossSwap(item.id, 'REJECTED');
-            actions.appendChild(ap); 
-            actions.appendChild(rj);
+          if (item.type === 'unavailability') {
+            // Obsługa niedyspozycji - tylko szef może zatwierdzać
+            if (isBoss && item.status === 'PENDING') {
+              const ap = document.createElement('button'); 
+              ap.className = 'btn'; 
+              ap.textContent = 'Zatwierdź'; 
+              ap.onclick = () => respondUnavailability(item.id, 'APPROVED');
+              const rj = document.createElement('button'); 
+              rj.className = 'btn'; 
+              rj.textContent = 'Odrzuć'; 
+              rj.onclick = () => respondUnavailability(item.id, 'REJECTED');
+              actions.appendChild(ap); 
+              actions.appendChild(rj);
+            }
+          } else {
+            // Obsługa regularnych próśb o zamianę - tylko konkretny odbiorca może odpowiedzieć
+            if (item.recipient_status === 'PENDING' && item.to_employee === me) {
+              const acc = document.createElement('button'); 
+              acc.className = 'btn'; 
+              acc.textContent = 'Akceptuj'; 
+              acc.onclick = () => respondSwap(item.id, 'ACCEPTED');
+              const dec = document.createElement('button'); 
+              dec.className = 'btn'; 
+              dec.textContent = 'Odrzuć'; 
+              dec.onclick = () => respondSwap(item.id, 'DECLINED');
+              actions.appendChild(acc); 
+              actions.appendChild(dec);
+            }
+            
+            if (isBoss && item.recipient_status !== 'PENDING' && item.boss_status === 'PENDING') {
+              const ap = document.createElement('button'); 
+              ap.className = 'btn'; 
+              ap.textContent = 'Zatwierdź'; 
+              ap.onclick = () => bossSwap(item.id, 'APPROVED');
+              const rj = document.createElement('button'); 
+              rj.className = 'btn'; 
+              rj.textContent = 'Odrzuć'; 
+              rj.onclick = () => bossSwap(item.id, 'REJECTED');
+              actions.appendChild(ap); 
+              actions.appendChild(rj);
+            }
           }
           
           row.appendChild(title); 
@@ -1215,11 +1884,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Odśwież listy dat w formularzu jeśli jest otwarty
-        if (composeEditor && composeEditor.classList.contains('show')) {
-          populateOwnShifts();
-          if (composeToName && composeToName.value) {
-            populateOtherShifts(composeToName.value);
-          }
+        if (shiftsEditor && shiftsEditor.classList.contains('show')) {
+          populateOwnShifts('shifts-from-date');
+          populateOwnShifts('shifts-give-from-date');
         }
       })
       .catch(error => {
@@ -1232,7 +1899,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps/respond', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ id, status }) 
+      body: JSON.stringify({ id, status }),
+      credentials: 'include'
     })
     .then(response => response.json())
     .then(data => {
@@ -1253,7 +1921,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps/boss', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify({ id, status }) 
+      body: JSON.stringify({ id, status }),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -1304,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (swapEditor) swapEditor.addEventListener('click', (e) => { if (e.target === swapEditor) closeSwaps(); });
   if (swapClear) swapClear.addEventListener('click', () => { 
     if (confirm('Czy na pewno chcesz wyczyścić wszystkie prośby o zamianę?')) {
-      fetch('/api/swaps/clear', { method: 'POST' })
+      fetch('/api/swaps/clear', { method: 'POST', credentials: 'include' })
         .then(response => response.json())
         .then(data => {
           if (data.error) {
@@ -1321,34 +1990,82 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // --- Compose dialog (składanie próśb o zamianę) ---
-  function toggleCompose() { 
-    if (composeEditor) {
-      composeEditor.classList.toggle('show', true);
-      // Wypełnij listę własnych zmian
-      populateOwnShifts();
-      // Odśwież listę zmian wybranej osoby jeśli jest wybrana
-      if (composeToName && composeToName.value) {
-        populateOtherShifts(composeToName.value);
+  // --- Zunifikowany panel zmian ---
+  function toggleShifts() { 
+    console.log('toggleShifts called');
+    console.log('shiftsEditor:', shiftsEditor);
+    if (shiftsEditor) {
+      console.log('Adding show class to shiftsEditor');
+      shiftsEditor.classList.add('show');
+      // Wypełnij listę własnych zmian dla wszystkich formularzy
+      populateOwnShifts('shifts-from-date');
+      populateOwnShifts('shifts-give-from-date');
+      // Ustaw domyślny formularz na zamianę
+      switchShiftForm();
+    } else {
+      console.error('shiftsEditor not found!');
+    }
+  }
+  
+  function closeShifts() { 
+    if (shiftsEditor) shiftsEditor.classList.remove('show');
+    // Wyczyść formularze
+    clearShiftForms();
+  }
+  
+  function switchShiftForm() {
+    const selectedType = document.querySelector('input[name="shift-type"]:checked').value;
+    
+    // Ukryj wszystkie formularze
+    document.querySelectorAll('.shift-form').forEach(form => {
+      form.classList.remove('active');
+    });
+    
+    // Pokaż odpowiedni formularz
+    const targetForm = document.getElementById(selectedType + '-form');
+    if (targetForm) {
+      targetForm.classList.add('active');
+    }
+    
+    // Zaktualizuj tekst przycisku
+    const sendButton = document.getElementById('shifts-send');
+    if (sendButton) {
+      switch(selectedType) {
+        case 'swap':
+          sendButton.textContent = 'Wyślij prośbę o zamianę';
+          break;
+        case 'give':
+          sendButton.textContent = 'Oddaj zmianę';
+          break;
+        case 'take':
+          sendButton.textContent = 'Poproś o zmianę';
+          break;
       }
     }
   }
   
-  function closeCompose() { 
-    if (composeEditor) composeEditor.classList.remove('show') 
-  }
-  
-  // --- Give shift functions (oddawanie zmian) ---
-  function toggleGive() { 
-    if (giveEditor) {
-      giveEditor.classList.toggle('show', true);
-      // Wypełnij listę własnych zmian
-      populateGiveShifts();
+  function clearShiftForms() {
+    // Wyczyść wszystkie pola formularzy
+    const forms = ['shifts-from-date', 'shifts-to-name', 'shifts-to-date', 
+                   'shifts-give-from-date', 'shifts-give-to-name',
+                   'shifts-take-from-name', 'shifts-take-from-date', 'shifts-comment'];
+    
+    forms.forEach(formId => {
+      const element = document.getElementById(formId);
+      if (element) {
+        if (element.tagName === 'SELECT') {
+          element.selectedIndex = 0;
+        } else {
+          element.value = '';
+        }
+      }
+    });
+    
+    // Ustaw domyślny typ na zamianę
+    const swapRadio = document.querySelector('input[name="shift-type"][value="swap"]');
+    if (swapRadio) {
+      swapRadio.checked = true;
     }
-  }
-  
-  function closeGive() { 
-    if (giveEditor) giveEditor.classList.remove('show') 
   }
   
   // Funkcja do wypełniania listy własnych zmian dla oddawania
@@ -1369,7 +2086,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const date = cell.dataset.date;
       const value = cell.textContent.trim();
       
-      if (value === 'D' || value === 'N') {
+      if (value === 'D' || value === 'N' || (value && value.startsWith('P '))) {
         const dateObj = new Date(date);
         shifts.push({
           date: date,
@@ -1423,8 +2140,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Funkcja do wypełniania listy własnych zmian
-  function populateOwnShifts() {
-    const fromDateSelect = document.getElementById('compose-from-date');
+  function populateOwnShifts(selectId = 'compose-from-date') {
+    const fromDateSelect = document.getElementById(selectId);
     if (!fromDateSelect) return;
     
     const currentUser = (table && table.getAttribute('data-current-user')) || '';
@@ -1440,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const date = cell.dataset.date;
       const value = cell.textContent.trim();
       
-      if (value === 'D' || value === 'N') {
+      if (value === 'D' || value === 'N' || (value && value.startsWith('P '))) {
         const dateObj = new Date(date);
         shifts.push({
           date: date,
@@ -1477,8 +2194,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Funkcja do wypełniania listy zmian wybranej osoby
-  function populateOtherShifts(employeeName) {
-    const toDateSelect = document.getElementById('compose-to-date');
+  function populateOtherShifts(employeeName, selectId = 'compose-to-date') {
+    const toDateSelect = document.getElementById(selectId);
     if (!toDateSelect) return;
     
     // Wyczyść listę
@@ -1492,7 +2209,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const date = cell.dataset.date;
       const value = cell.textContent.trim();
       
-      if (value === 'D' || value === 'N') {
+      if (value === 'D' || value === 'N' || (value && value.startsWith('P '))) {
         const dateObj = new Date(date);
         shifts.push({
           date: date,
@@ -1591,7 +2308,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       const data = await r.json().catch(() => ({})); 
@@ -1671,7 +2389,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/swaps', { 
       method: 'POST', 
       headers: {'Content-Type': 'application/json'}, 
-      body: JSON.stringify(payload) 
+      body: JSON.stringify(payload),
+      credentials: 'include'
     })
     .then(async r => { 
       let data = {};
@@ -1703,30 +2422,314 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // --- Event listeners dla formularzy ---
-  if (btnCompose) btnCompose.addEventListener('click', toggleCompose);
-  if (composeClose) composeClose.addEventListener('click', closeCompose);
-  if (composeEditor) composeEditor.addEventListener('click', (e) => { if (e.target === composeEditor) closeCompose(); });
-  if (composeSend) composeSend.addEventListener('click', sendCompose);
+  // Funkcja do wysyłania prośby o zmianę (zunifikowana)
+  function sendShifts() {
+    const selectedType = document.querySelector('input[name="shift-type"]:checked').value;
+    
+    switch(selectedType) {
+      case 'swap':
+        sendSwapRequest();
+        break;
+      case 'give':
+        sendGiveRequest();
+        break;
+      case 'take':
+        sendTakeRequest();
+        break;
+    }
+  }
   
-  // Give shift event listeners
-  if (btnGive) btnGive.addEventListener('click', toggleGive);
-  if (giveClose) giveClose.addEventListener('click', closeGive);
-  if (giveEditor) giveEditor.addEventListener('click', (e) => { if (e.target === giveEditor) closeGive(); });
-  if (giveSend) giveSend.addEventListener('click', sendGive);
+  function sendSwapRequest() {
+    if (!shiftsFromName || !shiftsFromDate || !shiftsToDate || !shiftsToName || !shiftsComment) return;
+    const from_date = (shiftsFromDate.value || '').trim();
+    const to_date = (shiftsToDate.value || '').trim();
+    
+    // Automatycznie pobierz typ zmiany z wybranej daty
+    let from_shift = null;
+    let to_shift = null;
+    
+    if (from_date) {
+      const ownCell = table.querySelector(`.slot[data-date="${from_date}"][data-employee="${shiftsFromName.value}"]`);
+      if (ownCell) {
+        from_shift = ownCell.textContent.trim();
+      }
+    }
+    
+    if (to_date) {
+      const otherCell = table.querySelector(`.slot[data-date="${to_date}"][data-employee="${shiftsToName.value}"]`);
+      if (otherCell) {
+        to_shift = otherCell.textContent.trim();
+      }
+    }
+    
+    const payload = {
+      from_date: from_date,
+      from_employee: (shiftsFromName.value || '').trim(),
+      to_date: to_date,
+      to_employee: (shiftsToName.value || '').trim(),
+      from_shift: from_shift,
+      to_shift: to_shift,
+      comment: (shiftsComment.value || '').trim(),
+      is_give_request: false,
+      is_ask_request: false
+    };
+    
+    // Walidacja
+    if (payload.from_employee === payload.to_employee) { 
+      alert('Nie możesz zamienić zmiany z samym sobą.'); 
+      return; 
+    }
+    if (!payload.from_date) { 
+      alert('Wybierz datę swojej zmiany'); 
+      return; 
+    }
+    if (!payload.to_date) { 
+      alert('Wybierz datę zmiany do przejęcia'); 
+      return; 
+    }
+    
+    // Sprawdź czy daty nie są już zajęte przez inne prośby
+    if (isDateOccupied(payload.from_date, payload.from_employee)) {
+      alert('Twoja zmiana w tym dniu jest już zaangażowana w inną prośbę o zamianę');
+      return;
+    }
+    if (isDateOccupied(payload.to_date, payload.to_employee)) {
+      alert('Zmiana którą chcesz przejąć jest już zaangażowana w inną prośbę o zamianę');
+      return;
+    }
+    
+    fetch('/api/swaps', { 
+      method: 'POST', 
+      headers: {'Content-Type': 'application/json'}, 
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    })
+    .then(async r => { 
+      let data = {};
+      try {
+        data = await r.json();
+      } catch (e) {
+        console.warn('Odpowiedź nie jest JSON:', e);
+      }
+      
+      if (r.ok) {
+        alert('Prośba o zamianę została wysłana');
+        closeShifts();
+        if (swapEditor && swapEditor.classList.contains('show')) {
+          loadSwaps();
+        }
+      } else {
+        alert(data.error || 'Wystąpił błąd podczas wysyłania prośby');
+      }
+    })
+    .catch((error) => {
+      console.error('Błąd podczas wysyłania prośby o zamianę:', error);
+      alert('Wystąpił błąd podczas wysyłania prośby: ' + error.message);
+    });
+  }
+  
+  function sendGiveRequest() {
+    if (!shiftsGiveFromName || !shiftsGiveFromDate || !shiftsGiveToName || !shiftsComment) return;
+    const from_date = (shiftsGiveFromDate.value || '').trim();
+    
+    // Automatycznie pobierz typ zmiany z wybranej daty
+    let from_shift = null;
+    
+    if (from_date) {
+      const ownCell = table.querySelector(`.slot[data-date="${from_date}"][data-employee="${shiftsGiveFromName.value}"]`);
+      if (ownCell) {
+        from_shift = ownCell.textContent.trim();
+      }
+    }
+    
+    const payload = {
+      from_date: from_date,
+      from_employee: (shiftsGiveFromName.value || '').trim(),
+      to_date: null,
+      to_employee: (shiftsGiveToName.value || '').trim(),
+      from_shift: from_shift,
+      to_shift: null,
+      comment: (shiftsComment.value || '').trim(),
+      is_give_request: true,
+      is_ask_request: false
+    };
+    
+    // Walidacja
+    if (payload.from_employee === payload.to_employee) { 
+      alert('Nie możesz oddać zmiany do siebie.'); 
+      return; 
+    }
+    if (!payload.from_date) { 
+      alert('Wybierz datę swojej zmiany'); 
+      return; 
+    }
+    if (!payload.to_employee) { 
+      alert('Wybierz osobę do której oddajesz zmianę'); 
+      return; 
+    }
+    
+    // Sprawdź czy data nie jest już zajęta przez inne prośby
+    if (isDateOccupied(payload.from_date, payload.from_employee)) {
+      alert('Twoja zmiana w tym dniu jest już zaangażowana w inną prośbę o zamianę');
+      return;
+    }
+    
+    // Sprawdź czy docelowa osoba nie ma już zmiany w tym dniu
+    const targetCell = table.querySelector(`.slot[data-date="${from_date}"][data-employee="${payload.to_employee}"]`);
+    if (targetCell && targetCell.textContent.trim()) {
+      alert(`${payload.to_employee} ma już zmianę w tym dniu. Nie możesz oddać swojej zmiany do osoby która już pracuje.`);
+      return;
+    }
+    
+    fetch('/api/swaps', { 
+      method: 'POST', 
+      headers: {'Content-Type': 'application/json'}, 
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    })
+    .then(async r => { 
+      let data = {};
+      try {
+        data = await r.json();
+      } catch (e) {
+        console.warn('Odpowiedź nie jest JSON:', e);
+      }
+      
+      if (r.ok) {
+        alert('Prośba o oddanie zmiany została wysłana');
+        closeShifts();
+        if (swapEditor && swapEditor.classList.contains('show')) {
+          loadSwaps();
+        }
+      } else {
+        alert(data.error || 'Wystąpił błąd podczas wysyłania prośby');
+      }
+    })
+    .catch((error) => {
+      console.error('Błąd podczas wysyłania prośby o oddanie zmiany:', error);
+      alert('Wystąpił błąd podczas wysyłania prośby: ' + error.message);
+    });
+  }
+  
+  function sendTakeRequest() {
+    if (!shiftsTakeFromName || !shiftsTakeFromDate || !shiftsComment) return;
+    const to_date = (shiftsTakeFromDate.value || '').trim();
+    
+    // Automatycznie pobierz typ zmiany z wybranej daty
+    let to_shift = null;
+    
+    if (to_date) {
+      const otherCell = table.querySelector(`.slot[data-date="${to_date}"][data-employee="${shiftsTakeFromName.value}"]`);
+      if (otherCell) {
+        to_shift = otherCell.textContent.trim();
+      }
+    }
+    
+    const currentUser = (table && table.getAttribute('data-current-user')) || '';
+    
+    const payload = {
+      from_date: '',  // Pusty string zamiast null dla zabrania zmiany
+      from_employee: currentUser,
+      to_date: to_date,
+      to_employee: (shiftsTakeFromName.value || '').trim(),
+      from_shift: '',  // Pusty string zamiast null
+      to_shift: to_shift,
+      comment: (shiftsComment.value || '').trim(),
+      is_give_request: false,
+      is_ask_request: true
+    };
+    
+    // Walidacja
+    if (payload.from_employee === payload.to_employee) { 
+      alert('Nie możesz poprosić o zmianę od siebie.'); 
+      return; 
+    }
+    if (!payload.to_date) { 
+      alert('Wybierz datę zmiany którą chcesz przejąć'); 
+      return; 
+    }
+    if (!payload.to_employee) { 
+      alert('Wybierz osobę od której chcesz przejąć zmianę'); 
+      return; 
+    }
+    
+    // Sprawdź czy data nie jest już zajęta przez inne prośby
+    if (isDateOccupied(payload.to_date, payload.to_employee)) {
+      alert('Zmiana którą chcesz przejąć jest już zaangażowana w inną prośbę o zamianę');
+      return;
+    }
+    
+    // Sprawdź czy nie masz już zmiany w tym dniu
+    const ownCell = table.querySelector(`.slot[data-date="${to_date}"][data-employee="${currentUser}"]`);
+    if (ownCell && ownCell.textContent.trim()) {
+      alert('Masz już zmianę w tym dniu. Nie możesz przejąć dodatkowej zmiany.');
+      return;
+    }
+    
+    fetch('/api/swaps', { 
+      method: 'POST', 
+      headers: {'Content-Type': 'application/json'}, 
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    })
+    .then(async r => { 
+      let data = {};
+      try {
+        data = await r.json();
+      } catch (e) {
+        console.warn('Odpowiedź nie jest JSON:', e);
+      }
+      
+      if (r.ok) {
+        alert('Prośba o przejęcie zmiany została wysłana');
+        closeShifts();
+        if (swapEditor && swapEditor.classList.contains('show')) {
+          loadSwaps();
+        }
+      } else {
+        alert(data.error || 'Wystąpił błąd podczas wysyłania prośby');
+      }
+    })
+    .catch((error) => {
+      console.error('Błąd podczas wysyłania prośby o przejęcie zmiany:', error);
+      alert('Wystąpił błąd podczas wysyłania prośby: ' + error.message);
+    });
+  }
 
-  // Event listener dla zmiany osoby w formularzu compose
-  if (composeToName) {
-    composeToName.addEventListener('change', (e) => {
+  // --- Event listeners dla zunifikowanego panelu zmian ---
+  if (btnShifts) btnShifts.addEventListener('click', toggleShifts);
+  if (shiftsClose) shiftsClose.addEventListener('click', closeShifts);
+  if (shiftsCancel) shiftsCancel.addEventListener('click', closeShifts);
+  if (shiftsEditor) shiftsEditor.addEventListener('click', (e) => { if (e.target === shiftsEditor) closeShifts(); });
+  if (shiftsSend) shiftsSend.addEventListener('click', sendShifts);
+  
+  // Event listeners dla radio buttons
+  shiftTypeRadios.forEach(radio => {
+    radio.addEventListener('change', switchShiftForm);
+  });
+
+  // Event listeners dla nowych formularzy
+  if (shiftsToName) {
+    shiftsToName.addEventListener('change', (e) => {
       const selectedEmployee = e.target.value;
       if (selectedEmployee) {
-        populateOtherShifts(selectedEmployee);
+        populateOtherShifts(selectedEmployee, 'shifts-to-date');
       } else {
-        // Resetuj listę dat gdy nie wybrano osoby
-        const toDateSelect = document.getElementById('compose-to-date');
-        if (toDateSelect) {
-          toDateSelect.innerHTML = '<option value="" disabled selected>Najpierw wybierz osobę</option>';
-          toDateSelect.disabled = true;
+        if (shiftsToDate) {
+          shiftsToDate.innerHTML = '<option value="" disabled selected>Najpierw wybierz osobę</option>';
+        }
+      }
+    });
+  }
+  
+  if (shiftsTakeFromName) {
+    shiftsTakeFromName.addEventListener('change', (e) => {
+      const selectedEmployee = e.target.value;
+      if (selectedEmployee) {
+        populateOtherShifts(selectedEmployee, 'shifts-take-from-date');
+      } else {
+        if (shiftsTakeFromDate) {
+          shiftsTakeFromDate.innerHTML = '<option value="" disabled selected>Najpierw wybierz osobę</option>';
         }
       }
     });
@@ -1735,14 +2738,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // Funkcja do odświeżania list w formularzu gdy zmienia się grafik
   function refreshComposeLists() {
     // Sprawdź czy formularz jest otwarty
-    if (composeEditor && composeEditor.classList.contains('show')) {
+    if (shiftsEditor && shiftsEditor.classList.contains('show')) {
       // Odśwież listę własnych zmian
-      populateOwnShifts();
+      populateOwnShifts('shifts-from-date');
+      populateOwnShifts('shifts-give-from-date');
       
       // Odśwież listę zmian wybranej osoby (jeśli jest wybrana)
-      const selectedEmployee = composeToName ? composeToName.value : '';
+      const selectedEmployee = shiftsToName ? shiftsToName.value : '';
       if (selectedEmployee) {
-        populateOtherShifts(selectedEmployee);
+        populateOtherShifts(selectedEmployee, 'shifts-to-date');
+      }
+      
+      const selectedTakeEmployee = shiftsTakeFromName ? shiftsTakeFromName.value : '';
+      if (selectedTakeEmployee) {
+        populateOtherShifts(selectedTakeEmployee, 'shifts-take-from-date');
       }
     }
   }
@@ -1773,5 +2782,905 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+  // ===== FUNKCJONALNOŚĆ NIEDYSPOZYCJI =====
+  
+  let selectedDays = [];
+  let currentMonth = null;
+  
+  // Inicjalizacja modala niedyspozycji
+  function initUnavailabilityModal() {
+    const modal = document.getElementById('unavailability-modal');
+    const openBtn = document.getElementById('btn-unavailability');
+    const closeBtn = document.getElementById('unavailability-close');
+    const cancelBtn = document.getElementById('unavailability-cancel');
+    const submitBtn = document.getElementById('unavailability-submit');
+    const monthInput = document.getElementById('unavailability-month');
+    const prevMonthBtn = document.getElementById('unavailability-prev-month');
+    const nextMonthBtn = document.getElementById('unavailability-next-month');
+    const monthLabel = document.getElementById('unavailability-month-label');
+    
+    if (!modal || !openBtn) return;
+    
+    // Otwórz modal
+    openBtn.addEventListener('click', () => {
+      const now = new Date();
+      const currentMonthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      monthInput.value = currentMonthStr;
+      monthInput.readOnly = true; // Upewnij się, że pole jest tylko do odczytu
+      selectedDays = [];
+      currentMonth = null;
+      updateCalendar();
+      updateSelectedDaysList();
+      updateMonthLabel();
+      modal.classList.add('show');
+      // Ustaw fokus na modal, żeby obsługa klawiatury działała
+      setTimeout(() => modal.focus(), 100);
+    });
+    
+    // Zamknij modal
+    [closeBtn, cancelBtn].forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          modal.classList.remove('show');
+        });
+      }
+    });
+    
+    // Nawigacja miesiącami
+    if (prevMonthBtn) {
+      prevMonthBtn.addEventListener('click', () => {
+        navigateMonth(-1);
+      });
+    }
+    
+    if (nextMonthBtn) {
+      nextMonthBtn.addEventListener('click', () => {
+        navigateMonth(1);
+      });
+    }
+    
+    // Zmiana miesiąca przez input (ukryty)
+    monthInput.addEventListener('change', () => {
+      selectedDays = [];
+      updateCalendar();
+      updateSelectedDaysList();
+      updateMonthLabel();
+    });
+    
+    // Wyślij zgłoszenie
+    if (submitBtn) {
+      submitBtn.addEventListener('click', submitUnavailability);
+    }
+    
+    // Obsługa klawiatury dla nawigacji miesiącami
+    modal.addEventListener('keydown', (e) => {
+      if (modal.classList.contains('show')) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          navigateMonth(-1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          navigateMonth(1);
+        }
+      }
+    });
+    
+    // Funkcja nawigacji miesiącami
+    function navigateMonth(direction) {
+      if (!currentMonth) {
+        const now = new Date();
+        currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+      }
+      
+      let newMonth = currentMonth.month + direction;
+      let newYear = currentMonth.year;
+      
+      if (newMonth < 1) {
+        newMonth = 12;
+        newYear--;
+      } else if (newMonth > 12) {
+        newMonth = 1;
+        newYear++;
+      }
+      
+      currentMonth = { year: newYear, month: newMonth };
+      monthInput.value = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+      selectedDays = [];
+      updateCalendar();
+      updateSelectedDaysList();
+      updateMonthLabel();
+    }
+    
+    // Aktualizuj etykietę miesiąca
+    function updateMonthLabel() {
+      if (!monthLabel || !currentMonth) return;
+      
+      const monthNames = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+                        'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+      monthLabel.textContent = `${monthNames[currentMonth.month]} ${currentMonth.year}`;
+    }
+  }
+  
+  // Aktualizuj mini-kalendarz
+  function updateCalendar() {
+    const monthInput = document.getElementById('unavailability-month');
+    const calendar = document.getElementById('unavailability-calendar');
+    
+    if (!monthInput || !calendar) return;
+    
+    const monthYear = monthInput.value;
+    if (!monthYear) return;
+    
+    const [year, month] = monthYear.split('-').map(Number);
+    currentMonth = { year, month };
+    
+    // Wyczyść kalendarz
+    calendar.innerHTML = '';
+    
+    // Nagłówki dni
+    const dayHeaders = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
+    dayHeaders.forEach(day => {
+      const header = document.createElement('div');
+      header.className = 'day-header';
+      header.textContent = day;
+      calendar.appendChild(header);
+    });
+    
+    // Pobierz pierwszy dzień miesiąca i ile dni ma miesiąc
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDay = (firstDay.getDay() + 6) % 7; // Poniedziałek = 0
+    
+    // Dodaj puste komórki na początku
+    for (let i = 0; i < startDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'day-cell other-month';
+      calendar.appendChild(empty);
+    }
+    
+    // Dodaj dni miesiąca
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayCell = document.createElement('div');
+      dayCell.className = 'day-cell';
+      dayCell.textContent = day;
+      dayCell.dataset.day = day;
+      
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      dayCell.dataset.date = dateStr;
+      
+      // Sprawdź czy dzień jest już wybrany
+      if (selectedDays.includes(dateStr)) {
+        dayCell.classList.add('selected');
+      }
+      
+      // Kliknięcie na dzień
+      dayCell.addEventListener('click', () => {
+        if (dayCell.classList.contains('other-month')) return;
+        
+        const dateStr = dayCell.dataset.date;
+        
+        if (selectedDays.includes(dateStr)) {
+          // Usuń z wybranych
+          selectedDays = selectedDays.filter(d => d !== dateStr);
+          dayCell.classList.remove('selected');
+        } else {
+          // Dodaj do wybranych
+          selectedDays.push(dateStr);
+          dayCell.classList.add('selected');
+        }
+        
+        updateSelectedDaysList();
+      });
+      
+      calendar.appendChild(dayCell);
+    }
+  }
+  
+  // Aktualizuj listę wybranych dni
+  function updateSelectedDaysList() {
+    const list = document.getElementById('selected-days-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    
+    selectedDays.sort().forEach(dateStr => {
+      const tag = document.createElement('div');
+      tag.className = 'selected-day-tag';
+      
+      const date = new Date(dateStr);
+      const dayName = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'][date.getDay()];
+      const dayNumber = date.getDate();
+      
+      tag.innerHTML = `
+        ${dayName} ${dayNumber}
+        <span class="remove-day" data-date="${dateStr}">×</span>
+      `;
+      
+      // Usuń dzień po kliknięciu na ×
+      tag.querySelector('.remove-day').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dateToRemove = e.target.dataset.date;
+        selectedDays = selectedDays.filter(d => d !== dateToRemove);
+        updateCalendar();
+        updateSelectedDaysList();
+      });
+      
+      list.appendChild(tag);
+    });
+  }
+  
+  // Wyślij zgłoszenie niedyspozycji
+  async function submitUnavailability() {
+    const monthInput = document.getElementById('unavailability-month');
+    const submitBtn = document.getElementById('unavailability-submit');
+    
+    if (!monthInput || !submitBtn) return;
+    
+    if (selectedDays.length === 0) {
+      alert('Wybierz przynajmniej jeden dzień niedyspozycji');
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wysyłanie...';
+    
+    try {
+      const response = await fetch('/api/unavailability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          month_year: monthInput.value,
+          selected_days: selectedDays,
+          comment: ''
+        }),
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('Zgłoszenie niedyspozycji zostało wysłane!');
+        document.getElementById('unavailability-modal').style.display = 'none';
+        selectedDays = [];
+        updateCalendar();
+        updateSelectedDaysList();
+      } else {
+        alert('Błąd: ' + (result.error || 'Nieznany błąd'));
+      }
+    } catch (error) {
+      console.error('Błąd podczas wysyłania zgłoszenia:', error);
+      alert('Wystąpił błąd podczas wysyłania zgłoszenia');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Wyślij zgłoszenie';
+    }
+  }
+  
+  // Funkcja do odpowiadania na niedyspozycje
+  async function respondUnavailability(id, status) {
+    try {
+      const response = await fetch('/api/unavailability/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id,
+          status: status,
+          boss_comment: ''
+        }),
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(`Zgłoszenie niedyspozycji zostało ${status === 'APPROVED' ? 'zatwierdzone' : 'odrzucone'}!`);
+        loadSwaps(); // Odśwież skrzynkę
+      } else {
+        alert('Błąd: ' + (result.error || 'Nieznany błąd'));
+      }
+    } catch (error) {
+      console.error('Błąd podczas odpowiadania na niedyspozycję:', error);
+      alert('Wystąpił błąd podczas przetwarzania zgłoszenia');
+    }
+  }
+  
+  // Inicjalizuj funkcjonalność niedyspozycji
+  initUnavailabilityModal();
+  
+  // Inicjalizuj powiadomienia
+  initializeNotifications();
+
   console.log('Aplikacja została w pełni załadowana i jest gotowa do użycia');
+});
+
+// ===== SYSTEM POWIADOMIEŃ PWA =====
+
+// Inicjalizacja powiadomień
+async function initializeNotifications() {
+  // Sprawdź czy przeglądarka obsługuje powiadomienia
+  if (!('Notification' in window)) {
+    console.log('Ta przeglądarka nie obsługuje powiadomień');
+    return;
+  }
+  
+  // Sprawdź czy service worker jest dostępny
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service Worker nie jest obsługiwany');
+    return;
+  }
+  
+  // Zarejestruj service worker
+  try {
+    const registration = await navigator.serviceWorker.register('/static/sw.js');
+    console.log('Service Worker zarejestrowany:', registration);
+    
+    // Sprawdź czy powiadomienia są dozwolone
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      console.log('Uprawnienie do powiadomień:', permission);
+    }
+    
+    // Jeśli powiadomienia są dozwolone, utwórz subskrypcję push
+    if (Notification.permission === 'granted') {
+      console.log('🔔 Powiadomienia są dozwolone, inicjalizuję subskrypcję push...');
+      await initializePushSubscription();
+    }
+    
+    // Uruchom background sync
+    if ('sync' in window.ServiceWorkerRegistration.prototype) {
+      registration.sync.register('check-notifications');
+    }
+    
+    // Sprawdź nowe prośby co 30 sekund
+    setInterval(checkForNewRequests, 30000);
+    
+  } catch (error) {
+    console.error('Błąd rejestracji Service Worker:', error);
+  }
+}
+
+// Sprawdzanie nowych próśb i zmian statusu
+async function checkForNewRequests() {
+  try {
+    // Sprawdź prośby o zamianę
+    const swapsResponse = await fetch('/api/swaps/inbox', { credentials: 'include' });
+    const swapsData = await swapsResponse.json();
+    
+    // Sprawdź niedyspozycje
+    const unavailabilityResponse = await fetch('/api/unavailability/inbox', { credentials: 'include' });
+    const unavailabilityData = await unavailabilityResponse.json();
+    
+    // Sprawdź zmiany w grafiku
+    const scheduleResponse = await fetch('/api/schedule/changes', { credentials: 'include' });
+    const scheduleData = await scheduleResponse.json();
+    
+    let hasChanges = false;
+    let notificationMessage = '';
+    
+    // Sprawdź prośby o zamianę
+    if (swapsData.items && swapsData.items.length > 0) {
+      const changes = await checkSwapsChanges(swapsData.items);
+      if (changes.hasChanges) {
+        hasChanges = true;
+        notificationMessage += changes.message;
+      }
+    }
+    
+    // Sprawdź niedyspozycje
+    if (unavailabilityData.items && unavailabilityData.items.length > 0) {
+      const changes = await checkUnavailabilityChanges(unavailabilityData.items);
+      if (changes.hasChanges) {
+        hasChanges = true;
+        if (notificationMessage) {
+          notificationMessage += `, ${changes.message}`;
+        } else {
+          notificationMessage = changes.message;
+        }
+      }
+    }
+    
+    // Sprawdź zmiany w grafiku
+    if (scheduleData.changes && scheduleData.changes.length > 0) {
+      const changes = await checkScheduleChanges(scheduleData.changes, scheduleData.current_user_name);
+      if (changes.hasChanges) {
+        hasChanges = true;
+        if (notificationMessage) {
+          notificationMessage += `, ${changes.message}`;
+        } else {
+          notificationMessage = changes.message;
+        }
+      }
+    }
+    
+    // Wyślij powiadomienie jeśli są zmiany
+    if (hasChanges && notificationMessage) {
+      showNotification(notificationMessage);
+    }
+  } catch (error) {
+    console.error('Błąd sprawdzania nowych próśb:', error);
+  }
+}
+
+// Sprawdzanie zmian w prośbach o zamianę
+async function checkSwapsChanges(items) {
+  const previousStatuses = JSON.parse(localStorage.getItem('previousRequestStatuses') || '{}');
+  const currentStatuses = {};
+  let hasChanges = false;
+  let message = '';
+  
+  items.forEach(item => {
+    currentStatuses[item.id] = item.final_status;
+    
+    // Sprawdź czy status się zmienił
+    if (previousStatuses[item.id] && previousStatuses[item.id] !== item.final_status) {
+      hasChanges = true;
+      const statusText = getStatusText(item.final_status);
+      
+      if (!message) {
+        message = `Status prośby o zamianę: ${statusText}`;
+      } else {
+        message += `, ${statusText}`;
+      }
+      
+      console.log(`Status zmieniony dla prośby ${item.id}: ${previousStatuses[item.id]} → ${item.final_status}`);
+    }
+    
+    // Sprawdź nowe prośby
+    if (!previousStatuses[item.id] && (item.final_status === 'OCZEKUJACE' || item.final_status === 'WSTEPNIE_ZATWIERDZONE')) {
+      hasChanges = true;
+      if (!message) {
+        message = `Nowa prośba o zamianę w skrzynce`;
+      } else {
+        message += `, nowa prośba`;
+      }
+    }
+  });
+  
+  // Zapisz aktualne statusy
+  localStorage.setItem('previousRequestStatuses', JSON.stringify(currentStatuses));
+  
+  return { hasChanges, message };
+}
+
+// Sprawdzanie zmian w niedyspozycjach
+async function checkUnavailabilityChanges(items) {
+  const previousStatuses = JSON.parse(localStorage.getItem('previousUnavailabilityStatuses') || '{}');
+  const currentStatuses = {};
+  let hasChanges = false;
+  let message = '';
+  
+  items.forEach(item => {
+    const status = item.status || 'PENDING';
+    currentStatuses[item.id] = status;
+    
+    // Sprawdź czy status się zmienił
+    if (previousStatuses[item.id] && previousStatuses[item.id] !== status) {
+      hasChanges = true;
+      const statusText = getUnavailabilityStatusText(status);
+      
+      if (!message) {
+        message = `Status niedyspozycji: ${statusText}`;
+      } else {
+        message += `, ${statusText}`;
+      }
+      
+      console.log(`Status zmieniony dla niedyspozycji ${item.id}: ${previousStatuses[item.id]} → ${status}`);
+    }
+    
+    // Sprawdź nowe niedyspozycje
+    if (!previousStatuses[item.id] && status === 'PENDING') {
+      hasChanges = true;
+      if (!message) {
+        message = `Nowa niedyspozycja w skrzynce`;
+      } else {
+        message += `, nowa niedyspozycja`;
+      }
+    }
+  });
+  
+  // Zapisz aktualne statusy
+  localStorage.setItem('previousUnavailabilityStatuses', JSON.stringify(currentStatuses));
+  
+  return { hasChanges, message };
+}
+
+// Funkcja pomocnicza do mapowania statusów niedyspozycji
+function getUnavailabilityStatusText(status) {
+  switch (status) {
+    case 'PENDING': return 'Oczekujące';
+    case 'APPROVED': return 'Zatwierdzone';
+    case 'REJECTED': return 'Odrzucone';
+    default: return status;
+  }
+}
+
+// Sprawdzanie zmian w grafiku
+async function checkScheduleChanges(changes, currentUserName) {
+  const previousChanges = JSON.parse(localStorage.getItem('previousScheduleChanges') || '{}');
+  const currentChanges = {};
+  let hasChanges = false;
+  let message = '';
+  
+  // Użyj nazwy użytkownika z API
+  const currentUser = currentUserName || getCurrentUserName();
+  
+  changes.forEach(change => {
+    const changeKey = `${change.id}_${change.changed_at}`;
+    currentChanges[change.id] = change;
+    
+    // Sprawdź czy to nowa zmiana
+    if (!previousChanges[change.id]) {
+      hasChanges = true;
+      
+      // Sprawdź czy zmiana dotyczy aktualnego użytkownika
+      if (change.employee_name === currentUser) {
+        const actionText = getScheduleActionText(change.action);
+        const shiftText = change.shift_type || 'brak zmiany';
+        
+        if (!message) {
+          message = `Zmiana w grafiku: ${actionText} ${shiftText} na ${change.date}`;
+        } else {
+          message += `, ${actionText} ${shiftText}`;
+        }
+        
+        console.log(`Nowa zmiana w grafiku dla ${change.employee_name}: ${change.action} ${change.shift_type} na ${change.date}`);
+      }
+    }
+  });
+  
+  // Zapisz aktualne zmiany
+  localStorage.setItem('previousScheduleChanges', JSON.stringify(currentChanges));
+  
+  return { hasChanges, message };
+}
+
+// Funkcja pomocnicza do mapowania akcji w grafiku
+function getScheduleActionText(action) {
+  switch (action) {
+    case 'DODANO': return 'Dodano';
+    case 'ZMIENIONO': return 'Zmieniono';
+    case 'USUNIETO': return 'Usunięto';
+    default: return action;
+  }
+}
+
+// Funkcja pomocnicza do pobrania nazwy aktualnego użytkownika
+function getCurrentUserName() {
+  // Spróbuj pobrać z elementu na stronie lub z localStorage
+  const userElement = document.querySelector('[data-user-name]');
+  if (userElement) {
+    return userElement.getAttribute('data-user-name');
+  }
+  
+  // Fallback - pobierz z localStorage lub użyj domyślnej wartości
+  return localStorage.getItem('currentUserName') || 'Nieznany użytkownik';
+}
+
+// Funkcja pomocnicza do określenia typu prośby
+function getRequestTypeText(item) {
+  if (item.is_ask_request) return 'zabranie';
+  if (item.is_give_request) return 'oddanie';
+  return 'zamiana';
+}
+
+// Wyświetlanie powiadomienia
+function showNotification(message, requestData = null) {
+  if (Notification.permission === 'granted') {
+    const notification = new Notification('Grafik SP4600', {
+      body: message,
+      icon: '/static/PKN.WA.D.png',
+      badge: '/static/PKN.WA.D.png',
+      tag: 'grafik-notification',
+      data: requestData,
+      requireInteraction: true
+    });
+    
+    notification.onclick = function() {
+      window.focus();
+      notification.close();
+      
+      // Otwórz skrzynkę jeśli jest dostępna
+      const swapsBtn = document.getElementById('btn-swaps-user') || document.getElementById('btn-swaps-admin');
+      if (swapsBtn) {
+        swapsBtn.click();
+      }
+    };
+    
+    // Automatycznie zamknij po 10 sekundach
+    setTimeout(() => {
+      notification.close();
+    }, 10000);
+  }
+}
+
+// Test powiadomień (do testowania)
+function testNotification() {
+  showNotification('To jest test powiadomienia!');
+}
+
+// Funkcja do ręcznego testowania subskrypcji push
+
+// Funkcja do ręcznego sprawdzenia statusów (np. po odświeżeniu strony)
+async function checkStatusChanges() {
+  console.log('Sprawdzam zmiany statusów...');
+  await checkForNewRequests();
+}
+
+// Funkcja eksportu do Excel (tylko dla adminów)
+function exportToExcel(event) {
+  console.log('Rozpoczynam eksport do Excel...');
+  
+  // Pokaż loading
+  const button = event ? event.target : document.querySelector('button[onclick*="exportToExcel"]');
+  if (!button) {
+    console.error('Nie znaleziono przycisku eksportu');
+    return;
+  }
+  
+  const originalText = button.textContent;
+  button.textContent = '⏳ EKSPORTUJĘ...';
+  button.disabled = true;
+  
+  // Pobierz aktualny miesiąc i rok z URL lub użyj bieżący miesiąc
+  const urlParams = new URLSearchParams(window.location.search);
+  const year = urlParams.get('year') ? parseInt(urlParams.get('year')) : new Date().getFullYear();
+  const month = urlParams.get('month') ? parseInt(urlParams.get('month')) : new Date().getMonth() + 1;
+  
+  console.log(`Eksportuję dla roku: ${year}, miesiąca: ${month}`);
+  
+  // Wywołaj API eksportu z parametrami miesiąca
+  fetch(`/api/export/excel?year=${year}&month=${month}`, {
+    method: 'GET',
+    credentials: 'include',  // Wysyłaj cookies sesji
+    headers: {
+      'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+  })
+    .then(response => {
+      console.log('Response status:', response.status);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
+      if (!response.ok) {
+        return response.text().then(text => {
+          console.error('Error response body:', text);
+          throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+        });
+      }
+      
+      // Sprawdź czy to jest plik Excel
+      const contentType = response.headers.get('Content-Type');
+      console.log('Content-Type:', contentType);
+      
+      if (!contentType || !contentType.includes('spreadsheetml')) {
+        return response.text().then(text => {
+          console.error('Unexpected content type:', contentType);
+          console.error('Response body:', text);
+          throw new Error(`Oczekiwano pliku Excel, otrzymano: ${contentType}`);
+        });
+      }
+      
+      // Pobierz nazwę pliku z nagłówka Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `grafik_sp4600_${year}_${month}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      console.log('Nazwa pliku:', filename);
+      
+      return response.blob().then(blob => {
+        console.log('Rozmiar blob:', blob.size, 'bytes');
+        return { blob, filename };
+      });
+    })
+    .then(({ blob, filename }) => {
+      if (blob.size === 0) {
+        throw new Error('Pobrany plik jest pusty');
+      }
+      
+      // Utwórz link do pobrania
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Wyczyść
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+      
+      console.log('Eksport do Excel zakończony pomyślnie, plik:', filename);
+      alert(`Plik ${filename} został pobrany pomyślnie!`);
+    })
+    .catch(error => {
+      console.error('Błąd podczas eksportu do Excel:', error);
+      alert(`Wystąpił błąd podczas eksportu do Excel: ${error.message}`);
+    })
+    .finally(() => {
+      // Przywróć przycisk
+      button.textContent = originalText;
+      button.disabled = false;
+    });
+}
+
+// Funkcja do podświetlania zalogowanego użytkownika
+function highlightCurrentUser() {
+  const table = document.getElementById('grafik');
+  if (!table) return;
+  
+  const currentUser = table.getAttribute('data-current-user');
+  if (!currentUser) return;
+  
+  // Znajdź nagłówek kolumny dla zalogowanego użytkownika
+  const headers = table.querySelectorAll('th.col-emp');
+  let userColumnIndex = -1;
+  
+  headers.forEach((header, index) => {
+    const headerText = header.textContent.trim();
+    // Sprawdź czy to kolumna zalogowanego użytkownika
+    if (headerText.includes(currentUser) || headerText === currentUser) {
+      header.classList.add('current-user');
+      userColumnIndex = index + 2; // +2 bo mamy kolumny data i dzień przed pracownikami
+    }
+  });
+  
+  // Podświetl wszystkie komórki w kolumnie zalogowanego użytkownika
+  if (userColumnIndex > 0) {
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells[userColumnIndex]) {
+        cells[userColumnIndex].classList.add('current-user');
+      }
+    });
+  }
+}
+
+// ===== NAWIGACJA ZMIAN DZIENNYCH =====
+let currentShiftDate = new Date(); // Aktualnie wyświetlana data
+
+function formatDateForDisplay(date) {
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  
+  if (isToday) {
+    return {
+      label: 'DZISIAJ',
+      date: date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    };
+  } else {
+    return {
+      label: date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      date: date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    };
+  }
+}
+
+function updateShiftDateDisplay(date) {
+  const dateInfo = formatDateForDisplay(date);
+  const labelElement = document.getElementById('shift-date-label');
+  const dateElement = document.getElementById('shift-date-display');
+  
+  if (labelElement) {
+    labelElement.textContent = dateInfo.label;
+  }
+  if (dateElement) {
+    dateElement.textContent = dateInfo.date;
+  }
+}
+
+function loadShiftsForDate(date) {
+  const dateString = date.toISOString().split('T')[0]; // Format YYYY-MM-DD
+  
+  fetch(`/api/shifts/${dateString}`, { credentials: 'include' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // Aktualizuj wyświetlane zmiany
+      updateShiftsDisplay(data);
+    })
+    .catch(error => {
+      console.error('Błąd podczas ładowania zmian:', error);
+      // W przypadku błędu wyświetl pustą listę
+      updateShiftsDisplay({
+        dniowka: [],
+        popoludniowka: [],
+        nocka: []
+      });
+    });
+}
+
+function updateShiftsDisplay(shiftsData) {
+  // Aktualizuj dniówkę
+  const dniowkaElement = document.getElementById('shifts-dniowka');
+  if (dniowkaElement) {
+    if (shiftsData.dniowka && shiftsData.dniowka.length > 0) {
+      dniowkaElement.innerHTML = `<ul>${shiftsData.dniowka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+    } else {
+      dniowkaElement.innerHTML = '<p class="muted">brak przypisań</p>';
+    }
+  }
+  
+  // Aktualizuj popołudniówkę
+  const popoludniowkaElement = document.getElementById('shifts-popoludniowka');
+  if (popoludniowkaElement) {
+    if (shiftsData.popoludniowka && shiftsData.popoludniowka.length > 0) {
+      popoludniowkaElement.innerHTML = `<ul>${shiftsData.popoludniowka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+    } else {
+      popoludniowkaElement.innerHTML = '<p class="muted">brak przypisań</p>';
+    }
+  }
+  
+  // Aktualizuj nockę
+  const nockaElement = document.getElementById('shifts-nocka');
+  if (nockaElement) {
+    if (shiftsData.nocka && shiftsData.nocka.length > 0) {
+      nockaElement.innerHTML = `<ul>${shiftsData.nocka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+    } else {
+      nockaElement.innerHTML = '<p class="muted">brak przypisań</p>';
+    }
+  }
+}
+
+function navigateToPreviousDay() {
+  const newDate = new Date(currentShiftDate);
+  newDate.setDate(newDate.getDate() - 1);
+  currentShiftDate = newDate;
+  
+  updateShiftDateDisplay(currentShiftDate);
+  loadShiftsForDate(currentShiftDate);
+}
+
+function navigateToNextDay() {
+  const newDate = new Date(currentShiftDate);
+  newDate.setDate(newDate.getDate() + 1);
+  currentShiftDate = newDate;
+  
+  updateShiftDateDisplay(currentShiftDate);
+  loadShiftsForDate(currentShiftDate);
+}
+
+function initializeShiftNavigation() {
+  // Ustaw początkową datę na dzisiaj
+  currentShiftDate = new Date();
+  updateShiftDateDisplay(currentShiftDate);
+  
+  // Dodaj event listenery dla przycisków nawigacji
+  const prevButton = document.getElementById('shift-prev-day');
+  const nextButton = document.getElementById('shift-next-day');
+  
+  if (prevButton) {
+    prevButton.addEventListener('click', navigateToPreviousDay);
+  }
+  
+  if (nextButton) {
+    nextButton.addEventListener('click', navigateToNextDay);
+  }
+}
+
+// Sprawdź zmiany statusów po załadowaniu strony
+document.addEventListener('DOMContentLoaded', function() {
+  // Podświetl zalogowanego użytkownika
+  highlightCurrentUser();
+  
+  // Inicjalizuj nawigację zmian
+  initializeShiftNavigation();
+  
+  // Poczekaj 2 sekundy po załadowaniu, żeby dane się załadowały
+  setTimeout(checkStatusChanges, 2000);
 });

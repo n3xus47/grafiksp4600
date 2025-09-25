@@ -6,8 +6,13 @@ Zachowuje pełną kompatybilność z Google OAuth2
 import os
 import logging
 import traceback
-from flask import Blueprint, render_template, redirect, url_for, session, request
+import re
+from flask import Blueprint, render_template, redirect, url_for, session, request, flash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from ..auth import init_oauth
+from ..database import get_db
+from ..password_utils import hash_password, verify_password, validate_password_strength
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +21,26 @@ bp = Blueprint('auth', __name__)
 # Inicjalizuj OAuth
 google = None
 
+# Rate limiter - będzie zainicjalizowany w init_auth_routes
+limiter = None
+
 def init_auth_routes(app):
     """Inicjalizuj trasy uwierzytelniania"""
-    global google
+    global google, limiter
     google = init_oauth(app)
+    
+    # Inicjalizuj rate limiter
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"]
+    )
+    limiter.init_app(app)
+    
+    # Dodaj rate limiting do tras
+    limiter.limit("5 per minute")(register)
+    limiter.limit("10 per minute")(login_email)
 
 @bp.get("/signin")
 def signin():
@@ -132,22 +153,32 @@ def auth_callback():
         db = get_db()
         
         # Sprawdź czy użytkownik już istnieje
-        existing_user = db.execute("SELECT id, role FROM users WHERE email = ?", (email,)).fetchone()
+        existing_user = db.execute("SELECT id, role, login_type FROM users WHERE email = ?", (email,)).fetchone()
         
         if existing_user:
             # Aktualizuj istniejącego użytkownika
-            db.execute("""
-                UPDATE users 
-                SET google_sub = ?, name = ?, role = COALESCE(role, 'USER')
-                WHERE email = ?
-            """, (google_sub, name, email))
+            if existing_user['login_type'] == 'EMAIL':
+                # Użytkownik ma konto email - połącz z Google
+                db.execute("""
+                    UPDATE users 
+                    SET google_sub = ?, name = ?, login_type = 'BOTH', role = COALESCE(role, 'USER')
+                    WHERE email = ?
+                """, (google_sub, name, email))
+                logger.info(f"Połączono konto email z Google dla {email}")
+            else:
+                # Użytkownik ma już konto Google lub BOTH - aktualizuj dane
+                db.execute("""
+                    UPDATE users 
+                    SET google_sub = ?, name = ?, role = COALESCE(role, 'USER')
+                    WHERE email = ?
+                """, (google_sub, name, email))
             user_id = existing_user["id"]
             user_role = existing_user["role"]
         else:
             # Utwórz nowego użytkownika
             cursor = db.execute("""
-                INSERT INTO users (google_sub, email, name, role) 
-                VALUES (?, ?, ?, 'USER')
+                INSERT INTO users (google_sub, email, name, login_type, role) 
+                VALUES (?, ?, ?, 'GOOGLE', 'USER')
             """, (google_sub, email, name))
             user_id = cursor.lastrowid
             user_role = 'USER'
@@ -166,6 +197,165 @@ def auth_callback():
         
     except Exception as e:
         logger.error(f"Błąd podczas autoryzacji: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return render_template("signin.html", error=f"Wystąpił błąd podczas logowania: {str(e)}")
+
+@bp.post("/register")
+def register():
+    """Rejestracja nowego użytkownika przez email i hasło"""
+    try:
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        name = request.form.get('name', '').strip()
+        
+        # Walidacja danych wejściowych
+        if not email or not password or not name:
+            flash("Wszystkie pola są wymagane", "error")
+            return render_template("signin.html", error="Wszystkie pola są wymagane")
+        
+        # Walidacja długości pól
+        if len(email) > 255:
+            flash("Email jest zbyt długi", "error")
+            return render_template("signin.html", error="Email jest zbyt długi")
+        
+        if len(name) > 255:
+            flash("Imię i nazwisko jest zbyt długie", "error")
+            return render_template("signin.html", error="Imię i nazwisko jest zbyt długie")
+        
+        if len(password) > 128:
+            flash("Hasło jest zbyt długie", "error")
+            return render_template("signin.html", error="Hasło jest zbyt długie")
+        
+        # Walidacja emaila
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            flash("Nieprawidłowy format adresu email", "error")
+            return render_template("signin.html", error="Nieprawidłowy format adresu email")
+        
+        # Sprawdź czy hasła się zgadzają
+        if password != confirm_password:
+            flash("Hasła nie są identyczne", "error")
+            return render_template("signin.html", error="Hasła nie są identyczne")
+        
+        # Sprawdź siłę hasła
+        is_valid, error_msg = validate_password_strength(password)
+        if not is_valid:
+            flash(error_msg, "error")
+            return render_template("signin.html", error=error_msg)
+        
+        # Sprawdź whitelistę emaili
+        whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        whitelist = [email.strip().lower() for email in whitelist if email.strip()]
+        
+        if whitelist and email not in whitelist:
+            logger.warning(f"Próba rejestracji użytkownika {email} nie na liście dozwolonych")
+            flash("Twój email nie jest autoryzowany do korzystania z tej aplikacji", "error")
+            return render_template("signin.html", error="Twój email nie jest autoryzowany do korzystania z tej aplikacji")
+        
+        db = get_db()
+        
+        # Sprawdź czy użytkownik już istnieje
+        existing_user = db.execute("SELECT id, login_type FROM users WHERE email = ?", (email,)).fetchone()
+        
+        if existing_user:
+            if existing_user['login_type'] in ['EMAIL', 'BOTH']:
+                flash("Użytkownik z tym adresem email już istnieje", "error")
+                return render_template("signin.html", error="Użytkownik z tym adresem email już istnieje")
+            else:
+                # Użytkownik ma konto Google - połącz konta
+                password_hash = hash_password(password)
+                db.execute("""
+                    UPDATE users 
+                    SET password_hash = ?, login_type = 'BOTH', name = ?
+                    WHERE email = ?
+                """, (password_hash, name, email))
+                user_id = existing_user['id']
+                logger.info(f"Połączono konto Google z rejestracją email dla {email}")
+        else:
+            # Utwórz nowego użytkownika
+            password_hash = hash_password(password)
+            cursor = db.execute("""
+                INSERT INTO users (email, name, password_hash, login_type, role) 
+                VALUES (?, ?, ?, 'EMAIL', 'USER')
+            """, (email, name, password_hash))
+            user_id = cursor.lastrowid
+            logger.info(f"Utworzono nowe konto email dla {email}")
+        
+        db.commit()
+        
+        # Ustaw sesję użytkownika
+        session['user_id'] = user_id
+        session['user_email'] = email
+        session['user_name'] = name
+        session['user_role'] = 'USER'
+        session.permanent = True
+        
+        logger.info(f"Użytkownik {email} zarejestrowany i zalogowany pomyślnie")
+        return redirect(url_for('main.index'))
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas rejestracji: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return render_template("signin.html", error=f"Wystąpił błąd podczas rejestracji: {str(e)}")
+
+@bp.post("/login-email")
+def login_email():
+    """Logowanie przez email i hasło"""
+    try:
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        
+        # Walidacja danych wejściowych
+        if not email or not password:
+            flash("Email i hasło są wymagane", "error")
+            return render_template("signin.html", error="Email i hasło są wymagane")
+        
+        # Walidacja długości pól
+        if len(email) > 255:
+            flash("Email jest zbyt długi", "error")
+            return render_template("signin.html", error="Email jest zbyt długi")
+        
+        if len(password) > 128:
+            flash("Hasło jest zbyt długie", "error")
+            return render_template("signin.html", error="Hasło jest zbyt długie")
+        
+        # Walidacja emaila
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            flash("Nieprawidłowy format adresu email", "error")
+            return render_template("signin.html", error="Nieprawidłowy format adresu email")
+        
+        db = get_db()
+        
+        # Znajdź użytkownika
+        user = db.execute("""
+            SELECT id, email, name, password_hash, login_type, role 
+            FROM users 
+            WHERE email = ? AND login_type IN ('EMAIL', 'BOTH')
+        """, (email,)).fetchone()
+        
+        if not user:
+            flash("Nieprawidłowy email lub hasło", "error")
+            return render_template("signin.html", error="Nieprawidłowy email lub hasło")
+        
+        # Sprawdź hasło
+        if not verify_password(password, user['password_hash']):
+            flash("Nieprawidłowy email lub hasło", "error")
+            return render_template("signin.html", error="Nieprawidłowy email lub hasło")
+        
+        # Ustaw sesję użytkownika
+        session['user_id'] = user['id']
+        session['user_email'] = user['email']
+        session['user_name'] = user['name']
+        session['user_role'] = user['role']
+        session.permanent = True
+        
+        logger.info(f"Użytkownik {email} zalogowany przez email pomyślnie")
+        return redirect(url_for('main.index'))
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas logowania email: {e}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return render_template("signin.html", error=f"Wystąpił błąd podczas logowania: {str(e)}")
 

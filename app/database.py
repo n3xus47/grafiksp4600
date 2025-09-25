@@ -31,9 +31,11 @@ def init_db():
         db.execute('''
             CREATE TABLE IF NOT EXISTS users (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              google_sub TEXT NOT NULL UNIQUE,  -- Unikalny ID z Google
+              google_sub TEXT UNIQUE,           -- Unikalny ID z Google (może być NULL)
               email TEXT NOT NULL UNIQUE,       -- Email użytkownika
               name TEXT NOT NULL,               -- Imię i nazwisko
+              password_hash TEXT,               -- Hash hasła (może być NULL dla Google-only)
+              login_type TEXT NOT NULL DEFAULT 'GOOGLE', -- Typ logowania: GOOGLE, EMAIL, BOTH
               role TEXT NOT NULL DEFAULT 'USER', -- Rola: USER lub ADMIN
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -63,6 +65,9 @@ def init_db():
         ensure_unavailability_table()
         ensure_schedule_changes_table()
         ensure_push_subscriptions_table()
+        
+        # Migruj tabelę users do nowej struktury
+        migrate_users_table()
         
         db.commit()
         logger.info("Baza danych zainicjalizowana pomyślnie")
@@ -238,6 +243,82 @@ def ensure_employees_code_column():
             
     except Exception as e:
         logger.error(f"Błąd podczas dodawania kolumny 'code' do tabeli employees: {e}")
+
+def ensure_employees_email_column():
+    """Dodaje kolumnę email do tabeli employees jeśli nie istnieje"""
+    try:
+        db = get_db()
+        cols = db.execute("PRAGMA table_info(employees)").fetchall()
+        has_email = any(c[1] == 'email' for c in cols)
+        
+        if not has_email:
+            db.execute("ALTER TABLE employees ADD COLUMN email TEXT")
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS employees_email_idx ON employees(email)")
+            db.commit()
+            logger.info("Dodano kolumnę 'email' do tabeli employees")
+            
+    except Exception as e:
+        logger.error(f"Błąd podczas dodawania kolumny 'email' do tabeli employees: {e}")
+
+def migrate_users_table():
+    """Migruje tabelę users do nowej struktury z obsługą email/hasło"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy kolumny już istnieją
+        cols = db.execute("PRAGMA table_info(users)").fetchall()
+        existing_columns = [col[1] for col in cols]
+        
+        # Dodaj kolumnę password_hash jeśli nie istnieje
+        if 'password_hash' not in existing_columns:
+            db.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+            logger.info("Dodano kolumnę 'password_hash' do tabeli users")
+        
+        # Dodaj kolumnę login_type jeśli nie istnieje
+        if 'login_type' not in existing_columns:
+            db.execute("ALTER TABLE users ADD COLUMN login_type TEXT NOT NULL DEFAULT 'GOOGLE'")
+            logger.info("Dodano kolumnę 'login_type' do tabeli users")
+        
+        # Zmień google_sub na nullable jeśli nie jest
+        if 'google_sub' in existing_columns:
+            # Sprawdź czy google_sub jest NOT NULL
+            google_sub_col = next((col for col in cols if col[1] == 'google_sub'), None)
+            if google_sub_col and google_sub_col[3] == 1:  # 1 oznacza NOT NULL
+                # SQLite nie obsługuje ALTER COLUMN, więc musimy utworzyć nową tabelę
+                logger.info("Migruję tabelę users do nowej struktury...")
+                
+                # Utwórz nową tabelę z poprawną strukturą
+                db.execute('''
+                    CREATE TABLE users_new (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      google_sub TEXT UNIQUE,
+                      email TEXT NOT NULL UNIQUE,
+                      name TEXT NOT NULL,
+                      password_hash TEXT,
+                      login_type TEXT NOT NULL DEFAULT 'GOOGLE',
+                      role TEXT NOT NULL DEFAULT 'USER',
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                ''')
+                
+                # Skopiuj dane z starej tabeli
+                db.execute('''
+                    INSERT INTO users_new (id, google_sub, email, name, role, created_at, login_type)
+                    SELECT id, google_sub, email, name, role, created_at, 'GOOGLE'
+                    FROM users
+                ''')
+                
+                # Usuń starą tabelę i zmień nazwę nowej
+                db.execute("DROP TABLE users")
+                db.execute("ALTER TABLE users_new RENAME TO users")
+                
+                logger.info("Migracja tabeli users zakończona pomyślnie")
+        
+        db.commit()
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas migracji tabeli users: {e}")
+        raise
 
 def init_app(app):
     """Inicjalizuj moduł bazy danych z aplikacją Flask"""

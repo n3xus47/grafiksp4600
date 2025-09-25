@@ -533,6 +533,66 @@ def api_swaps_clear():
         return jsonify(error="Wystąpił błąd podczas czyszczenia"), 500
 
 # ============================================================================
+# ENDPOINTY ZMIAN DZIENNYCH
+# ============================================================================
+
+@bp.get("/shifts/<date>")
+@login_required
+def api_shifts_for_date(date):
+    """Pobiera zmiany dla konkretnej daty"""
+    try:
+        import datetime as dt
+        
+        # Walidacja daty
+        try:
+            target_date = dt.datetime.strptime(date, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify(error="Nieprawidłowy format daty. Użyj YYYY-MM-DD"), 400
+        
+        db = get_db()
+        
+        # Pobierz zmiany dla tej daty
+        shifts = db.execute("""
+            SELECT s.shift_type, e.name 
+            FROM shifts s 
+            JOIN employees e ON s.employee_id = e.id 
+            WHERE s.date = ?
+            ORDER BY s.shift_type, e.name
+        """, (date,)).fetchall()
+        
+        # Grupuj zmiany według typu
+        shifts_by_type = {
+            'DNIOWKA': [],
+            'POPOLUDNIOWKA': [],
+            'NOCKA': []
+        }
+        
+        for shift in shifts:
+            shift_type = shift['shift_type']
+            name = shift['name']
+            
+            if shift_type == 'DNIOWKA':
+                shifts_by_type['DNIOWKA'].append(name)
+            elif shift_type == 'POPOLUDNIOWKA':
+                shifts_by_type['POPOLUDNIOWKA'].append(name)
+            elif shift_type == 'NOCKA':
+                shifts_by_type['NOCKA'].append(name)
+        
+        # Dodaj małe litery dla kompatybilności z frontendem
+        result = {
+            'date': date,
+            'dniowka': shifts_by_type['DNIOWKA'],
+            'popoludniowka': shifts_by_type['POPOLUDNIOWKA'],
+            'nocka': shifts_by_type['NOCKA']
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania zmian dla daty {date}: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania danych"), 500
+
+# ============================================================================
 # ENDPOINTY ZARZĄDZANIA PRACOWNIKAMI
 # ============================================================================
 
@@ -541,18 +601,20 @@ def api_swaps_clear():
 def api_employees_list():
     """Pobiera listę pracowników (admin)"""
     try:
-        from ..database import ensure_employees_code_column
+        from ..database import ensure_employees_code_column, ensure_employees_email_column
         ensure_employees_code_column()  # Upewnij się, że kolumna code istnieje
+        ensure_employees_email_column()  # Upewnij się, że kolumna email istnieje
         
         db = get_db()
-        employees = db.execute("SELECT id, name, code FROM employees ORDER BY name").fetchall()
+        employees = db.execute("SELECT id, name, code, email FROM employees ORDER BY name").fetchall()
         
         employees_list = []
         for emp in employees:
             employees_list.append({
                 'id': emp['id'],
                 'name': emp['name'],
-                'code': emp['code'] or ''  # Zwróć pusty string jeśli code jest None
+                'code': emp['code'] or '',  # Zwróć pusty string jeśli code jest None
+                'email': emp['email'] or ''  # Zwróć pusty string jeśli email jest None
             })
         
         return jsonify({"employees": employees_list})
@@ -566,12 +628,14 @@ def api_employees_list():
 def api_employees_create():
     """Dodaje nowego pracownika (admin)"""
     try:
-        from ..database import ensure_employees_code_column
+        from ..database import ensure_employees_code_column, ensure_employees_email_column
         ensure_employees_code_column()  # Upewnij się, że kolumna code istnieje
+        ensure_employees_email_column()  # Upewnij się, że kolumna email istnieje
         
         data = safe_get_json()
         name = data.get('name', '').strip()
         code = data.get('code', '').strip()
+        email = data.get('email', '').strip()
         
         if not name:
             return jsonify(error="Nazwa pracownika jest wymagana"), 400
@@ -589,11 +653,17 @@ def api_employees_create():
             if existing_code:
                 return jsonify(error="Pracownik o tym kodzie już istnieje"), 400
         
+        # Sprawdź czy email już istnieje (jeśli podano)
+        if email:
+            existing_email = db.execute("SELECT id FROM employees WHERE email = ?", (email,)).fetchone()
+            if existing_email:
+                return jsonify(error="Pracownik o tym emailu już istnieje"), 400
+        
         # Dodaj pracownika
-        cursor = db.execute("INSERT INTO employees (name, code) VALUES (?, ?)", (name, code or None))
+        cursor = db.execute("INSERT INTO employees (name, code, email) VALUES (?, ?, ?)", (name, code or None, email or None))
         db.commit()
         
-        logger.info(f"Admin {session.get('user_email')} dodał pracownika: {name} (kod: {code})")
+        logger.info(f"Admin {session.get('user_email')} dodał pracownika: {name} (kod: {code}, email: {email})")
         return jsonify(status="ok", message="Pracownik został dodany", id=cursor.lastrowid)
         
     except Exception as e:
@@ -605,12 +675,14 @@ def api_employees_create():
 def api_employees_update(emp_id):
     """Aktualizuje pracownika (admin)"""
     try:
-        from ..database import ensure_employees_code_column
+        from ..database import ensure_employees_code_column, ensure_employees_email_column
         ensure_employees_code_column()  # Upewnij się, że kolumna code istnieje
+        ensure_employees_email_column()  # Upewnij się, że kolumna email istnieje
         
         data = safe_get_json()
         name = data.get('name', '').strip()
         code = data.get('code', '').strip()
+        email = data.get('email', '').strip()
         
         if not name:
             return jsonify(error="Nazwa pracownika jest wymagana"), 400
@@ -633,11 +705,17 @@ def api_employees_update(emp_id):
             if code_exists:
                 return jsonify(error="Pracownik o tym kodzie już istnieje"), 400
         
+        # Sprawdź czy email nie jest już używany (jeśli podano)
+        if email:
+            email_exists = db.execute("SELECT id FROM employees WHERE email = ? AND id != ?", (email, emp_id)).fetchone()
+            if email_exists:
+                return jsonify(error="Pracownik o tym emailu już istnieje"), 400
+        
         # Aktualizuj pracownika
-        db.execute("UPDATE employees SET name = ?, code = ? WHERE id = ?", (name, code or None, emp_id))
+        db.execute("UPDATE employees SET name = ?, code = ?, email = ? WHERE id = ?", (name, code or None, email or None, emp_id))
         db.commit()
         
-        logger.info(f"Admin {session.get('user_email')} zaktualizował pracownika {emp_id}: {name} (kod: {code})")
+        logger.info(f"Admin {session.get('user_email')} zaktualizował pracownika {emp_id}: {name} (kod: {code}, email: {email})")
         return jsonify(status="ok", message="Pracownik został zaktualizowany")
         
     except Exception as e:
@@ -667,6 +745,94 @@ def api_employees_delete(emp_id):
     except Exception as e:
         logger.error(f"Błąd podczas usuwania pracownika: {e}")
         return jsonify(error="Wystąpił błąd podczas usuwania"), 500
+
+# ============================================================================
+# ENDPOINTY ZARZĄDZANIA WHITELISTĄ
+# ============================================================================
+
+@bp.get("/whitelist")
+@admin_required
+def api_whitelist_get():
+    """Pobiera aktualną whitelistę emaili (admin)"""
+    try:
+        import os
+        whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        whitelist = [email.strip() for email in whitelist if email.strip()]
+        
+        return jsonify({"emails": whitelist})
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania whitelisty: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania whitelisty"), 500
+
+@bp.post("/whitelist")
+@admin_required
+def api_whitelist_add():
+    """Dodaje email do whitelisty (admin)"""
+    try:
+        data = safe_get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify(error="Email jest wymagany"), 400
+        
+        # Sprawdź format emaila
+        import re
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return jsonify(error="Nieprawidłowy format emaila"), 400
+        
+        import os
+        current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
+        
+        if email in current_whitelist:
+            return jsonify(error="Email już jest na whitelistcie"), 400
+        
+        # Dodaj email do whitelisty
+        current_whitelist.append(email)
+        new_whitelist = ','.join(current_whitelist)
+        
+        # Zaktualizuj zmienną środowiskową (tylko dla tej sesji)
+        os.environ['GOOGLE_WHITELIST'] = new_whitelist
+        
+        logger.info(f"Admin {session.get('user_email')} dodał email do whitelisty: {email}")
+        return jsonify(status="ok", message="Email został dodany do whitelisty")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas dodawania do whitelisty: {e}")
+        return jsonify(error="Wystąpił błąd podczas dodawania do whitelisty"), 500
+
+@bp.delete("/whitelist")
+@admin_required
+def api_whitelist_remove():
+    """Usuwa email z whitelisty (admin)"""
+    try:
+        data = safe_get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify(error="Email jest wymagany"), 400
+        
+        import os
+        current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
+        
+        if email not in current_whitelist:
+            return jsonify(error="Email nie jest na whitelistcie"), 400
+        
+        # Usuń email z whitelisty
+        current_whitelist.remove(email)
+        new_whitelist = ','.join(current_whitelist)
+        
+        # Zaktualizuj zmienną środowiskową (tylko dla tej sesji)
+        os.environ['GOOGLE_WHITELIST'] = new_whitelist
+        
+        logger.info(f"Admin {session.get('user_email')} usunął email z whitelisty: {email}")
+        return jsonify(status="ok", message="Email został usunięty z whitelisty")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas usuwania z whitelisty: {e}")
+        return jsonify(error="Wystąpił błąd podczas usuwania z whitelisty"), 500
 
 # ============================================================================
 # ENDPOINTY SYSTEMOWE

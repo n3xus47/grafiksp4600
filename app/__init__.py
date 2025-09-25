@@ -6,6 +6,7 @@ Modularna struktura z zachowaniem pełnej kompatybilności
 import os
 import logging
 from flask import Flask, request
+from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 
 # Ładowanie zmiennych środowiskowych
@@ -28,6 +29,16 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
     app.config['DATABASE_PATH'] = os.path.join(os.path.dirname(__file__), "..", "app.db")
     
+    # CSRF Protection
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+    
+    # Dodaj csrf_token do kontekstu szablonów
+    @app.context_processor
+    def inject_csrf_token():
+        from flask_wtf.csrf import generate_csrf
+        return dict(csrf_token=generate_csrf())
+    
     # Import modułów po utworzeniu aplikacji
     from . import database
     from . import auth
@@ -35,6 +46,9 @@ def create_app():
     
     # Inicjalizacja bazy danych
     database.init_app(app)
+    
+    # Inicjalizuj trasy autoryzacji
+    auth_routes.init_auth_routes(app)
     
     # Rejestracja blueprintów
     app.register_blueprint(main.bp)

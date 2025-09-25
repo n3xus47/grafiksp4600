@@ -92,6 +92,9 @@ def index():
             if emp_row:
                 current_emp_name = emp_row["name"]
         
+        # Przygotuj datę dzisiejszą
+        today_date = dt.date.today().strftime('%d.%m.%Y')
+        
         response = make_response(render_template("index.html", 
             shifts_today=shifts_today,
             shifts_tomorrow=shifts_tomorrow,
@@ -105,7 +108,8 @@ def index():
             shifts_by_date=shifts_by_date,
             is_admin=is_admin,
             current_user=current_user,
-            current_emp_name=current_emp_name
+            current_emp_name=current_emp_name,
+            today_date=today_date
         ))
         
         logger.info(f"Główna strona załadowana dla użytkownika {current_user}")

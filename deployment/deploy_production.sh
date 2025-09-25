@@ -149,35 +149,16 @@ create_app_user() {
 install_application() {
     log_step "Instalacja aplikacji"
     
-    # Sprawdź czy katalog docelowy istnieje
-    if [ ! -d "$APP_DIR" ]; then
-        log_error "Katalog $APP_DIR nie istnieje"
-        exit 1
-    fi
-    
-    # Sprawdź czy pliki źródłowe istnieją
-    for file in app.py config.py requirements.txt static templates wsgi.py; do
-        if [ ! -e "$file" ]; then
-            log_error "Plik $file nie istnieje w bieżącym katalogu"
-            exit 1
-        fi
-    done
-    
-    # Skopiuj pliki aplikacji (pomiń katalog deployment) - wymuś nadpisanie
-    log_info "Kopiowanie plików aplikacji do $APP_DIR"
-    sudo cp -rf app.py config.py requirements.txt static templates wsgi.py $APP_DIR/
+    # Skopiuj pliki aplikacji
+    sudo cp -r . $APP_DIR/
     sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
     
-    # Utwórz wirtualne środowisko (jeśli nie istnieje)
+    # Utwórz wirtualne środowisko
     cd $APP_DIR
-    if [ ! -d "venv" ]; then
-        sudo -u $APP_USER python3 -m venv venv
-        sudo -u $APP_USER $APP_DIR/venv/bin/pip install --upgrade pip
-        sudo -u $APP_USER $APP_DIR/venv/bin/pip install -r $APP_DIR/requirements.txt
-        sudo -u $APP_USER $APP_DIR/venv/bin/pip install gunicorn
-    else
-        log_info "Wirtualne środowisko już istnieje, pomijam instalację pakietów"
-    fi
+    sudo -u $APP_USER python3 -m venv venv
+    sudo -u $APP_USER $APP_DIR/venv/bin/pip install --upgrade pip
+    sudo -u $APP_USER $APP_DIR/venv/bin/pip install -r requirements.txt
+    sudo -u $APP_USER $APP_DIR/venv/bin/pip install gunicorn
     
     # Utwórz katalogi logów
     sudo mkdir -p /var/log/$APP_NAME
@@ -203,18 +184,31 @@ server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
     
-    # HTTP configuration (SSL będzie dodane przez certbot)
+    # Przekierowanie na HTTPS
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    # SSL configuration (będzie automatycznie skonfigurowane przez certbot)
     
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     
     # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/json application/javascript;
+    
+    # Rate limiting
+    limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone \$binary_remote_addr zone=login:10m rate=5r/m;
     
     # Static files
     location /static/ {
@@ -276,11 +270,15 @@ server {
 }
 EOF
     
-    # Włącz konfigurację (test będzie wykonany po SSL)
+    # Włącz konfigurację
     sudo ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
     sudo rm -f /etc/nginx/sites-enabled/default
     
-    log_info "Konfiguracja Nginx utworzona (test po SSL)"
+    # Test konfiguracji
+    sudo nginx -t
+    sudo systemctl reload nginx
+    
+    log_info "Nginx skonfigurowany"
 }
 
 # Konfiguracja SSL
@@ -293,112 +291,13 @@ setup_ssl() {
     # Uzyskaj certyfikat SSL
     sudo certbot certonly --standalone -d $DOMAIN -d www.$DOMAIN --email $EMAIL --agree-tos --non-interactive
     
-    # Zaktualizuj konfigurację Nginx z SSL
-    sudo tee /etc/nginx/sites-available/$APP_NAME > /dev/null <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    
-    # Przekierowanie na HTTPS
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name $DOMAIN www.$DOMAIN;
-    
-    # SSL configuration
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-    
-    # Security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript;
-    
-    # Static files
-    location /static/ {
-        alias $APP_DIR/static/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    # Health check
-    location /healthz {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-    
-    # API endpoints with rate limiting
-    location /api/ {
-        limit_req zone=api burst=20 nodelay;
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
-        proxy_read_timeout 30s;
-    }
-    
-    # Login endpoints with stricter rate limiting
-    location /login/ {
-        limit_req zone=api burst=5 nodelay;
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-    
-    # Auth callback
-    location /authorize {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-    
-    # Main application
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
-        proxy_read_timeout 30s;
-    }
-}
-EOF
-    
     # Uruchom nginx ponownie
     sudo systemctl start nginx
     
     # Automatyczne odnowienie certyfikatów
     sudo crontab -l 2>/dev/null | { cat; echo "0 12 * * * /usr/bin/certbot renew --quiet"; } | sudo crontab -
     
-    # Test konfiguracji Nginx po SSL
-    sudo nginx -t
-    sudo systemctl reload nginx
-    
-    log_info "SSL skonfigurowany i Nginx przetestowany"
+    log_info "SSL skonfigurowany"
 }
 
 # Konfiguracja aplikacji
@@ -511,15 +410,6 @@ main() {
     echo "=========================================================="
     echo
     
-    # Sprawdź czy jesteśmy w katalogu głównym projektu
-    if [ ! -f "app.py" ] || [ ! -f "requirements.txt" ] || [ ! -d "static" ] || [ ! -d "templates" ]; then
-        log_error "Ten skrypt musi być uruchomiony z katalogu głównego projektu GRAFIKSP4600"
-        log_error "Upewnij się, że pliki app.py, requirements.txt oraz katalogi static i templates istnieją"
-        exit 1
-    fi
-    
-    log_info "Weryfikacja katalogu projektu: OK"
-    
     get_user_input
     
     update_system
@@ -529,8 +419,8 @@ main() {
     create_app_user
     install_application
     setup_systemd
-    setup_ssl
     setup_nginx
+    setup_ssl
     configure_app
     start_application
     test_application

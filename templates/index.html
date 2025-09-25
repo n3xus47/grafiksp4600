@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Grafik zmian pracowników</title>
-  <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}">
+  <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}&t={{ range(1000000, 9999999) | random }}">
   <link rel="manifest" href="/static/manifest.json?v={{ range(1000000, 9999999) | random }}">
   <meta name="theme-color" content="#d32f2f">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,6 +32,11 @@
         <a class="nav-btn" href="/?year={{ next_year }}&month={{ next_month }}" aria-label="Następny miesiąc">&#x25B6;</a>
       </div>
       <div class="header-right">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Przełącz motyw" title="Przełącz między trybem jasnym a ciemnym">
+          <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+          </svg>
+        </button>
         <span id="clock">Ładowanie...</span>
       </div>
     </div>
@@ -36,33 +44,40 @@
 
   <main class="wrap">
     <div class="grid3-vertical">
-      <!-- Nagłówek dla dzisiejszych zmian -->
-      <div class="shift-header today-header">
-        <h2>DZISIAJ</h2>
+      <!-- Nagłówek dla zmian z nawigacją -->
+      <div class="shift-header daily-shifts-header">
+        <div class="shift-navigation">
+          <button id="shift-prev-day" class="nav-btn" aria-label="Poprzedni dzień">&#x25C0;</button>
+          <div class="shift-date-info">
+            <h2 id="shift-date-label">DZISIAJ</h2>
+            <span id="shift-date-display">{{ today_date }}</span>
+          </div>
+          <button id="shift-next-day" class="nav-btn" aria-label="Następny dzień">&#x25B6;</button>
+        </div>
       </div>
       
-      <!-- Pasek z informacjami o dzisiejszych zmianach (na górze) -->
-      <section class="today-bar">
-        <div class="today-content">
-          <div class="today-section">
+      <!-- Panel zmian z nawigacją -->
+      <section class="daily-shifts-bar">
+        <div class="shifts-content">
+          <div class="shifts-section">
             <h3>DNIÓWKA</h3>
-            <div id="list-d">
+            <div id="shifts-dniowka">
               {% if shifts_today.dniowka %}
                 <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
               {% else %}<p class="muted">brak przypisań</p>{% endif %}
             </div>
           </div>
-          <div class="today-section">
+          <div class="shifts-section">
             <h3>POPOŁUDNIÓWKA</h3>
-            <div id="list-p">
+            <div id="shifts-popoludniowka">
               {% if shifts_today.popoludniowka %}
                 <ul>{% for name in shifts_today.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
               {% else %}<p class="muted">brak przypisań</p>{% endif %}
             </div>
           </div>
-          <div class="today-section">
+          <div class="shifts-section">
             <h3>NOCKA</h3>
-            <div id="list-n">
+            <div id="shifts-nocka">
               {% if shifts_today.nocka %}
                 <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
               {% else %}<p class="muted">brak przypisań</p>{% endif %}
@@ -70,9 +85,9 @@
           </div>
         </div>
         <!-- Kontener dla przycisków akcji w trybie edycji -->
-        <div id="today-actions" class="today-actions hidden">
-          <button id="save-today" class="btn">Zapisz</button>
-          <button id="cancel-today" class="btn">Anuluj</button>
+        <div id="shifts-actions" class="shifts-actions hidden">
+          <button id="save-shifts" class="btn">Zapisz</button>
+          <button id="cancel-shifts" class="btn">Anuluj</button>
         </div>
       </section>
 
@@ -90,7 +105,7 @@
             <thead>
               <tr>
                 <th class="col-date">data</th>
-                <th class="col-day">dzień</th>
+                <th class="col-day">Dzień</th>
                 {% set pair = ['Ania','Bożena'] %}
                 {% set ns = namespace(pair_done=false) %}
                 {% for emp in employees %}
@@ -105,8 +120,6 @@
                     <th class="col-emp"><span class="rot">{{ emp.display_name }}</span></th>
                   {% endif %}
                 {% endfor %}
-                <th class="col-day">dzień</th>
-                <th class="col-date">data</th>
                 {% if is_admin %}
                 <th class="col-summary">licznik</th>
                 {% endif %}
@@ -114,9 +127,9 @@
             </thead>
             <tbody>
               {% for row in schedule_rows %}
-              <tr class="{% if row.is_off %}off-day{% endif %}">
-                <td class="col-date">{{ row.dd }}</td>
-                <td class="col-day">{{ row.abbr }}</td>
+              <tr class="{% if row.is_off %}off-day{% endif %}{% if row.is_today %} today-row{% endif %}">
+                <td class="col-date{% if row.is_today %} today{% endif %}">{{ row.dd }}</td>
+                <td class="col-day{% if row.is_today %} today{% endif %}">{{ row.abbr }}</td>
                 {% set pair = ['Ania','Bożena'] %}
                 {% set ns_row = namespace(pair_done=false) %}
                 {% for emp in employees %}
@@ -131,7 +144,7 @@
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
-                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="Ania i Bożena" data-value="{{ display_value }}">{{ display_value }}</td>
+                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="Ania i Bożena" data-value="{{ display_value }}">{{ display_value }}</td>
                     {% set ns_row.pair_done = true %}
                   {% elif emp.name in pair and ns_row.pair_done %}
                     {# skip duplicate from pair #}
@@ -148,13 +161,11 @@
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
-                    <td class="col-emp slot" data-date="{{ row.iso }}" data-employee="{{ emp.name }}" data-value="{{ display_value }}">{{ display_value }}</td>
+                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="{{ emp.name }}" data-value="{{ display_value }}">{{ display_value }}</td>
                   {% endif %}
                 {% endfor %}
-                <td class="col-day">{{ row.abbr }}</td>
-                <td class="col-date">{{ row.dd }}</td>
                 {% if is_admin %}
-                <td class="col-summary">
+                <td class="col-summary{% if row.is_today %} today{% endif %}">
                   <div class="summary-item dniowka-count">{{ row.shifts.DNIOWKA|length if row.shifts and row.shifts.DNIOWKA else 0 }}</div>
                   <div class="summary-item poludniowka-count">{{ row.shifts.POPOLUDNIOWKA|length if row.shifts and row.shifts.POPOLUDNIOWKA else 0 }}</div>
                   <div class="summary-item nocka-count">{{ row.shifts.NOCKA|length if row.shifts and row.shifts.NOCKA else 0 }}</div>
@@ -195,45 +206,6 @@
         </div>
       </section>
 
-      <!-- Nagłówek dla jutrzejszych zmian -->
-      <div class="shift-header tomorrow-header">
-        <h2>JUTRO</h2>
-      </div>
-      
-      <!-- Panel jutrzejszych zmian (pod tabelą, nad funkcjami) -->
-      <section class="tomorrow-bar">
-        <div class="tomorrow-content">
-          <div class="tomorrow-section">
-            <h3>DNIÓWKA</h3>
-            <div id="list-d-tomorrow">
-              {% if shifts_tomorrow.dniowka %}
-                <ul>{% for name in shifts_tomorrow.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
-            </div>
-          </div>
-          <div class="tomorrow-section">
-            <h3>POPOŁUDNIÓWKA</h3>
-            <div id="list-p-tomorrow">
-              {% if shifts_tomorrow.popoludniowka %}
-                <ul>{% for name in shifts_tomorrow.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
-            </div>
-          </div>
-          <div class="tomorrow-section">
-            <h3>NOCKA</h3>
-            <div id="list-n-tomorrow">
-              {% if shifts_tomorrow.nocka %}
-                <ul>{% for name in shifts_tomorrow.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
-            </div>
-          </div>
-        </div>
-        <!-- Kontener dla przycisków akcji w trybie edycji -->
-        <div id="tomorrow-actions" class="tomorrow-actions hidden">
-          <button id="save-tomorrow" class="btn">Zapisz</button>
-          <button id="cancel-tomorrow" class="btn">Anuluj</button>
-        </div>
-      </section>
 
       <!-- Prawy panel (rozszerzony na całą szerokość) -->
       <section class="card right-panel full-width">
@@ -242,6 +214,7 @@
           {% if is_admin %}
           <button id="btn-swaps-admin" class="btn w100">SKRZYNKA</button>
           <button id="btn-emps" class="btn w100">EDYCJA PRACOWNIKÓW</button>
+          <button id="btn-whitelist" class="btn w100" style="background: #9c27b0;">📧 ZARZĄDZANIE WHITELISTĄ</button>
           <button class="btn w100" disabled>GENEROWANIE GRAFIKU (NIEDOSTĘPNE)</button>
           <button id="btn-edit" class="btn w100">RĘCZNE WPROWADZANIE ZMIAN</button>
           <button onclick="exportToExcel(event)" class="btn w100" style="background: #4caf50;">📊 EKSPORT DO EXCEL</button>
@@ -274,7 +247,21 @@
       <div class="emp-add">
         <input id="emp-name" placeholder="imię" />
         <input id="emp-code" placeholder="id" />
+        <input id="emp-email" placeholder="email" type="email" />
         <button id="emp-add-btn" class="btn">Dodaj</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zarządzanie whitelistą -->
+  <div id="whitelist-editor" class="emp-editor">
+    <div class="emp-container">
+      <button type="button" id="whitelist-close" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Zarządzanie Whitelistą Emaili</div>
+      <div class="whitelist-list" id="whitelist-list"></div>
+      <div class="emp-add">
+        <input id="whitelist-email" placeholder="email@example.com" type="email" />
+        <button id="whitelist-add-btn" class="btn">Dodaj Email</button>
       </div>
     </div>
   </div>
