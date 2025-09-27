@@ -355,6 +355,63 @@ def api_swaps_inbox():
         logger.error(f"Błąd podczas pobierania próśb o zamianę: {e}")
         return jsonify(error="Wystąpił błąd podczas pobierania danych"), 500
 
+@bp.post("/unavailability")
+@login_required
+def api_unavailability_create():
+    """Tworzy zgłoszenie niedyspozycji"""
+    try:
+        from ..database import ensure_unavailability_table
+        ensure_unavailability_table()
+        data = safe_get_json()
+        
+        month_year = data.get("month_year", "").strip()
+        selected_days = data.get("selected_days", [])
+        comment = data.get("comment", "").strip()
+        
+        if not month_year or not selected_days:
+            return jsonify(error="Miesiąc i wybrane dni są wymagane"), 400
+        
+        # Pobierz dane użytkownika z sesji
+        user_email = session.get('user_email', '')
+        user_name = session.get('user_name', '')
+        user_id = session.get('user_id', '')
+        
+        logger.info(f"Session data - user_email: {user_email}, user_name: {user_name}, user_id: {user_id}")
+        
+        if not user_email:
+            return jsonify(error="Nie można określić użytkownika (brak email w sesji)"), 400
+        
+        db = get_db()
+        
+        # Znajdź ID pracownika po email (najlepsze rozwiązanie - email jest unikalny)
+        emp_row = db.execute("SELECT id FROM employees WHERE email = ?", (user_email,)).fetchone()
+        logger.info(f"Szukam pracownika po email '{user_email}': {emp_row}")
+        
+        if not emp_row:
+            return jsonify(error=f"Nie znaleziono pracownika dla email='{user_email}'. Upewnij się, że Twoje konto jest powiązane z pracownikiem w systemie."), 400
+        
+        emp_id = emp_row['id']
+        
+        # Usunięto sprawdzenie duplikatów - można wysyłać nieograniczoną ilość zgłoszeń
+        
+        # Konwertuj wybrane dni na string
+        selected_days_str = ','.join(selected_days)
+        
+        # Utwórz zgłoszenie
+        db.execute("""
+            INSERT INTO unavailability_requests (employee_id, month_year, comment, selected_days)
+            VALUES (?, ?, ?, ?)
+        """, (emp_id, month_year, comment or "Niedyspozycja", selected_days_str))
+        
+        db.commit()
+        
+        logger.info(f"Użytkownik {user_name} zgłosił niedyspozycję dla {month_year}: {selected_days_str}")
+        return jsonify(message="Subskrypcja zapisana pomyślnie")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia zgłoszenia niedyspozycji: {e}")
+        return jsonify(error="Wystąpił błąd podczas tworzenia zgłoszenia"), 500
+
 @bp.get("/unavailability/inbox")
 def api_unavailability_inbox():
     # Sprawdź czy użytkownik jest zalogowany
@@ -362,10 +419,61 @@ def api_unavailability_inbox():
         return jsonify(error="Nie jesteś zalogowany"), 401
     """Pobiera prośby o niedyspozycję dla użytkownika"""
     try:
-        # Zwróć pustą listę na razie - endpoint nie jest jeszcze w pełni zaimplementowany
+        db = get_db()
+        
+        # Pobierz wszystkie zgłoszenia niedyspozycji z informacjami o pracownikach
+        unavailability_requests = db.execute("""
+            SELECT 
+                ur.id,
+                ur.employee_id,
+                ur.month_year,
+                ur.selected_days,
+                ur.comment,
+                ur.status,
+                ur.boss_comment,
+                ur.created_at,
+                ur.updated_at,
+                e.name as employee_name,
+                e.email as employee_email
+            FROM unavailability_requests ur
+            JOIN employees e ON ur.employee_id = e.id
+            ORDER BY ur.created_at DESC
+        """).fetchall()
+        
+        # Konwertuj na listę słowników
+        items = []
+        for req in unavailability_requests:
+            # Parsuj selected_days jeśli to JSON string
+            selected_days = req['selected_days']
+            if selected_days.startswith('[') and selected_days.endswith(']'):
+                try:
+                    import json
+                    selected_days = json.loads(selected_days)
+                except:
+                    selected_days = selected_days.split(',') if selected_days else []
+            else:
+                selected_days = selected_days.split(',') if selected_days else []
+            
+            items.append({
+                'id': req['id'],
+                'employee_id': req['employee_id'],
+                'employee_name': req['employee_name'],
+                'employee_email': req['employee_email'],
+                'month_year': req['month_year'],
+                'selected_days': selected_days,
+                'comment': req['comment'],
+                'status': req['status'],
+                'boss_comment': req['boss_comment'],
+                'created_at': req['created_at'],
+                'updated_at': req['updated_at']
+            })
+        
+        # Sprawdź czy użytkownik jest szefem (można dodać logikę sprawdzania roli)
+        is_boss = True  # Na razie wszyscy mogą widzieć wszystkie zgłoszenia
+        
         return jsonify({
-            'items': [],
-            'is_boss': False
+            'items': items,
+            'is_boss': is_boss
         })
         
     except Exception as e:
@@ -950,4 +1058,156 @@ def subscribe_push():
     except Exception as e:
         logger.error(f"Błąd podczas zapisywania subskrypcji push: {e}")
         return jsonify(error="Błąd serwera"), 500
+
+# ============================================================================
+# ENDPOINTY EKSPORTU
+# ============================================================================
+
+@bp.get("/export/excel")
+@login_required
+@admin_required
+def api_export_excel():
+    """Eksportuje grafik do pliku Excel"""
+    try:
+        from flask import send_file
+        import tempfile
+        
+        # Sprawdź czy openpyxl jest dostępne
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils import get_column_letter
+            OPENPYXL_AVAILABLE = True
+        except ImportError:
+            OPENPYXL_AVAILABLE = False
+            logger.warning("openpyxl nie jest zainstalowane. Eksport do Excel będzie niedostępny.")
+            return jsonify(error="Eksport do Excel nie jest dostępny. Zainstaluj openpyxl."), 500
+        
+        if not OPENPYXL_AVAILABLE:
+            return jsonify(error="Eksport do Excel nie jest dostępny"), 500
+        
+        # Pobierz parametry
+        year = int(request.args.get('year', 2025))
+        month = int(request.args.get('month', 9))
+        
+        db = get_db()
+        
+        # Pobierz pracowników
+        employees = db.execute("SELECT id, name FROM employees ORDER BY name").fetchall()
+        
+        # Pobierz zmiany dla miesiąca
+        start_date = f"{year:04d}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year + 1:04d}-01-01"
+        else:
+            end_date = f"{year:04d}-{month + 1:02d}-01"
+        
+        shifts = db.execute("""
+            SELECT s.date, s.shift_type, e.name 
+            FROM shifts s 
+            JOIN employees e ON s.employee_id = e.id 
+            WHERE s.date >= ? AND s.date < ?
+            ORDER BY s.date, e.name
+        """, (start_date, end_date)).fetchall()
+        
+        # Utwórz workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Grafik {year}-{month:02d}"
+        
+        # Style
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="D32F2F", end_color="D32F2F", fill_type="solid")
+        center_alignment = Alignment(horizontal="center", vertical="center")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Nagłówki
+        ws['A1'] = f"Grafik zmian pracowników - {year}-{month:02d}"
+        ws['A1'].font = Font(bold=True, size=16)
+        ws.merge_cells('A1:H1')
+        
+        # Nagłówki kolumn
+        headers = ['Data', 'Dzień'] + [emp['name'] for emp in employees] + ['Dzień', 'Data']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=3, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        
+        # Przygotuj dane
+        import datetime as dt
+        import calendar
+        
+        first_day = dt.date(year, month, 1)
+        last_day = dt.date(year, month, calendar.monthrange(year, month)[1])
+        
+        # Pobierz pierwszy poniedziałek tygodnia
+        days_since_monday = first_day.weekday()
+        start_date_obj = first_day - dt.timedelta(days=days_since_monday)
+        
+        # Wygeneruj 5 tygodni (35 dni)
+        row = 4
+        for i in range(35):
+            current_date = start_date_obj + dt.timedelta(days=i)
+            is_off = current_date.weekday() >= 5  # Sobota i niedziela
+            
+            # Data
+            ws.cell(row=row, column=1, value=current_date.strftime('%Y-%m-%d'))
+            ws.cell(row=row, column=1).border = border
+            
+            # Dzień
+            ws.cell(row=row, column=2, value=current_date.strftime('%a'))
+            ws.cell(row=row, column=2).border = border
+            
+            # Zmiany pracowników
+            for col, emp in enumerate(employees, 3):
+                shift_type = ''
+                for shift in shifts:
+                    if (shift['date'] == current_date.strftime('%Y-%m-%d') and 
+                        shift['name'] == emp['name']):
+                        shift_type = shift['shift_type']
+                        break
+                
+                cell = ws.cell(row=row, column=col, value=shift_type)
+                cell.border = border
+                if is_off:
+                    cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+            
+            # Dzień (duplikat)
+            ws.cell(row=row, column=len(employees) + 3, value=current_date.strftime('%a'))
+            ws.cell(row=row, column=len(employees) + 3).border = border
+            
+            # Data (duplikat)
+            ws.cell(row=row, column=len(employees) + 4, value=current_date.strftime('%Y-%m-%d'))
+            ws.cell(row=row, column=len(employees) + 4).border = border
+            
+            row += 1
+        
+        # Dostosuj szerokość kolumn
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 12
+        
+        # Zapisz do tymczasowego pliku
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            wb.save(tmp_file.name)
+            tmp_file_path = tmp_file.name
+        
+        # Wyślij plik
+        filename = f"grafik_sp4600_{year}_{month:02d}.xlsx"
+        return send_file(
+            tmp_file_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas eksportu do Excel: {e}")
+        return jsonify(error="Wystąpił błąd podczas eksportu"), 500
 

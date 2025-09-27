@@ -315,7 +315,706 @@
   highlightCurrentUser();
   updateSummary();
   setInterval(highlightToday, 60000); // Aktualizuj co minutę
+
+
 })();
+
+// ============================================================================
+// HAMBURGER MENU W STYLU YOUTUBE
+// ============================================================================
+
+function initializeHamburgerMenu() {
+  console.log('🍔 Inicjalizuję hamburger menu...');
+  
+  const hamburgerBtn = document.getElementById('hamburger-menu');
+  const hamburgerPanel = document.getElementById('hamburger-menu-panel');
+  const hamburgerClose = document.getElementById('hamburger-close');
+  
+  console.log('🔍 Elementy hamburger menu:', {
+    hamburgerBtn: !!hamburgerBtn,
+    hamburgerPanel: !!hamburgerPanel,
+    hamburgerClose: !!hamburgerClose
+  });
+  
+  if (!hamburgerBtn || !hamburgerPanel || !hamburgerClose) {
+    console.warn('⚠️ Nie znaleziono elementów hamburger menu');
+    return;
+  }
+  
+  // Otwórz menu
+  hamburgerBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    openHamburgerMenu();
+  });
+  
+  // Zamknij menu
+  hamburgerClose.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeHamburgerMenu();
+  });
+  
+  // Zamknij menu po kliknięciu w overlay
+  document.addEventListener('click', function(e) {
+    if (!hamburgerPanel.classList.contains('hidden') && 
+        !hamburgerPanel.contains(e.target) && 
+        !hamburgerBtn.contains(e.target)) {
+      closeHamburgerMenu();
+    }
+  });
+  
+  // Zamknij menu po naciśnięciu Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !hamburgerPanel.classList.contains('hidden')) {
+      closeHamburgerMenu();
+    }
+  });
+  
+  // Dodaj obsługę przycisków menu
+  setupMenuButtons();
+  
+  console.log('✅ Hamburger menu zainicjalizowane');
+}
+
+function setupMenuButtons() {
+  console.log('🔧 Konfiguruję przyciski hamburger menu...');
+  
+  // Obsługa wszystkich przycisków menu
+  const menuButtons = [
+    'menu-btn-employees',
+    'menu-btn-swaps-admin', 
+    'menu-btn-swaps-user',
+    'menu-btn-whitelist',
+    'menu-btn-edit',
+    'menu-btn-unavailability',
+    'menu-btn-shifts',
+    'menu-btn-export',
+    'menu-btn-refresh'
+  ];
+  
+  console.log('🔍 Sprawdzam przyciski menu:', menuButtons);
+  
+  menuButtons.forEach(menuButtonId => {
+    const menuButton = document.getElementById(menuButtonId);
+    console.log(`🔍 Przycisk ${menuButtonId}:`, !!menuButton);
+    if (menuButton) {
+      menuButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log(`🍔 Kliknięto przycisk menu: ${menuButtonId}`);
+        
+        closeHamburgerMenu();
+        
+        // Uruchom odpowiednią funkcję po zamknięciu menu
+        setTimeout(() => {
+          console.log(`🎯 Uruchamiam funkcję dla: ${menuButtonId}`);
+          
+          // Bezpośrednie wywołanie funkcji
+          if (menuButtonId === 'menu-btn-employees') {
+            console.log('👥 Uruchamiam toggleEmps');
+            if (typeof toggleEmps === 'function') {
+              toggleEmps();
+            } else {
+              console.error('❌ toggleEmps nie jest funkcją!');
+            }
+          } else if (menuButtonId === 'menu-btn-swaps-admin' || menuButtonId === 'menu-btn-swaps-user') {
+            console.log('🔄 Uruchamiam toggleSwaps');
+            if (typeof toggleSwaps === 'function') {
+              toggleSwaps();
+            } else {
+              console.error('❌ toggleSwaps nie jest funkcją!');
+            }
+          } else if (menuButtonId === 'menu-btn-whitelist') {
+            console.log('📋 Uruchamiam toggleWhitelist');
+            if (typeof toggleWhitelist === 'function') {
+              toggleWhitelist();
+            } else {
+              console.error('❌ toggleWhitelist nie jest funkcją!');
+            }
+          } else if (menuButtonId === 'menu-btn-edit') {
+            console.log('✏️ Uruchamiam toggleEdit');
+            if (typeof toggleEdit === 'function') {
+              toggleEdit();
+            } else {
+              console.error('❌ toggleEdit nie jest funkcją!');
+            }
+          } else if (menuButtonId === 'menu-btn-unavailability') {
+            console.log('❌ Otwieramy modal niedyspozycji');
+            const modal = document.getElementById('unavailability-modal');
+            if (modal) {
+              modal.style.display = 'flex';
+              // Inicjalizuj kalendarz z aktualnym miesiącem
+              const monthInput = document.getElementById('unavailability-month');
+              if (monthInput) {
+                const now = new Date();
+                const currentMonthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+                monthInput.value = currentMonthStr;
+                monthInput.readOnly = true;
+                
+                // Ustaw currentMonth globalnie
+                currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+                console.log('📅 Ustawiono currentMonth:', currentMonth);
+              }
+              
+              // Wyczyść wybrane dni
+              selectedDays = [];
+              
+              // Wywołaj updateCalendar
+              if (typeof updateCalendar === 'function') {
+                updateCalendar();
+              } else {
+                console.error('❌ updateCalendar nie jest funkcją!');
+              }
+              
+              // Zaktualizuj listę wybranych dni i etykietę miesiąca
+              if (typeof updateSelectedDaysList === 'function') {
+                updateSelectedDaysList();
+              }
+              if (typeof updateMonthLabel === 'function') {
+                updateMonthLabel();
+              }
+            } else {
+              console.error('❌ Modal niedyspozycji nie znaleziony!');
+            }
+          } else if (menuButtonId === 'menu-btn-shifts') {
+            console.log('⏰ Uruchamiam toggleShifts');
+            if (typeof toggleShifts === 'function') {
+              toggleShifts();
+            } else {
+              console.error('❌ toggleShifts nie jest funkcją!');
+            }
+          } else if (menuButtonId === 'menu-btn-export') {
+            console.log('📊 Uruchamiam eksport do Excel');
+            console.log('📊 Sprawdzam czy funkcja exportToExcel istnieje...');
+            console.log('📊 typeof exportToExcel:', typeof exportToExcel);
+            if (typeof exportToExcel === 'function') {
+              console.log('✅ Funkcja exportToExcel istnieje, wywołuję...');
+              // Znajdź przycisk i przekaż go do funkcji
+              const button = document.querySelector('#menu-btn-export');
+              if (button) {
+                console.log('✅ Znaleziono przycisk, przekazuję go do funkcji');
+                exportToExcel({ target: button });
+              } else {
+                console.error('❌ Nie znaleziono przycisku eksportu');
+              }
+            } else {
+              console.error('❌ exportToExcel nie jest funkcją!');
+              console.error('❌ Dostępne funkcje:', Object.keys(window).filter(key => typeof window[key] === 'function'));
+            }
+          } else if (menuButtonId === 'menu-btn-refresh') {
+            console.log('🔄 Uruchamiam odświeżanie cache');
+            if (typeof forcePageRefresh === 'function') {
+              forcePageRefresh();
+            } else {
+              console.error('❌ forcePageRefresh nie jest funkcją!');
+            }
+          }
+        }, 350);
+      });
+    } else {
+      console.warn(`⚠️ Nie znaleziono przycisku menu: ${menuButtonId}`);
+    }
+  });
+  
+  console.log('✅ Przyciski hamburger menu skonfigurowane');
+}
+
+function openHamburgerMenu() {
+  console.log('🍔 Otwieram hamburger menu...');
+  
+  const hamburgerPanel = document.getElementById('hamburger-menu-panel');
+  const hamburgerBtn = document.getElementById('hamburger-menu');
+  
+  if (!hamburgerPanel || !hamburgerBtn) return;
+  
+  // Usuń klasę hidden
+  hamburgerPanel.classList.remove('hidden');
+  
+  // Dodaj overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'hamburger-menu-overlay';
+  overlay.id = 'hamburger-overlay';
+  document.body.appendChild(overlay);
+  
+  // Dodaj animację
+  hamburgerPanel.classList.add('slide-in');
+  
+  // Zablokuj scroll na body
+  document.body.style.overflow = 'hidden';
+  
+  // Focus na pierwszy element menu
+  setTimeout(() => {
+    const firstMenuItem = hamburgerPanel.querySelector('.menu-item');
+    if (firstMenuItem) {
+      firstMenuItem.focus();
+    }
+  }, 100);
+  
+  console.log('✅ Hamburger menu otwarte');
+}
+
+function closeHamburgerMenu() {
+  console.log('🍔 Zamykam hamburger menu...');
+  
+  const hamburgerPanel = document.getElementById('hamburger-menu-panel');
+  const overlay = document.getElementById('hamburger-overlay');
+  
+  if (!hamburgerPanel) return;
+  
+  // Dodaj animację zamykania
+  hamburgerPanel.classList.remove('slide-in');
+  hamburgerPanel.classList.add('slide-out');
+  
+  // Usuń overlay
+  if (overlay) {
+    overlay.remove();
+  }
+  
+  // Przywróć scroll na body
+  document.body.style.overflow = '';
+  
+  // Ukryj panel po animacji
+  setTimeout(() => {
+    hamburgerPanel.classList.add('hidden');
+    hamburgerPanel.classList.remove('slide-out');
+  }, 300);
+  
+  console.log('✅ Hamburger menu zamknięte');
+}
+
+// Funkcja pomocnicza do obsługi kliknięć w elementy menu
+function handleMenuItemClick(buttonId, callback) {
+  const button = document.getElementById(buttonId);
+  if (button) {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeHamburgerMenu();
+      if (callback) {
+        setTimeout(callback, 350); // Poczekaj aż menu się zamknie
+      }
+    });
+  }
+}
+
+// Inicjalizuj hamburger menu po załadowaniu DOM
+document.addEventListener('DOMContentLoaded', function() {
+  initializeHamburgerMenu();
+  initializeUnavailabilityModal();
+});
+
+// ============================================================================
+// INICJALIZACJA MODALA NIEDYSPOZYCJI
+// ============================================================================
+
+// Funkcja inicjalizacji modala niedyspozycji - przeniesiona z IIFE
+function initializeUnavailabilityModal() {
+  console.log('🔧 Inicjalizuję modal niedyspozycji...');
+  
+  const modal = document.getElementById('unavailability-modal');
+  const closeBtn = document.getElementById('unavailability-close');
+  const cancelBtn = document.getElementById('unavailability-cancel');
+  const submitBtn = document.getElementById('unavailability-submit');
+  const monthInput = document.getElementById('unavailability-month');
+  const prevMonthBtn = document.getElementById('unavailability-prev-month');
+  const nextMonthBtn = document.getElementById('unavailability-next-month');
+  const monthLabel = document.getElementById('unavailability-month-label');
+  
+  console.log('🔍 Elementy modala niedyspozycji:', {
+    modal: !!modal,
+    closeBtn: !!closeBtn,
+    cancelBtn: !!cancelBtn,
+    submitBtn: !!submitBtn,
+    monthInput: !!monthInput,
+    prevMonthBtn: !!prevMonthBtn,
+    nextMonthBtn: !!nextMonthBtn,
+    monthLabel: !!monthLabel
+  });
+  
+  if (!modal) {
+    console.warn('⚠️ Modal niedyspozycji nie znaleziony');
+    return;
+  }
+  
+  console.log('✅ Modal niedyspozycji znaleziony, dodaję event listenery...');
+  
+  // Zamknij modal
+  [closeBtn, cancelBtn].forEach((btn, index) => {
+    if (btn) {
+      console.log(`🔧 Dodaję event listener do przycisku ${index === 0 ? 'close' : 'cancel'}`);
+      btn.addEventListener('click', (e) => {
+        console.log('❌ Zamykam modal niedyspozycji', e.target);
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        console.log('✅ Modal ukryty, display: none');
+      });
+    } else {
+      console.warn(`⚠️ Przycisk ${index === 0 ? 'close' : 'cancel'} nie znaleziony`);
+    }
+  });
+  
+  // Nawigacja miesiącami
+  if (prevMonthBtn) {
+    console.log('🔧 Dodaję event listener do przycisku poprzedni miesiąc');
+    prevMonthBtn.addEventListener('click', () => {
+      console.log('⬅️ Poprzedni miesiąc');
+      navigateMonth(-1);
+    });
+  } else {
+    console.warn('⚠️ Przycisk poprzedni miesiąc nie znaleziony');
+  }
+  
+  if (nextMonthBtn) {
+    console.log('🔧 Dodaję event listener do przycisku następny miesiąc');
+    nextMonthBtn.addEventListener('click', () => {
+      console.log('➡️ Następny miesiąc');
+      navigateMonth(1);
+    });
+  } else {
+    console.warn('⚠️ Przycisk następny miesiąc nie znaleziony');
+  }
+  
+  // Zmiana miesiąca przez input (ukryty)
+  if (monthInput) {
+    monthInput.addEventListener('change', () => {
+      console.log('📅 Zmiana miesiąca przez input');
+      if (typeof selectedDays !== 'undefined') {
+        selectedDays = [];
+      }
+      if (typeof updateCalendar === 'function') {
+        updateCalendar();
+      }
+      if (typeof updateSelectedDaysList === 'function') {
+        updateSelectedDaysList();
+      }
+      updateMonthLabel();
+    });
+  }
+  
+  // Wyślij zgłoszenie
+  if (submitBtn) {
+    console.log('🔧 Dodaję event listener do przycisku submit');
+    submitBtn.addEventListener('click', () => {
+      console.log('📤 Wysyłanie zgłoszenia niedyspozycji');
+      if (typeof submitUnavailability === 'function') {
+        submitUnavailability();
+      } else {
+        console.error('❌ submitUnavailability nie jest funkcją!');
+      }
+    });
+  } else {
+    console.warn('⚠️ Przycisk submit nie znaleziony');
+  }
+  
+  // Obsługa klawiatury dla nawigacji miesiącami
+  modal.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('show')) {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateMonth(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateMonth(1);
+      }
+    }
+  });
+  
+  
+  console.log('✅ Modal niedyspozycji zainicjalizowany');
+}
+
+// ============================================================================
+// GLOBALNE ZMIENNE I FUNKCJE
+// ============================================================================
+
+// Globalne zmienne dla niedyspozycji
+let selectedDays = [];
+let currentMonth = null;
+
+// ============================================================================
+// FUNKCJE NAWIGACJI MIESIĄCAMI - PRZENIESIONE Z IIFE
+// ============================================================================
+
+// Funkcja nawigacji miesiącami
+function navigateMonth(direction) {
+  console.log('🔄 Nawigacja miesiącami:', direction);
+  
+  if (typeof currentMonth === 'undefined' || !currentMonth) {
+    console.warn('⚠️ currentMonth nie jest zdefiniowany');
+    return;
+  }
+  
+  currentMonth.month += direction;
+  if (currentMonth.month > 12) {
+    currentMonth.month = 1;
+    currentMonth.year++;
+  } else if (currentMonth.month < 1) {
+    currentMonth.month = 12;
+    currentMonth.year--;
+  }
+  
+  const newMonthStr = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+  const monthInput = document.getElementById('unavailability-month');
+  if (monthInput) {
+    monthInput.value = newMonthStr;
+  }
+  
+  if (typeof selectedDays !== 'undefined') {
+    selectedDays = [];
+  }
+  
+  if (typeof updateCalendar === 'function') {
+    updateCalendar();
+  }
+  
+  if (typeof updateSelectedDaysList === 'function') {
+    updateSelectedDaysList();
+  }
+  
+  updateMonthLabel();
+  console.log('✅ Miesiąc zmieniony na:', newMonthStr);
+}
+
+// Aktualizuj etykietę miesiąca
+function updateMonthLabel() {
+  const monthLabel = document.getElementById('unavailability-month-label');
+  
+  if (!monthLabel || typeof currentMonth === 'undefined' || !currentMonth) {
+    console.warn('⚠️ monthLabel lub currentMonth nie jest dostępny');
+    return;
+  }
+  
+  const monthNames = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+                    'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+  monthLabel.textContent = `${monthNames[currentMonth.month]} ${currentMonth.year}`;
+  console.log('✅ Etykieta miesiąca zaktualizowana:', monthLabel.textContent);
+}
+
+// Aktualizuj listę wybranych dni
+function updateSelectedDaysList() {
+  const list = document.getElementById('selected-days-list');
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  if (typeof selectedDays === 'undefined' || !selectedDays) {
+    selectedDays = [];
+  }
+  
+  selectedDays.sort().forEach(dateStr => {
+    const tag = document.createElement('div');
+    tag.className = 'selected-day-tag';
+    
+    const date = new Date(dateStr);
+    const dayName = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'][date.getDay()];
+    const dayNumber = date.getDate();
+    
+    tag.innerHTML = `
+      ${dayName} ${dayNumber}
+      <span class="remove-day" data-date="${dateStr}">×</span>
+    `;
+    
+    // Usuń dzień po kliknięciu na ×
+    tag.querySelector('.remove-day').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dateToRemove = e.target.dataset.date;
+      selectedDays = selectedDays.filter(d => d !== dateToRemove);
+      updateCalendar();
+      updateSelectedDaysList();
+    });
+    
+    list.appendChild(tag);
+  });
+}
+
+// ============================================================================
+// FUNKCJA SUBMIT NIEDYSPOZYCJI - PRZENIESIONA Z IIFE
+// ============================================================================
+
+// Wyślij zgłoszenie niedyspozycji
+async function submitUnavailability() {
+  console.log('📤 Wywołuję submitUnavailability...');
+  
+  const monthInput = document.getElementById('unavailability-month');
+  const submitBtn = document.getElementById('unavailability-submit');
+  
+  if (!monthInput || !submitBtn) {
+    console.error('❌ Brak monthInput lub submitBtn');
+    return;
+  }
+  
+  if (typeof selectedDays === 'undefined' || selectedDays.length === 0) {
+    alert('Wybierz przynajmniej jeden dzień niedyspozycji');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Wysyłanie...';
+  
+  try {
+    const response = await fetch('/api/unavailability', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        month_year: monthInput.value,
+        selected_days: selectedDays,
+        comment: ''
+      }),
+      credentials: 'include'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert('Zgłoszenie niedyspozycji zostało wysłane!');
+      const modal = document.getElementById('unavailability-modal');
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+      if (typeof selectedDays !== 'undefined') {
+        selectedDays = [];
+      }
+      if (typeof updateCalendar === 'function') {
+        updateCalendar();
+      }
+      if (typeof updateSelectedDaysList === 'function') {
+        updateSelectedDaysList();
+      }
+    } else {
+      alert('Błąd: ' + (result.error || 'Nieznany błąd'));
+    }
+  } catch (error) {
+    console.error('Błąd podczas wysyłania zgłoszenia:', error);
+    alert('Wystąpił błąd podczas wysyłania zgłoszenia');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Wyślij zgłoszenie';
+  }
+}
+
+// ============================================================================
+// GLOBALNE FUNKCJE DLA HAMBURGER MENU
+// ============================================================================
+
+// Funkcja toggleSwaps - przeniesiona z IIFE
+function toggleSwaps() {
+  const swapEditor = document.getElementById('swap-editor');
+  if (!swapEditor) return;
+  const show = !swapEditor.classList.contains('show');
+  swapEditor.classList.toggle('show', show);
+  if (show) {
+    // Wywołaj loadSwaps jeśli istnieje
+    if (typeof loadSwaps === 'function') {
+      loadSwaps();
+    }
+  }
+}
+
+// Funkcja updateCalendar - przeniesiona z IIFE
+function updateCalendar() {
+  const monthInput = document.getElementById('unavailability-month');
+  const calendar = document.getElementById('unavailability-calendar');
+  
+  if (!monthInput || !calendar) return;
+  
+  const monthYear = monthInput.value;
+  if (!monthYear) return;
+  
+  const [year, month] = monthYear.split('-').map(Number);
+  // currentMonth musi być globalna zmienna
+  if (typeof currentMonth !== 'undefined') {
+    currentMonth = { year, month };
+  }
+  
+  // Wyczyść kalendarz
+  calendar.innerHTML = '';
+  
+  // Nagłówki dni
+  const dayHeaders = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
+  dayHeaders.forEach(day => {
+    const header = document.createElement('div');
+    header.className = 'day-header';
+    header.textContent = day;
+    calendar.appendChild(header);
+  });
+  
+  // Pobierz pierwszy dzień miesiąca i ile dni ma miesiąc
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDay = (firstDay.getDay() + 6) % 7; // Poniedziałek = 0
+  
+  // Dodaj puste komórki na początku
+  for (let i = 0; i < startDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'day-cell other-month';
+    calendar.appendChild(empty);
+  }
+  
+  // Dodaj dni miesiąca
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayCell = document.createElement('div');
+    dayCell.className = 'day-cell';
+    dayCell.textContent = day;
+    dayCell.dataset.day = day;
+    
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    dayCell.dataset.date = dateStr;
+    
+    // Sprawdź czy dzień jest już wybrany (selectedDays musi być globalna)
+    if (typeof selectedDays !== 'undefined' && selectedDays.includes(dateStr)) {
+      dayCell.classList.add('selected');
+    }
+    
+    // Kliknięcie na dzień
+    dayCell.addEventListener('click', () => {
+      if (dayCell.classList.contains('other-month')) return;
+      
+      const dateStr = dayCell.dataset.date;
+      
+      if (typeof selectedDays !== 'undefined') {
+        if (selectedDays.includes(dateStr)) {
+          // Usuń z wybranych
+          selectedDays = selectedDays.filter(d => d !== dateStr);
+          dayCell.classList.remove('selected');
+        } else {
+          // Dodaj do wybranych
+          selectedDays.push(dateStr);
+          dayCell.classList.add('selected');
+        }
+        
+        // Wywołaj updateSelectedDaysList jeśli istnieje
+        if (typeof updateSelectedDaysList === 'function') {
+          updateSelectedDaysList();
+        }
+      }
+    });
+    
+    calendar.appendChild(dayCell);
+  }
+}
+
+// Funkcja toggleShifts - przeniesiona z IIFE
+function toggleShifts() {
+  console.log('toggleShifts called');
+  const shiftsEditor = document.getElementById('shifts-editor');
+  console.log('shiftsEditor:', shiftsEditor);
+  if (shiftsEditor) {
+    console.log('Adding show class to shiftsEditor');
+    shiftsEditor.classList.add('show');
+    // Wywołaj funkcje pomocnicze jeśli istnieją
+    if (typeof populateOwnShifts === 'function') {
+      populateOwnShifts('shifts-from-date');
+      populateOwnShifts('shifts-give-from-date');
+    }
+    if (typeof switchShiftForm === 'function') {
+      switchShiftForm();
+    }
+  } else {
+    console.error('shiftsEditor not found!');
+  }
+}
 
 // Funkcja wymuszenia odświeżenia strony (z cache busting)
 function forcePageRefresh() {
@@ -900,6 +1599,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // Zmienne stanu aplikacji
   let editMode = false;
   const pending = new Map();
+  
+  // Synchronizuj z globalnymi zmiennymi
+  globalEditMode = editMode;
+  globalPending = pending;
+  
+  // Udostępnij lokalną zmienną globalnie
+  window.localEditMode = editMode;
   const todayD = document.getElementById('list-d');
   const todayN = document.getElementById('list-n');
   
@@ -1017,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentUser = (table.getAttribute('data-current-user') || '').trim();
     
     // Jeśli w trybie edycji -> zachowanie edycyjne
-    if (editMode) {
+    if (editMode || globalEditMode || window.localEditMode) {
       // Sprawdź czy trzymany jest Ctrl (wielokrotny wybór)
       if (e.ctrlKey || e.metaKey) {
         toggleCellSelection(cell);
@@ -1294,11 +2000,13 @@ document.addEventListener('DOMContentLoaded', function() {
     choose(pValue);
   });
 
-  // Funkcje trybu edycji
+  // Funkcje trybu edycji - synchronizuj z globalnymi zmiennymi
   function toggleEdit() {
     // Użyj requestAnimationFrame dla lepszej wydajności
     requestAnimationFrame(() => {
       editMode = !editMode;
+      globalEditMode = editMode; // Synchronizuj z globalną zmienną
+      window.localEditMode = editMode; // Synchronizuj z window
       if (todayActions) todayActions.classList.toggle('hidden', !editMode);
       
       // Dodaj/usuń klasę edit-mode na body dla delikatnego mrygania
@@ -1306,6 +2014,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (!editMode) { 
         pending.clear(); 
+        globalPending.clear(); // Synchronizuj z globalną zmienną
         hideEditor(); 
       }
     });
@@ -1314,7 +2023,10 @@ document.addEventListener('DOMContentLoaded', function() {
   function save() {
     const finish = () => {
       pending.clear();
+      globalPending.clear(); // Synchronizuj z globalną zmienną
       editMode = false;
+      globalEditMode = false; // Synchronizuj z globalną zmienną
+      window.localEditMode = false; // Synchronizuj z window
       if (todayActions) todayActions.classList.add('hidden');
       document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
       hideEditor();
@@ -1356,6 +2068,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   function cancel() {
     editMode = false;
+    globalEditMode = false; // Synchronizuj z globalną zmienną
+    window.localEditMode = false; // Synchronizuj z window
     if (todayActions) todayActions.classList.add('hidden');
     document.body.classList.remove('edit-mode'); // Usuń klasę edit-mode
     hideEditor();
@@ -1956,12 +2670,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  function toggleSwaps() {
-    if (!swapEditor) return;
-    const show = !swapEditor.classList.contains('show');
-    swapEditor.classList.toggle('show', show);
-    if (show) loadSwaps();
-  }
   
   function closeSwaps() { 
     if (swapEditor) swapEditor.classList.remove('show') 
@@ -1991,21 +2699,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // --- Zunifikowany panel zmian ---
-  function toggleShifts() { 
-    console.log('toggleShifts called');
-    console.log('shiftsEditor:', shiftsEditor);
-    if (shiftsEditor) {
-      console.log('Adding show class to shiftsEditor');
-      shiftsEditor.classList.add('show');
-      // Wypełnij listę własnych zmian dla wszystkich formularzy
-      populateOwnShifts('shifts-from-date');
-      populateOwnShifts('shifts-give-from-date');
-      // Ustaw domyślny formularz na zamianę
-      switchShiftForm();
-    } else {
-      console.error('shiftsEditor not found!');
-    }
-  }
   
   function closeShifts() { 
     if (shiftsEditor) shiftsEditor.classList.remove('show');
@@ -2783,281 +3476,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
   // ===== FUNKCJONALNOŚĆ NIEDYSPOZYCJI =====
+  // (Funkcja initUnavailabilityModal została przeniesiona do globalnego scope)
   
-  let selectedDays = [];
-  let currentMonth = null;
   
-  // Inicjalizacja modala niedyspozycji
-  function initUnavailabilityModal() {
-    const modal = document.getElementById('unavailability-modal');
-    const openBtn = document.getElementById('btn-unavailability');
-    const closeBtn = document.getElementById('unavailability-close');
-    const cancelBtn = document.getElementById('unavailability-cancel');
-    const submitBtn = document.getElementById('unavailability-submit');
-    const monthInput = document.getElementById('unavailability-month');
-    const prevMonthBtn = document.getElementById('unavailability-prev-month');
-    const nextMonthBtn = document.getElementById('unavailability-next-month');
-    const monthLabel = document.getElementById('unavailability-month-label');
-    
-    if (!modal || !openBtn) return;
-    
-    // Otwórz modal
-    openBtn.addEventListener('click', () => {
-      const now = new Date();
-      const currentMonthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-      monthInput.value = currentMonthStr;
-      monthInput.readOnly = true; // Upewnij się, że pole jest tylko do odczytu
-      selectedDays = [];
-      currentMonth = null;
-      updateCalendar();
-      updateSelectedDaysList();
-      updateMonthLabel();
-      modal.classList.add('show');
-      // Ustaw fokus na modal, żeby obsługa klawiatury działała
-      setTimeout(() => modal.focus(), 100);
-    });
-    
-    // Zamknij modal
-    [closeBtn, cancelBtn].forEach(btn => {
-      if (btn) {
-        btn.addEventListener('click', () => {
-          modal.classList.remove('show');
-        });
-      }
-    });
-    
-    // Nawigacja miesiącami
-    if (prevMonthBtn) {
-      prevMonthBtn.addEventListener('click', () => {
-        navigateMonth(-1);
-      });
-    }
-    
-    if (nextMonthBtn) {
-      nextMonthBtn.addEventListener('click', () => {
-        navigateMonth(1);
-      });
-    }
-    
-    // Zmiana miesiąca przez input (ukryty)
-    monthInput.addEventListener('change', () => {
-      selectedDays = [];
-      updateCalendar();
-      updateSelectedDaysList();
-      updateMonthLabel();
-    });
-    
-    // Wyślij zgłoszenie
-    if (submitBtn) {
-      submitBtn.addEventListener('click', submitUnavailability);
-    }
-    
-    // Obsługa klawiatury dla nawigacji miesiącami
-    modal.addEventListener('keydown', (e) => {
-      if (modal.classList.contains('show')) {
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          navigateMonth(-1);
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          navigateMonth(1);
-        }
-      }
-    });
-    
-    // Funkcja nawigacji miesiącami
-    function navigateMonth(direction) {
-      if (!currentMonth) {
-        const now = new Date();
-        currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
-      }
-      
-      let newMonth = currentMonth.month + direction;
-      let newYear = currentMonth.year;
-      
-      if (newMonth < 1) {
-        newMonth = 12;
-        newYear--;
-      } else if (newMonth > 12) {
-        newMonth = 1;
-        newYear++;
-      }
-      
-      currentMonth = { year: newYear, month: newMonth };
-      monthInput.value = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-      selectedDays = [];
-      updateCalendar();
-      updateSelectedDaysList();
-      updateMonthLabel();
-    }
-    
-    // Aktualizuj etykietę miesiąca
-    function updateMonthLabel() {
-      if (!monthLabel || !currentMonth) return;
-      
-      const monthNames = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
-                        'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
-      monthLabel.textContent = `${monthNames[currentMonth.month]} ${currentMonth.year}`;
-    }
-  }
-  
-  // Aktualizuj mini-kalendarz
-  function updateCalendar() {
-    const monthInput = document.getElementById('unavailability-month');
-    const calendar = document.getElementById('unavailability-calendar');
-    
-    if (!monthInput || !calendar) return;
-    
-    const monthYear = monthInput.value;
-    if (!monthYear) return;
-    
-    const [year, month] = monthYear.split('-').map(Number);
-    currentMonth = { year, month };
-    
-    // Wyczyść kalendarz
-    calendar.innerHTML = '';
-    
-    // Nagłówki dni
-    const dayHeaders = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie'];
-    dayHeaders.forEach(day => {
-      const header = document.createElement('div');
-      header.className = 'day-header';
-      header.textContent = day;
-      calendar.appendChild(header);
-    });
-    
-    // Pobierz pierwszy dzień miesiąca i ile dni ma miesiąc
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
-    const daysInMonth = lastDay.getDate();
-    const startDay = (firstDay.getDay() + 6) % 7; // Poniedziałek = 0
-    
-    // Dodaj puste komórki na początku
-    for (let i = 0; i < startDay; i++) {
-      const empty = document.createElement('div');
-      empty.className = 'day-cell other-month';
-      calendar.appendChild(empty);
-    }
-    
-    // Dodaj dni miesiąca
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayCell = document.createElement('div');
-      dayCell.className = 'day-cell';
-      dayCell.textContent = day;
-      dayCell.dataset.day = day;
-      
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      dayCell.dataset.date = dateStr;
-      
-      // Sprawdź czy dzień jest już wybrany
-      if (selectedDays.includes(dateStr)) {
-        dayCell.classList.add('selected');
-      }
-      
-      // Kliknięcie na dzień
-      dayCell.addEventListener('click', () => {
-        if (dayCell.classList.contains('other-month')) return;
-        
-        const dateStr = dayCell.dataset.date;
-        
-        if (selectedDays.includes(dateStr)) {
-          // Usuń z wybranych
-          selectedDays = selectedDays.filter(d => d !== dateStr);
-          dayCell.classList.remove('selected');
-        } else {
-          // Dodaj do wybranych
-          selectedDays.push(dateStr);
-          dayCell.classList.add('selected');
-        }
-        
-        updateSelectedDaysList();
-      });
-      
-      calendar.appendChild(dayCell);
-    }
-  }
-  
-  // Aktualizuj listę wybranych dni
-  function updateSelectedDaysList() {
-    const list = document.getElementById('selected-days-list');
-    if (!list) return;
-    
-    list.innerHTML = '';
-    
-    selectedDays.sort().forEach(dateStr => {
-      const tag = document.createElement('div');
-      tag.className = 'selected-day-tag';
-      
-      const date = new Date(dateStr);
-      const dayName = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'][date.getDay()];
-      const dayNumber = date.getDate();
-      
-      tag.innerHTML = `
-        ${dayName} ${dayNumber}
-        <span class="remove-day" data-date="${dateStr}">×</span>
-      `;
-      
-      // Usuń dzień po kliknięciu na ×
-      tag.querySelector('.remove-day').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const dateToRemove = e.target.dataset.date;
-        selectedDays = selectedDays.filter(d => d !== dateToRemove);
-        updateCalendar();
-        updateSelectedDaysList();
-      });
-      
-      list.appendChild(tag);
-    });
-  }
-  
-  // Wyślij zgłoszenie niedyspozycji
-  async function submitUnavailability() {
-    const monthInput = document.getElementById('unavailability-month');
-    const submitBtn = document.getElementById('unavailability-submit');
-    
-    if (!monthInput || !submitBtn) return;
-    
-    if (selectedDays.length === 0) {
-      alert('Wybierz przynajmniej jeden dzień niedyspozycji');
-      return;
-    }
-    
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Wysyłanie...';
-    
-    try {
-      const response = await fetch('/api/unavailability', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          month_year: monthInput.value,
-          selected_days: selectedDays,
-          comment: ''
-        }),
-        credentials: 'include'
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        alert('Zgłoszenie niedyspozycji zostało wysłane!');
-        document.getElementById('unavailability-modal').style.display = 'none';
-        selectedDays = [];
-        updateCalendar();
-        updateSelectedDaysList();
-      } else {
-        alert('Błąd: ' + (result.error || 'Nieznany błąd'));
-      }
-    } catch (error) {
-      console.error('Błąd podczas wysyłania zgłoszenia:', error);
-      alert('Wystąpił błąd podczas wysyłania zgłoszenia');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Wyślij zgłoszenie';
-    }
-  }
   
   // Funkcja do odpowiadania na niedyspozycje
   async function respondUnavailability(id, status) {
@@ -3090,7 +3511,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Inicjalizuj funkcjonalność niedyspozycji
-  initUnavailabilityModal();
+  // (initUnavailabilityModal jest już wywoływana globalnie)
   
   // Inicjalizuj powiadomienia
   initializeNotifications();
@@ -3413,12 +3834,22 @@ async function checkStatusChanges() {
 
 // Funkcja eksportu do Excel (tylko dla adminów)
 function exportToExcel(event) {
-  console.log('Rozpoczynam eksport do Excel...');
+  console.log('🚀 Rozpoczynam eksport do Excel...');
+  console.log('Event:', event);
   
   // Pokaż loading
-  const button = event ? event.target : document.querySelector('button[onclick*="exportToExcel"]');
+  const button = event ? event.target : document.querySelector('#menu-btn-export');
+  console.log('Znaleziony przycisk:', button);
+  console.log('Wszystkie przyciski z ID menu-btn-export:', document.querySelectorAll('#menu-btn-export'));
+  console.log('Wszystkie przyciski menu:', document.querySelectorAll('[id^="menu-btn-"]'));
+  console.log('HTML hamburger menu:', document.querySelector('.hamburger-menu-items')?.innerHTML);
+  
   if (!button) {
-    console.error('Nie znaleziono przycisku eksportu');
+    console.error('❌ Nie znaleziono przycisku eksportu');
+    console.error('❌ Sprawdzam czy hamburger menu jest otwarte...');
+    const hamburgerMenu = document.querySelector('.hamburger-menu');
+    console.log('❌ Hamburger menu element:', hamburgerMenu);
+    console.log('❌ Hamburger menu visible:', hamburgerMenu?.style.display);
     return;
   }
   
@@ -3431,7 +3862,8 @@ function exportToExcel(event) {
   const year = urlParams.get('year') ? parseInt(urlParams.get('year')) : new Date().getFullYear();
   const month = urlParams.get('month') ? parseInt(urlParams.get('month')) : new Date().getMonth() + 1;
   
-  console.log(`Eksportuję dla roku: ${year}, miesiąca: ${month}`);
+  console.log(`📅 Eksportuję dla roku: ${year}, miesiąca: ${month}`);
+  console.log(`🌐 URL: /api/export/excel?year=${year}&month=${month}`);
   
   // Wywołaj API eksportu z parametrami miesiąca
   fetch(`/api/export/excel?year=${year}&month=${month}`, {
@@ -3505,8 +3937,10 @@ function exportToExcel(event) {
       alert(`Plik ${filename} został pobrany pomyślnie!`);
     })
     .catch(error => {
-      console.error('Błąd podczas eksportu do Excel:', error);
-      alert(`Wystąpił błąd podczas eksportu do Excel: ${error.message}`);
+      console.error('❌ Błąd podczas eksportu do Excel:', error);
+      console.error('❌ Szczegóły błędu:', error.message);
+      console.error('❌ Stack trace:', error.stack);
+      alert(`❌ Wystąpił błąd podczas eksportu do Excel: ${error.message}\n\nSprawdź konsolę przeglądarki (F12) dla szczegółów.`);
     })
     .finally(() => {
       // Przywróć przycisk
@@ -3673,6 +4107,34 @@ function initializeShiftNavigation() {
   }
 }
 
+// Globalne zmienne i funkcje dla trybu edycji
+let globalEditMode = false;
+let globalPending = new Map();
+
+// Globalna funkcja toggleEdit dostępna dla menu
+function toggleEdit() {
+  // Użyj requestAnimationFrame dla lepszej wydajności
+  requestAnimationFrame(() => {
+    globalEditMode = !globalEditMode;
+    const todayActions = document.getElementById('shifts-actions');
+    if (todayActions) todayActions.classList.toggle('hidden', !globalEditMode);
+    
+    // Dodaj/usuń klasę edit-mode na body dla delikatnego mrygania
+    document.body.classList.toggle('edit-mode', globalEditMode);
+    
+    // Synchronizuj z lokalną zmienną editMode jeśli jest dostępna
+    window.localEditMode = globalEditMode;
+    
+    if (!globalEditMode) { 
+      globalPending.clear(); 
+      // Wywołaj hideEditor jeśli istnieje
+      if (typeof hideEditor === 'function') {
+        hideEditor();
+      }
+    }
+  });
+}
+
 // Sprawdź zmiany statusów po załadowaniu strony
 document.addEventListener('DOMContentLoaded', function() {
   // Podświetl zalogowanego użytkownika
@@ -3684,3 +4146,4 @@ document.addEventListener('DOMContentLoaded', function() {
   // Poczekaj 2 sekundy po załadowaniu, żeby dane się załadowały
   setTimeout(checkStatusChanges, 2000);
 });
+

@@ -15,6 +15,9 @@ python-dotenv>=1.0,<2
 requests>=2.31,<3
 urllib3>=2.0,<3
 
+# Excel export
+openpyxl>=3.1,<4
+
 # Database (SQLite is built-in, but we might want to add migrations later)
 # alembic>=1.12,<2  # Uncomment when adding database migrations
 

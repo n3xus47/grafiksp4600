@@ -121,6 +121,7 @@ def ensure_unavailability_table():
                   employee_id INTEGER NOT NULL,
                   month_year TEXT NOT NULL,
                   reason TEXT NOT NULL,
+                  selected_days TEXT,
                   status TEXT DEFAULT 'PENDING',
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                   FOREIGN KEY (employee_id) REFERENCES employees (id)
@@ -128,6 +129,12 @@ def ensure_unavailability_table():
             ''')
             logger.info("Tabela unavailability_requests utworzona")
         else:
+            # Sprawdź czy kolumna selected_days istnieje
+            cursor = db.execute("PRAGMA table_info(unavailability_requests)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'selected_days' not in columns:
+                db.execute('ALTER TABLE unavailability_requests ADD COLUMN selected_days TEXT')
+                logger.info("Dodano kolumnę selected_days do tabeli unavailability_requests")
             logger.info("Tabela unavailability_requests już istnieje")
             
     except Exception as e:
