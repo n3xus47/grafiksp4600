@@ -38,16 +38,78 @@ def api_save():
         
         # Pobierz nazwę użytkownika
         user_email = session.get('user_email', 'nieznany')
+        user_role = session.get('user_role', 'USER')
         
         # Pobierz dane z requestu
         data = safe_get_json()
         changes = data.get('changes', [])
+        is_draft = data.get('is_draft', False)  # Nowy parametr dla trybu draft
         
         if not changes:
             return jsonify(error="Brak zmian do zapisania"), 400
         
+        # Sprawdź czy użytkownik może używać trybu draft
+        if is_draft and user_role != 'ADMIN':
+            return jsonify(error="Tylko administratorzy mogą używać trybu roboczego"), 403
+        
         db = get_db()
         
+        # Jeśli to tryb draft, użyj specjalnej logiki
+        if is_draft:
+            from ..database import ensure_draft_shifts_table
+            ensure_draft_shifts_table()
+            
+            user_id = session.get('user_id')
+            
+            # Wyczyść wszystkie istniejące drafty dla tego użytkownika
+            db.execute("DELETE FROM draft_shifts WHERE created_by = ?", (user_id,))
+            
+            # Zapisz nowe zmiany w trybie draft
+            for change in changes:
+                date = change.get('date')
+                employee = change.get('employee') or change.get('name')
+                shift_type_raw = change.get('shift_type') or change.get('value', '')
+                
+                # Mapowanie typów zmian (jak w normalnym save)
+                shift_type_mapping = {
+                    'D': 'DNIOWKA',
+                    'DNIOWKA': 'DNIOWKA',
+                    'N': 'NOCKA', 
+                    'NOCKA': 'NOCKA',
+                    'P': 'POPOLUDNIOWKA'
+                }
+                
+                if shift_type_raw in shift_type_mapping:
+                    shift_type = shift_type_mapping[shift_type_raw]
+                elif shift_type_raw and shift_type_raw.startswith('P '):
+                    shift_type = shift_type_raw
+                else:
+                    shift_type = shift_type_raw
+                
+                if not date or not employee:
+                    continue
+                
+                # Znajdź ID pracownika
+                emp_row = db.execute("SELECT id FROM employees WHERE name = ?", (employee,)).fetchone()
+                if not emp_row:
+                    logger.warning(f"Nie znaleziono pracownika: {employee}")
+                    continue
+                
+                emp_id = emp_row['id']
+                
+                # Zapisz tylko jeśli shift_type nie jest puste
+                if shift_type and shift_type.strip() and shift_type != '-':
+                    db.execute("""
+                        INSERT INTO draft_shifts (date, shift_type, employee_id, created_by)
+                        VALUES (?, ?, ?, ?)
+                    """, (date, shift_type, emp_id, user_id))
+                    logger.info(f"DRAFT ZAPISANO: {date} - {employee} - {shift_type}")
+            
+            db.commit()
+            logger.info(f"Zapisano {len(changes)} zmian w trybie draft przez {user_email}")
+            return jsonify(status="ok", message="Zmiany robocze zapisane pomyślnie")
+        
+        # Normalny tryb zapisywania (z powiadomieniami)
         # Zapisz zmiany do bazy danych
         for change in changes:
             date = change.get('date')
@@ -126,6 +188,7 @@ def api_slot():
     try:
         date = request.args.get('date')
         employee = request.args.get('employee')
+        is_draft = request.args.get('is_draft', 'false').lower() == 'true'
         
         if not date or not employee:
             return jsonify(error="Brak wymaganych parametrów"), 400
@@ -139,13 +202,33 @@ def api_slot():
         
         emp_id = emp_row['id']
         
-        # Pobierz zmianę dla tego pracownika w tym dniu
-        shift_row = db.execute("""
-            SELECT shift_type FROM shifts 
-            WHERE date = ? AND employee_id = ?
-        """, (date, emp_id)).fetchone()
-        
-        shift_type = shift_row['shift_type'] if shift_row else ''
+        # Jeśli to tryb draft, sprawdź najpierw draft_shifts
+        if is_draft:
+            from ..database import ensure_draft_shifts_table
+            ensure_draft_shifts_table()
+            
+            user_id = session.get('user_id')
+            user_role = session.get('user_role', 'USER')
+            
+            # Tylko admini mogą używać trybu draft
+            if user_role != 'ADMIN':
+                return jsonify(error="Tylko administratorzy mogą używać trybu roboczego"), 403
+            
+            # Pobierz zmianę z draft dla tego pracownika w tym dniu
+            draft_row = db.execute("""
+                SELECT shift_type FROM draft_shifts 
+                WHERE date = ? AND employee_id = ? AND created_by = ?
+            """, (date, emp_id, user_id)).fetchone()
+            
+            shift_type = draft_row['shift_type'] if draft_row else ''
+        else:
+            # Normalny tryb - pobierz z głównej tabeli shifts
+            shift_row = db.execute("""
+                SELECT shift_type FROM shifts 
+                WHERE date = ? AND employee_id = ?
+            """, (date, emp_id)).fetchone()
+            
+            shift_type = shift_row['shift_type'] if shift_row else ''
         
         return jsonify({
             'date': date,
@@ -771,6 +854,21 @@ def api_employees_create():
         cursor = db.execute("INSERT INTO employees (name, code, email) VALUES (?, ?, ?)", (name, code or None, email or None))
         db.commit()
         
+        # Jeśli podano email, dodaj go automatycznie do whitelisty
+        if email:
+            try:
+                import os
+                current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+                current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
+                
+                if email not in current_whitelist:
+                    current_whitelist.append(email)
+                    new_whitelist = ','.join(current_whitelist)
+                    os.environ['GOOGLE_WHITELIST'] = new_whitelist
+                    logger.info(f"Email {email} został automatycznie dodany do whitelisty")
+            except Exception as e:
+                logger.warning(f"Nie udało się dodać emaila do whitelisty: {e}")
+        
         logger.info(f"Admin {session.get('user_email')} dodał pracownika: {name} (kod: {code}, email: {email})")
         return jsonify(status="ok", message="Pracownik został dodany", id=cursor.lastrowid)
         
@@ -819,9 +917,36 @@ def api_employees_update(emp_id):
             if email_exists:
                 return jsonify(error="Pracownik o tym emailu już istnieje"), 400
         
+        # Pobierz stary email przed aktualizacją
+        old_emp = db.execute("SELECT email FROM employees WHERE id = ?", (emp_id,)).fetchone()
+        old_email = old_emp['email'] if old_emp else None
+        
         # Aktualizuj pracownika
         db.execute("UPDATE employees SET name = ?, code = ?, email = ? WHERE id = ?", (name, code or None, email or None, emp_id))
         db.commit()
+        
+        # Synchronizuj whitelistę
+        try:
+            import os
+            current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+            current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
+            
+            # Usuń stary email z whitelisty (jeśli istniał)
+            if old_email and old_email in current_whitelist:
+                current_whitelist.remove(old_email)
+                logger.info(f"Stary email {old_email} został usunięty z whitelisty")
+            
+            # Dodaj nowy email do whitelisty (jeśli podano)
+            if email and email not in current_whitelist:
+                current_whitelist.append(email)
+                logger.info(f"Nowy email {email} został dodany do whitelisty")
+            
+            # Zaktualizuj zmienną środowiskową
+            new_whitelist = ','.join(current_whitelist)
+            os.environ['GOOGLE_WHITELIST'] = new_whitelist
+            
+        except Exception as e:
+            logger.warning(f"Nie udało się zsynchronizować whitelisty: {e}")
         
         logger.info(f"Admin {session.get('user_email')} zaktualizował pracownika {emp_id}: {name} (kod: {code}, email: {email})")
         return jsonify(status="ok", message="Pracownik został zaktualizowany")
@@ -837,15 +962,34 @@ def api_employees_delete(emp_id):
     try:
         db = get_db()
         
-        # Sprawdź czy pracownik istnieje
-        existing = db.execute("SELECT name FROM employees WHERE id = ?", (emp_id,)).fetchone()
+        # Sprawdź czy pracownik istnieje i pobierz email
+        existing = db.execute("SELECT name, email FROM employees WHERE id = ?", (emp_id,)).fetchone()
         if not existing:
             return jsonify(error="Nie znaleziono pracownika"), 404
         
+        # Pobierz email przed usunięciem
+        emp_email = existing['email'] if existing['email'] else None
+        
         # Usuń pracownika i jego zmiany
         db.execute("DELETE FROM shifts WHERE employee_id = ?", (emp_id,))
+        
         db.execute("DELETE FROM employees WHERE id = ?", (emp_id,))
         db.commit()
+        
+        # Usuń email z whitelisty (jeśli istniał)
+        if emp_email:
+            try:
+                import os
+                current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+                current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
+                
+                if emp_email in current_whitelist:
+                    current_whitelist.remove(emp_email)
+                    new_whitelist = ','.join(current_whitelist)
+                    os.environ['GOOGLE_WHITELIST'] = new_whitelist
+                    logger.info(f"Email {emp_email} został usunięty z whitelisty")
+            except Exception as e:
+                logger.warning(f"Nie udało się usunąć emaila z whitelisty: {e}")
         
         logger.info(f"Admin {session.get('user_email')} usunął pracownika {emp_id}: {existing['name']}")
         return jsonify(status="ok", message="Pracownik został usunięty")
@@ -957,7 +1101,11 @@ def healthz():
 
 @bp.get("/debug/env")
 def debug_env():
-    """Debug endpoint - informacje o środowisku"""
+    """Debug endpoint - informacje o środowisku (tylko w development)"""
+    from flask import current_app
+    if not current_app.config.get('DEBUG', False):
+        return jsonify({"error": "Debug endpoint not available"}), 404
+    
     return jsonify({
         "environment": "development",
         "has_client_id": bool(os.environ.get('GOOGLE_CLIENT_ID')),
@@ -1060,6 +1208,252 @@ def subscribe_push():
         return jsonify(error="Błąd serwera"), 500
 
 # ============================================================================
+# ENDPOINTY SYSTEMU ROBOCZEGO (DRAFT)
+# ============================================================================
+
+@bp.post("/draft/save")
+@login_required
+@admin_required
+def api_draft_save():
+    """Zapisuje zmiany w trybie roboczym (tylko dla adminów)"""
+    try:
+        from ..database import ensure_draft_shifts_table
+        ensure_draft_shifts_table()
+        
+        data = safe_get_json()
+        changes = data.get('changes', [])
+        
+        if not changes:
+            return jsonify(error="Brak zmian do zapisania"), 400
+        
+        db = get_db()
+        user_id = session.get('user_id')
+        user_email = session.get('user_email', 'nieznany')
+        
+        # Wyczyść wszystkie istniejące drafty dla tego użytkownika
+        db.execute("DELETE FROM draft_shifts WHERE created_by = ?", (user_id,))
+        
+        # Zapisz nowe zmiany w trybie draft
+        for change in changes:
+            date = change.get('date')
+            employee = change.get('employee') or change.get('name')
+            shift_type_raw = change.get('shift_type') or change.get('value', '')
+            
+            # Mapowanie typów zmian (jak w normalnym save)
+            shift_type_mapping = {
+                'D': 'DNIOWKA',
+                'DNIOWKA': 'DNIOWKA',
+                'N': 'NOCKA', 
+                'NOCKA': 'NOCKA',
+                'P': 'POPOLUDNIOWKA'
+            }
+            
+            if shift_type_raw in shift_type_mapping:
+                shift_type = shift_type_mapping[shift_type_raw]
+            elif shift_type_raw and shift_type_raw.startswith('P '):
+                shift_type = shift_type_raw
+            else:
+                shift_type = shift_type_raw
+            
+            if not date or not employee:
+                continue
+            
+            # Znajdź ID pracownika
+            emp_row = db.execute("SELECT id FROM employees WHERE name = ?", (employee,)).fetchone()
+            if not emp_row:
+                logger.warning(f"Nie znaleziono pracownika: {employee}")
+                continue
+            
+            emp_id = emp_row['id']
+            
+            # Zapisz tylko jeśli shift_type nie jest puste
+            if shift_type and shift_type.strip() and shift_type != '-':
+                db.execute("""
+                    INSERT INTO draft_shifts (date, shift_type, employee_id, created_by)
+                    VALUES (?, ?, ?, ?)
+                """, (date, shift_type, emp_id, user_id))
+                logger.info(f"DRAFT ZAPISANO: {date} - {employee} - {shift_type}")
+        
+        db.commit()
+        
+        logger.info(f"Zapisano {len(changes)} zmian w trybie draft przez {user_email}")
+        return jsonify(status="ok", message="Zmiany robocze zapisane pomyślnie")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas zapisywania zmian draft: {e}")
+        return jsonify(error="Wystąpił błąd podczas zapisywania"), 500
+
+@bp.get("/draft/load")
+@login_required
+@admin_required
+def api_draft_load():
+    """Ładuje wersję roboczą (tylko dla adminów)"""
+    try:
+        from ..database import ensure_draft_shifts_table
+        ensure_draft_shifts_table()
+        
+        db = get_db()
+        user_id = session.get('user_id')
+        
+        # Pobierz wszystkie drafty dla tego użytkownika
+        draft_shifts = db.execute("""
+            SELECT ds.date, ds.shift_type, e.name as employee_name
+            FROM draft_shifts ds
+            JOIN employees e ON ds.employee_id = e.id
+            WHERE ds.created_by = ?
+            ORDER BY ds.date, e.name
+        """, (user_id,)).fetchall()
+        
+        # Konwertuj na format podobny do normalnych zmian
+        changes = []
+        for shift in draft_shifts:
+            changes.append({
+                'date': shift['date'],
+                'employee': shift['employee_name'],
+                'shift_type': shift['shift_type']
+            })
+        
+        return jsonify({
+            'status': 'ok',
+            'changes': changes,
+            'count': len(changes)
+        })
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas ładowania draft: {e}")
+        return jsonify(error="Wystąpił błąd podczas ładowania"), 500
+
+@bp.post("/draft/publish")
+@login_required
+@admin_required
+def api_draft_publish():
+    """Publikuje zmiany z draft do produkcji (tylko dla adminów)"""
+    try:
+        from ..database import ensure_draft_shifts_table, ensure_schedule_changes_table
+        ensure_draft_shifts_table()
+        ensure_schedule_changes_table()
+        
+        db = get_db()
+        user_id = session.get('user_id')
+        user_email = session.get('user_email', 'nieznany')
+        
+        # Pobierz wszystkie drafty dla tego użytkownika
+        draft_shifts = db.execute("""
+            SELECT ds.date, ds.shift_type, e.name as employee_name, e.id as employee_id
+            FROM draft_shifts ds
+            JOIN employees e ON ds.employee_id = e.id
+            WHERE ds.created_by = ?
+        """, (user_id,)).fetchall()
+        
+        if not draft_shifts:
+            return jsonify(error="Brak zmian do publikacji"), 400
+        
+        # Zastosuj zmiany do głównej tabeli shifts
+        for shift in draft_shifts:
+            date = shift['date']
+            employee_name = shift['employee_name']
+            shift_type = shift['shift_type']
+            employee_id = shift['employee_id']
+            
+            # Pobierz starą zmianę przed usunięciem
+            old_shift = db.execute("SELECT shift_type FROM shifts WHERE date = ? AND employee_id = ?", 
+                                 (date, employee_id)).fetchone()
+            old_shift_type = old_shift['shift_type'] if old_shift else None
+            
+            # Usuń istniejącą zmianę
+            db.execute("DELETE FROM shifts WHERE date = ? AND employee_id = ?", (date, employee_id))
+            
+            # Dodaj nową zmianę
+            if shift_type and shift_type.strip() and shift_type != '-':
+                db.execute("INSERT INTO shifts (date, shift_type, employee_id) VALUES (?, ?, ?)", 
+                          (date, shift_type, employee_id))
+                
+                # Zapisz historię zmian (teraz już z powiadomieniami)
+                action = "DODANO" if not old_shift_type else "ZMIENIONO"
+                db.execute("""
+                    INSERT INTO schedule_changes (date, employee_name, old_shift, new_shift, changed_by)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (date, employee_name, old_shift_type or '', shift_type, user_email))
+            else:
+                # Zapisz usunięcie do schedule_changes
+                if old_shift_type:
+                    db.execute("""
+                        INSERT INTO schedule_changes (date, employee_name, old_shift, new_shift, changed_by)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (date, employee_name, old_shift_type, '', user_email))
+        
+        # Usuń drafty po publikacji
+        db.execute("DELETE FROM draft_shifts WHERE created_by = ?", (user_id,))
+        
+        db.commit()
+        
+        logger.info(f"Opublikowano {len(draft_shifts)} zmian z draft przez {user_email}")
+        return jsonify(status="ok", message=f"Opublikowano {len(draft_shifts)} zmian")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas publikacji draft: {e}")
+        return jsonify(error="Wystąpił błąd podczas publikacji"), 500
+
+@bp.post("/draft/discard")
+@login_required
+@admin_required
+def api_draft_discard():
+    """Usuwa wersję roboczą (tylko dla adminów)"""
+    try:
+        from ..database import ensure_draft_shifts_table
+        ensure_draft_shifts_table()
+        
+        db = get_db()
+        user_id = session.get('user_id')
+        user_email = session.get('user_email', 'nieznany')
+        
+        # Pobierz liczbę draftów przed usunięciem
+        count = db.execute("SELECT COUNT(*) as count FROM draft_shifts WHERE created_by = ?", (user_id,)).fetchone()['count']
+        
+        # Usuń wszystkie drafty dla tego użytkownika
+        db.execute("DELETE FROM draft_shifts WHERE created_by = ?", (user_id,))
+        db.commit()
+        
+        logger.info(f"Usunięto {count} zmian draft przez {user_email}")
+        return jsonify(status="ok", message=f"Usunięto {count} zmian roboczych")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas usuwania draft: {e}")
+        return jsonify(error="Wystąpił błąd podczas usuwania"), 500
+
+@bp.get("/draft/status")
+@login_required
+@admin_required
+def api_draft_status():
+    """Sprawdza status wersji roboczej (tylko dla adminów)"""
+    try:
+        from ..database import ensure_draft_shifts_table
+        ensure_draft_shifts_table()
+        
+        db = get_db()
+        user_id = session.get('user_id')
+        
+        # Sprawdź czy istnieją drafty dla tego użytkownika
+        count = db.execute("SELECT COUNT(*) as count FROM draft_shifts WHERE created_by = ?", (user_id,)).fetchone()['count']
+        
+        # Pobierz datę ostatniej modyfikacji
+        last_update = db.execute("""
+            SELECT MAX(updated_at) as last_update 
+            FROM draft_shifts 
+            WHERE created_by = ?
+        """, (user_id,)).fetchone()['last_update']
+        
+        return jsonify({
+            'has_draft': count > 0,
+            'count': count,
+            'last_update': last_update
+        })
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas sprawdzania statusu draft: {e}")
+        return jsonify(error="Wystąpił błąd podczas sprawdzania statusu"), 500
+
+# ============================================================================
 # ENDPOINTY EKSPORTU
 # ============================================================================
 
@@ -1067,10 +1461,12 @@ def subscribe_push():
 @login_required
 @admin_required
 def api_export_excel():
-    """Eksportuje grafik do pliku Excel"""
+    """Eksportuje grafik do pliku Excel - dokładnie jak na stronie"""
     try:
         from flask import send_file
         import tempfile
+        import datetime as dt
+        import calendar
         
         # Sprawdź czy openpyxl jest dostępne
         try:
@@ -1092,23 +1488,79 @@ def api_export_excel():
         
         db = get_db()
         
-        # Pobierz pracowników
+        # Pobierz pracowników (tak jak na stronie)
         employees = db.execute("SELECT id, name FROM employees ORDER BY name").fetchall()
         
-        # Pobierz zmiany dla miesiąca
-        start_date = f"{year:04d}-{month:02d}-01"
-        if month == 12:
-            end_date = f"{year + 1:04d}-01-01"
-        else:
-            end_date = f"{year:04d}-{month + 1:02d}-01"
+        # Przygotuj dane kalendarza (tak jak na stronie)
+        def get_calendar_days(year, month):
+            """Pobierz dni kalendarza dla danego miesiąca - tylko dni danego miesiąca od 1 do ostatniego"""
+            day_names = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nie']
+            
+            first_day = dt.date(year, month, 1)
+            last_day = dt.date(year, month, calendar.monthrange(year, month)[1])
+            
+            calendar_days = []
+            current_date = first_day
+            while current_date <= last_day:
+                is_off = current_date.weekday() >= 5  # Sobota i niedziela
+                is_today = current_date == dt.date.today()
+                
+                calendar_days.append({
+                    "date": current_date.strftime('%Y-%m-%d'),
+                    "iso": current_date.isoformat(),
+                    "dd": current_date.strftime('%d'),
+                    "abbr": day_names[current_date.weekday()],
+                    "is_off": is_off,
+                    "is_today": is_today
+                })
+                
+                current_date += dt.timedelta(days=1)
+            
+            return calendar_days
         
-        shifts = db.execute("""
-            SELECT s.date, s.shift_type, e.name 
-            FROM shifts s 
-            JOIN employees e ON s.employee_id = e.id 
-            WHERE s.date >= ? AND s.date < ?
-            ORDER BY s.date, e.name
-        """, (start_date, end_date)).fetchall()
+        # Pobierz zmiany dla miesiąca (tak jak na stronie)
+        def get_shifts_for_month(db, year, month):
+            """Pobierz zmiany dla danego miesiąca"""
+            start_date = f"{year:04d}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year + 1:04d}-01-01"
+            else:
+                end_date = f"{year:04d}-{month + 1:02d}-01"
+            
+            shifts = db.execute("""
+                SELECT s.date, s.shift_type, e.name 
+                FROM shifts s 
+                JOIN employees e ON s.employee_id = e.id 
+                WHERE s.date >= ? AND s.date < ?
+                ORDER BY s.date, e.name
+            """, (start_date, end_date)).fetchall()
+            
+            shifts_by_date = {}
+            for shift in shifts:
+                date = shift["date"]
+                if date not in shifts_by_date:
+                    shifts_by_date[date] = {}
+                shifts_by_date[date][shift["name"]] = shift["shift_type"]
+            
+            return shifts_by_date
+        
+        # Pobierz dane
+        calendar_days = get_calendar_days(year, month)
+        shifts_by_date = get_shifts_for_month(db, year, month)
+        
+        # Przygotuj wiersze grafiku (tak jak na stronie)
+        schedule_rows = []
+        for day in calendar_days:
+            row_data = {
+                "date": day["date"],
+                "iso": day["iso"],
+                "dd": day["dd"],
+                "abbr": day["abbr"],
+                "is_off": day["is_off"],
+                "is_today": day["is_today"],
+                "shifts": shifts_by_date.get(day["date"], {})
+            }
+            schedule_rows.append(row_data)
         
         # Utwórz workbook
         wb = Workbook()
@@ -1125,67 +1577,117 @@ def api_export_excel():
             top=Side(style='thin'),
             bottom=Side(style='thin')
         )
+        off_day_fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
         
-        # Nagłówki
-        ws['A1'] = f"Grafik zmian pracowników - {year}-{month:02d}"
-        ws['A1'].font = Font(bold=True, size=16)
-        ws.merge_cells('A1:H1')
+        # Nagłówki - dokładnie jak na stronie
+        headers = ["Data", "Dzień"]
         
-        # Nagłówki kolumn
-        headers = ['Data', 'Dzień'] + [emp['name'] for emp in employees] + ['Dzień', 'Data']
+        # Dodaj pracowników (z obsługą pary Ania i Bożena)
+        pair = ['Ania', 'Bożena']
+        pair_done = False
+        employees_for_export = []
+        for emp in employees:
+            if emp['name'] in pair and not pair_done:
+                headers.append("Ania i Bożena")
+                employees_for_export.append("Ania i Bożena")
+                pair_done = True
+            elif emp['name'] in pair and pair_done:
+                # Pomiń duplikat z pary
+                continue
+            elif emp['name'] == 'Maciej':
+                # Pomiń Macieja
+                continue
+            else:
+                headers.append(emp['name'])
+                employees_for_export.append(emp['name'])
+        
+        # Dodaj kolumnę licznika
+        headers.append("Licznik")
+        
+        # Zapisz nagłówki
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=3, column=col, value=header)
+            cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = center_alignment
             cell.border = border
         
-        # Przygotuj dane
-        import datetime as dt
-        import calendar
-        
-        first_day = dt.date(year, month, 1)
-        last_day = dt.date(year, month, calendar.monthrange(year, month)[1])
-        
-        # Pobierz pierwszy poniedziałek tygodnia
-        days_since_monday = first_day.weekday()
-        start_date_obj = first_day - dt.timedelta(days=days_since_monday)
-        
-        # Wygeneruj 5 tygodni (35 dni)
-        row = 4
-        for i in range(35):
-            current_date = start_date_obj + dt.timedelta(days=i)
-            is_off = current_date.weekday() >= 5  # Sobota i niedziela
-            
+        # Wygeneruj wiersze - dokładnie jak na stronie
+        row = 2
+        for day_row in schedule_rows:
             # Data
-            ws.cell(row=row, column=1, value=current_date.strftime('%Y-%m-%d'))
+            ws.cell(row=row, column=1, value=day_row['dd'])
             ws.cell(row=row, column=1).border = border
+            if day_row['is_off']:
+                ws.cell(row=row, column=1).fill = off_day_fill
             
             # Dzień
-            ws.cell(row=row, column=2, value=current_date.strftime('%a'))
+            ws.cell(row=row, column=2, value=day_row['abbr'])
             ws.cell(row=row, column=2).border = border
+            if day_row['is_off']:
+                ws.cell(row=row, column=2).fill = off_day_fill
             
-            # Zmiany pracowników
-            for col, emp in enumerate(employees, 3):
-                shift_type = ''
-                for shift in shifts:
-                    if (shift['date'] == current_date.strftime('%Y-%m-%d') and 
-                        shift['name'] == emp['name']):
-                        shift_type = shift['shift_type']
-                        break
+            # Zmiany pracowników - dokładnie jak na stronie
+            col = 3
+            for emp_name in employees_for_export:
+                shift_value = ''
                 
-                cell = ws.cell(row=row, column=col, value=shift_type)
+                if emp_name == "Ania i Bożena":
+                    # Sprawdź czy któraś z pary ma zmianę
+                    ania_shift = day_row['shifts'].get('Ania', '')
+                    bozena_shift = day_row['shifts'].get('Bożena', '')
+                    
+                    if ania_shift == 'DNIOWKA' or bozena_shift == 'DNIOWKA':
+                        shift_value = 'D'
+                    elif ania_shift == 'NOCKA' or bozena_shift == 'NOCKA':
+                        shift_value = 'N'
+                    elif ania_shift == 'POPOLUDNIOWKA' or bozena_shift == 'POPOLUDNIOWKA':
+                        shift_value = 'P'
+                    elif ania_shift.startswith('P ') or bozena_shift.startswith('P '):
+                        # Międzyzmiana z godzinami
+                        if ania_shift.startswith('P '):
+                            shift_value = ania_shift
+                        else:
+                            shift_value = bozena_shift
+                else:
+                    # Zwykły pracownik
+                    shift_type = day_row['shifts'].get(emp_name, '')
+                    if shift_type == 'DNIOWKA':
+                        shift_value = 'D'
+                    elif shift_type == 'NOCKA':
+                        shift_value = 'N'
+                    elif shift_type == 'POPOLUDNIOWKA':
+                        shift_value = 'P'
+                    elif shift_type.startswith('P '):
+                        # Międzyzmiana z godzinami
+                        shift_value = shift_type
+                
+                cell = ws.cell(row=row, column=col, value=shift_value)
                 cell.border = border
-                if is_off:
-                    cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+                if day_row['is_off']:
+                    cell.fill = off_day_fill
+                
+                col += 1
             
-            # Dzień (duplikat)
-            ws.cell(row=row, column=len(employees) + 3, value=current_date.strftime('%a'))
-            ws.cell(row=row, column=len(employees) + 3).border = border
+            # Licznik - dokładnie jak na stronie
+            dniowka_count = len([s for s in day_row['shifts'].values() if s == 'DNIOWKA'])
+            popoludniowka_count = len([s for s in day_row['shifts'].values() if s == 'POPOLUDNIOWKA'])
+            nocka_count = len([s for s in day_row['shifts'].values() if s == 'NOCKA'])
             
-            # Data (duplikat)
-            ws.cell(row=row, column=len(employees) + 4, value=current_date.strftime('%Y-%m-%d'))
-            ws.cell(row=row, column=len(employees) + 4).border = border
+            # Dla pary Ania i Bożena licz jako jedną osobę
+            if 'Ania' in day_row['shifts'] and 'Bożena' in day_row['shifts']:
+                if day_row['shifts']['Ania'] == 'DNIOWKA' and day_row['shifts']['Bożena'] == 'DNIOWKA':
+                    dniowka_count -= 1  # Odejmij jedną, bo liczymy parę jako jedną
+                elif day_row['shifts']['Ania'] == 'POPOLUDNIOWKA' and day_row['shifts']['Bożena'] == 'POPOLUDNIOWKA':
+                    popoludniowka_count -= 1
+                elif day_row['shifts']['Ania'] == 'NOCKA' and day_row['shifts']['Bożena'] == 'NOCKA':
+                    nocka_count -= 1
+            
+            licznik_text = f"D:{dniowka_count} P:{popoludniowka_count} N:{nocka_count}"
+            ws.cell(row=row, column=col, value=licznik_text)
+            ws.cell(row=row, column=col).border = border
+            if day_row['is_off']:
+                ws.cell(row=row, column=col).fill = off_day_fill
             
             row += 1
         

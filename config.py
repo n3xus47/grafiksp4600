@@ -35,10 +35,10 @@ class Config:
     HSTS_MAX_AGE = 31536000  # 1 rok - zmusza przeglądarkę do używania HTTPS
     CSP_POLICY = "upgrade-insecure-requests; block-all-mixed-content"  # Content Security Policy
     
-    # Web Push Notifications - VAPID keys
-    VAPID_PUBLIC_KEY = "BIvhQxAeGQGHEfdZRg8c1DyFQ2i35xL-ZBlfVz8GO4u8UxSVbWeCVACXpBi7_L7nDQJl3nxMoIYSPNJDn8xOsBQ"
-    VAPID_PRIVATE_KEY = "mDLquW_I2UY48iiKLK7xRUQ3MnzfctL9nRxVAyQI2BE"
-    VAPID_CLAIM_EMAIL = "admin@grafik4600.com"
+    # Web Push Notifications - VAPID keys (z zmiennych środowiskowych)
+    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+    VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+    VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "admin@grafik4600.com")
 
 
 class DevelopmentConfig(Config):

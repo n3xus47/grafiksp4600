@@ -7,6 +7,19 @@
  */
 
 (function(){
+  // Funkcja do escapowania HTML (ochrona przed XSS)
+  function escapeHtml(text) {
+    if (typeof text !== 'string') return text;
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+  }
+
   // Funkcja debounce - opóźnia wykonanie funkcji o określony czas
   // Używana żeby nie wykonywać funkcji zbyt często (np. przy wpisywaniu w pole tekstowe)
   function debounce(func, wait) {
@@ -424,13 +437,6 @@ function setupMenuButtons() {
               toggleSwaps();
             } else {
               console.error('❌ toggleSwaps nie jest funkcją!');
-            }
-          } else if (menuButtonId === 'menu-btn-whitelist') {
-            console.log('📋 Uruchamiam toggleWhitelist');
-            if (typeof toggleWhitelist === 'function') {
-              toggleWhitelist();
-            } else {
-              console.error('❌ toggleWhitelist nie jest funkcją!');
             }
           } else if (menuButtonId === 'menu-btn-edit') {
             console.log('✏️ Uruchamiam toggleEdit');
@@ -2504,7 +2510,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Zgłoszenie niedyspozycji
             const days = JSON.parse(item.selected_days || '[]');
             const daysText = days.length > 0 ? days.join(', ') : 'Brak dni';
-            title.innerHTML = `📅 <strong>Niedyspozycja:</strong> ${item.employee_name} - ${item.month_year}<br>
+            title.innerHTML = `📅 <strong>Niedyspozycja:</strong> ${escapeHtml(item.employee_name)} - ${escapeHtml(item.month_year)}<br>
                               <small>Dni: ${daysText}</small>`;
           } else {
             // Prośba o zamianę
@@ -2540,7 +2546,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const commentDiv = document.createElement('div');
           commentDiv.className = 'swap-comment';
           if (item.comment_requester && item.comment_requester.trim()) {
-            commentDiv.innerHTML = `<span class="comment-label">💬</span> <strong>Komentarz:</strong> ${item.comment_requester}`;
+            commentDiv.innerHTML = `<span class="comment-label">💬</span> <strong>Komentarz:</strong> ${escapeHtml(item.comment_requester)}`;
           } else {
             commentDiv.innerHTML = `<span class="comment-label">💬</span> <strong>Komentarz:</strong> <em>Brak komentarza</em>`;
           }
@@ -3519,6 +3525,204 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('Aplikacja została w pełni załadowana i jest gotowa do użycia');
 });
 
+// ===== GLOBALNE FUNKCJE DLA HAMBURGER MENU =====
+
+// Globalne funkcje dla hamburger menu - muszą być dostępne poza DOMContentLoaded
+function toggleEmps() {
+  const empEditor = document.getElementById('emp-editor');
+  if (!empEditor) return;
+  const show = !empEditor.classList.contains('show');
+  
+  if (show) {
+    // Pokaż modal najpierw
+    empEditor.classList.add('show');
+    
+    // Użyj requestAnimationFrame dla lepszej wydajności
+    requestAnimationFrame(() => {
+      // Użyj cache jeśli jest świeży
+      const now = Date.now();
+      if (window.employeesCache && (now - window.employeesCacheTime) < 30000) {
+        renderEmployees(window.employeesCache);
+      } else {
+        loadEmployees();
+      }
+    });
+  } else {
+    empEditor.classList.remove('show');
+  }
+}
+
+
+// Globalne zmienne cache dla pracowników
+window.employeesCache = null;
+window.employeesCacheTime = 0;
+const CACHE_DURATION = 30000; // 30 sekund
+
+// Globalne funkcje pomocnicze
+function loadEmployees() {
+  fetch('/api/employees', { credentials: 'include' })
+    .then(response => response.json())
+    .then(data => { 
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      // Zaktualizuj cache
+      window.employeesCache = data.employees || [];
+      window.employeesCacheTime = Date.now();
+      renderEmployees(window.employeesCache); 
+    })
+    .catch(error => {
+      console.error('Błąd podczas ładowania pracowników:', error);
+      alert('Błąd podczas ładowania listy pracowników');
+    });
+}
+
+function renderEmployees(items) {
+  const empList = document.getElementById('emp-list');
+  if (!empList) return;
+  
+  // Użyj requestAnimationFrame dla lepszej wydajności
+  requestAnimationFrame(() => {
+    // Użyj DocumentFragment dla lepszej wydajności
+    const fragment = document.createDocumentFragment();
+    
+    for (const emp of items) {
+      const row = document.createElement('div');
+      row.className = 'emp-row';
+      row.innerHTML = `
+        <div>${emp.name} <span class="meta">(${emp.code || '-'})</span> ${emp.email ? `<br><small class="email-meta">${emp.email}</small>` : ''}</div>
+        <div class="emp-actions">
+          <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
+          <button data-id="${emp.id}" class="btn">Usuń</button>
+        </div>
+      `;
+      
+      // Przycisk edycji
+      row.querySelector('.btn-edit').addEventListener('click', () => {
+        showEditEmployeeDialog(emp);
+      });
+      
+      // Przycisk usuwania
+      row.querySelector('.btn:not(.btn-edit)').addEventListener('click', () => {
+        if (confirm(`Czy na pewno chcesz usunąć pracownika "${emp.name}"?`)) {
+          fetch(`/api/employees/${emp.id}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                alert('Błąd podczas usuwania: ' + data.error);
+              } else {
+                // Zaktualizuj cache
+                window.employeesCache = window.employeesCache.filter(e => e.id !== emp.id);
+                window.employeesCacheTime = Date.now();
+                loadEmployees();
+                alert('Pracownik został usunięty');
+              }
+            })
+            .catch(error => {
+              console.error('Błąd podczas usuwania pracownika:', error);
+              alert('Wystąpił błąd podczas usuwania pracownika');
+            });
+        }
+      });
+      
+      fragment.appendChild(row);
+    }
+    
+    // Wyczyść i dodaj wszystkie elementy jednocześnie
+    empList.innerHTML = '';
+    empList.appendChild(fragment);
+  });
+}
+
+
+function showEditEmployeeDialog(emp) {
+  // Utwórz dialog edycji
+  const dialog = document.createElement('div');
+  dialog.className = 'emp-editor show';
+  dialog.innerHTML = `
+    <div class="emp-container">
+      <button type="button" class="emp-close" aria-label="Zamknij">✕</button>
+      <div class="emp-head">Edytuj pracownika</div>
+      <div class="emp-edit-form">
+        <div class="emp-add">
+          <input id="edit-emp-name" placeholder="imię" value="${emp.name}" />
+          <input id="edit-emp-code" placeholder="id" value="${emp.code || ''}" />
+          <input id="edit-emp-email" placeholder="email" type="email" value="${emp.email || ''}" />
+        </div>
+        <div class="emp-edit-actions">
+          <button id="edit-emp-save" class="btn">Zapisz</button>
+          <button id="edit-emp-cancel" class="btn">Anuluj</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Dodaj do body
+  document.body.appendChild(dialog);
+  
+  // Event listeners
+  const closeBtn = dialog.querySelector('.emp-close');
+  const cancelBtn = dialog.querySelector('#edit-emp-cancel');
+  const saveBtn = dialog.querySelector('#edit-emp-save');
+  const nameInput = dialog.querySelector('#edit-emp-name');
+  const codeInput = dialog.querySelector('#edit-emp-code');
+  const emailInput = dialog.querySelector('#edit-emp-email');
+  
+  function closeDialog() {
+    dialog.remove();
+  }
+  
+  closeBtn.addEventListener('click', closeDialog);
+  cancelBtn.addEventListener('click', closeDialog);
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeDialog();
+  });
+  
+  // Zapisz zmiany
+  saveBtn.addEventListener('click', () => {
+    const newName = nameInput.value.trim();
+    const newCode = codeInput.value.trim();
+    const newEmail = emailInput.value.trim();
+    
+    if (!newName) {
+      alert('Imię jest wymagane');
+      return;
+    }
+    
+    fetch(`/api/employees/${emp.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName, code: newCode, email: newEmail })
+    })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(data.error || 'Błąd podczas edycji');
+      }
+      return data;
+    })
+    .then(() => {
+      closeDialog();
+      loadEmployees(); // Odśwież listę
+      alert('Pracownik został zaktualizowany!');
+    })
+    .catch((err) => {
+      alert('Błąd: ' + err.message);
+    });
+  });
+  
+  // Enter w polach
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveBtn.click();
+  });
+  codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveBtn.click();
+  });
+  emailInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveBtn.click();
+  });
+}
+
 // ===== SYSTEM POWIADOMIEŃ PWA =====
 
 // Inicjalizacja powiadomień
@@ -3790,14 +3994,17 @@ function getRequestTypeText(item) {
 }
 
 // Wyświetlanie powiadomienia
-function showNotification(message, requestData = null) {
-  if (Notification.permission === 'granted') {
+function showNotification(message, type = 'info') {
+  // Wyświetl powiadomienie w konsoli dla debugowania
+  console.log(`🔔 [NOTIFICATION] ${type.toUpperCase()}: ${message}`);
+  
+  // Jeśli to push notification i mamy pozwolenie
+  if (type === 'push' && Notification.permission === 'granted') {
     const notification = new Notification('Grafik SP4600', {
       body: message,
       icon: '/static/PKN.WA.D.png',
       badge: '/static/PKN.WA.D.png',
       tag: 'grafik-notification',
-      data: requestData,
       requireInteraction: true
     });
     
@@ -3816,6 +4023,15 @@ function showNotification(message, requestData = null) {
     setTimeout(() => {
       notification.close();
     }, 10000);
+  } else {
+    // Dla innych typów powiadomień, wyświetl alert (tymczasowo)
+    if (type === 'error') {
+      alert('❌ ' + message);
+    } else if (type === 'success') {
+      alert('✅ ' + message);
+    } else {
+      alert('ℹ️ ' + message);
+    }
   }
 }
 
@@ -4044,7 +4260,7 @@ function updateShiftsDisplay(shiftsData) {
   const dniowkaElement = document.getElementById('shifts-dniowka');
   if (dniowkaElement) {
     if (shiftsData.dniowka && shiftsData.dniowka.length > 0) {
-      dniowkaElement.innerHTML = `<ul>${shiftsData.dniowka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+      dniowkaElement.innerHTML = `<ul>${shiftsData.dniowka.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>`;
     } else {
       dniowkaElement.innerHTML = '<p class="muted">brak przypisań</p>';
     }
@@ -4054,7 +4270,7 @@ function updateShiftsDisplay(shiftsData) {
   const popoludniowkaElement = document.getElementById('shifts-popoludniowka');
   if (popoludniowkaElement) {
     if (shiftsData.popoludniowka && shiftsData.popoludniowka.length > 0) {
-      popoludniowkaElement.innerHTML = `<ul>${shiftsData.popoludniowka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+      popoludniowkaElement.innerHTML = `<ul>${shiftsData.popoludniowka.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>`;
     } else {
       popoludniowkaElement.innerHTML = '<p class="muted">brak przypisań</p>';
     }
@@ -4064,7 +4280,7 @@ function updateShiftsDisplay(shiftsData) {
   const nockaElement = document.getElementById('shifts-nocka');
   if (nockaElement) {
     if (shiftsData.nocka && shiftsData.nocka.length > 0) {
-      nockaElement.innerHTML = `<ul>${shiftsData.nocka.map(name => `<li>${name}</li>`).join('')}</ul>`;
+      nockaElement.innerHTML = `<ul>${shiftsData.nocka.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>`;
     } else {
       nockaElement.innerHTML = '<p class="muted">brak przypisań</p>';
     }
@@ -4125,8 +4341,31 @@ function toggleEdit() {
     // Synchronizuj z lokalną zmienną editMode jeśli jest dostępna
     window.localEditMode = globalEditMode;
     
+    if (globalEditMode) {
+      console.log('🔧 [EDIT] Włączam tryb edycji - globalEditMode:', globalEditMode);
+      
+      // Gdy włączamy tryb edycji, dodaj event listener dla przycisku draft (tylko raz)
+      const toggleDraftBtn = document.getElementById('toggle-draft-mode');
+      if (toggleDraftBtn && !toggleDraftBtn.hasAttribute('data-listener-added')) {
+        console.log('🔧 [EDIT] Dodaję event listener do przycisku draft w trybie edycji');
+        toggleDraftBtn.addEventListener('click', function(e) {
+          console.log('🔧 [EDIT] Kliknięto przycisk trybu roboczego w trybie edycji!', e);
+          toggleDraftMode();
+        });
+        toggleDraftBtn.setAttribute('data-listener-added', 'true');
+      }
+      
+      // Zaktualizuj interfejs trybu roboczego
+      updateDraftUI();
+    }
+    
     if (!globalEditMode) { 
-      globalPending.clear(); 
+      globalPending.clear();
+      // Wyczyść zmiany draft gdy wyłączamy tryb edycji
+      if (isDraftMode) {
+        draftChanges.clear();
+        isDraftMode = false;
+      }
       // Wywołaj hideEditor jeśli istnieje
       if (typeof hideEditor === 'function') {
         hideEditor();
@@ -4135,13 +4374,486 @@ function toggleEdit() {
   });
 }
 
+// ============================================================================
+// PROSTY SYSTEM TRYBU ROBOCZEGO
+// ============================================================================
+
+// Zmienne globalne dla trybu roboczego
+let isDraftMode = false;
+let draftChanges = new Map();
+
+// Prosta funkcja włączania/wyłączania trybu roboczego
+function toggleDraftMode() {
+  if (isDraftMode) {
+    exitDraftMode();
+  } else {
+    enterDraftMode();
+  }
+}
+
+// Włącz tryb roboczy
+function enterDraftMode() {
+  console.log('🔄 [DRAFT] Włączam tryb roboczy...');
+  isDraftMode = true;
+  updateDraftUI();
+  
+  // Załaduj zapisane wersje robocze
+  loadDraftData();
+  
+  showNotification('Tryb roboczy włączony', 'info');
+}
+
+// Wyłącz tryb roboczy
+function exitDraftMode() {
+  console.log('🔄 [DRAFT] Wyłączam tryb roboczy...');
+  isDraftMode = false;
+  draftChanges.clear();
+  
+  // Przywróć oficjalny grafik
+  restoreOfficialSchedule();
+  
+  updateDraftUI();
+  showNotification('Tryb roboczy wyłączony - przywrócono oficjalny grafik', 'info');
+}
+
+// Przywróć oficjalny grafik
+function restoreOfficialSchedule() {
+  console.log('🔄 [DRAFT] Przywracam oficjalny grafik...');
+  
+  // Wyczyść wszystkie sloty
+  document.querySelectorAll('.slot[data-date][data-employee]').forEach(slot => {
+    slot.setAttribute('data-value', '');
+    slot.textContent = '';
+    slot.classList.remove('draft-slot');
+  });
+  
+  // Pobierz parametry roku i miesiąca z tabeli
+  const grafikTable = document.getElementById('grafik');
+  const year = grafikTable.getAttribute('data-year');
+  const month = grafikTable.getAttribute('data-month');
+  
+  if (!year || !month) {
+    console.error('Brak parametrów roku/miesiąca w tabeli');
+    return;
+  }
+  
+  // Załaduj oficjalny grafik z serwera dla całego miesiąca
+  fetch(`/?year=${year}&month=${month}`, { credentials: 'include' })
+    .then(response => response.text())
+    .then(html => {
+      // Parsuj HTML aby wyciągnąć dane shifts_by_date
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const scriptTags = doc.querySelectorAll('script');
+      
+      let shiftsData = {};
+      let dataFound = false;
+      
+      for (const script of scriptTags) {
+        const content = script.textContent;
+        if (content.includes('shiftsData = ')) {
+          try {
+            // Wyciągnij dane z JavaScript
+            const match = content.match(/const shiftsData = (.*?);/s);
+            if (match) {
+              shiftsData = JSON.parse(match[1]);
+              dataFound = true;
+              break;
+            }
+          } catch (e) {
+            console.error('Błąd parsowania shiftsData:', e);
+          }
+        }
+      }
+      
+      if (!dataFound) {
+        console.error('Nie znaleziono danych shiftsData w HTML');
+        showNotification('Błąd ładowania oficjalnego grafiku', 'error');
+        return;
+      }
+      
+      // Zastosuj oficjalny grafik
+      Object.keys(shiftsData).forEach(date => {
+        if (date === '_timestamp') return; // Pomiń klucz timestamp
+        
+        Object.keys(shiftsData[date]).forEach(employeeName => {
+          const shiftType = shiftsData[date][employeeName];
+          
+          // Znajdź odpowiednią komórkę w tabeli
+          const cell = document.querySelector(`[data-date="${date}"][data-employee="${employeeName}"]`);
+          if (cell) {
+            // Zaktualizuj komórkę typem zmiany
+            const displayValue = shiftType === 'DNIOWKA' ? 'D' : shiftType === 'NOCKA' ? 'N' : shiftType;
+            cell.textContent = displayValue;
+            cell.dataset.value = shiftType;
+            
+            // Dodaj odpowiednią klasę dla stylowania
+            cell.classList.remove('dniowka', 'nocka', 'custom-shift', 'poludniowka');
+            if (shiftType === 'DNIOWKA') {
+              cell.classList.add('dniowka');
+            } else if (shiftType === 'NOCKA') {
+              cell.classList.add('nocka');
+            } else if (shiftType && shiftType.startsWith('P ')) {
+              cell.classList.add('poludniowka');
+            } else if (shiftType && shiftType.length > 0) {
+              cell.classList.add('custom-shift');
+            }
+          }
+        });
+      });
+      
+      console.log('🔄 [DRAFT] Oficjalny grafik przywrócony dla całego miesiąca');
+    })
+    .catch(error => {
+      console.error('Błąd ładowania oficjalnego grafiku:', error);
+    });
+}
+
+// Aktualizuj interfejs trybu roboczego
+function updateDraftUI() {
+  const toggleBtn = document.getElementById('toggle-draft-mode');
+  const saveBtn = document.getElementById('save-draft-version');
+  const normalSaveBtn = document.getElementById('save-shifts');
+  const cancelBtn = document.getElementById('cancel-shifts');
+  
+  if (toggleBtn) {
+    if (isDraftMode) {
+      toggleBtn.textContent = 'Wyłącz tryb roboczy';
+      toggleBtn.classList.add('active');
+    } else {
+      toggleBtn.textContent = 'Włącz tryb roboczy';
+      toggleBtn.classList.remove('active');
+    }
+  }
+  
+  if (saveBtn) {
+    if (isDraftMode) {
+      saveBtn.classList.remove('hidden');
+    } else {
+      saveBtn.classList.add('hidden');
+    }
+  }
+  
+  // Ukryj/pokaż przyciski normalnego trybu edycji
+  if (normalSaveBtn) {
+    if (isDraftMode) {
+      normalSaveBtn.classList.add('hidden');
+    } else {
+      normalSaveBtn.classList.remove('hidden');
+    }
+  }
+  
+  if (cancelBtn) {
+    if (isDraftMode) {
+      cancelBtn.classList.add('hidden');
+    } else {
+      cancelBtn.classList.remove('hidden');
+    }
+  }
+  
+  // Sprawdź czy istnieją zapisane wersje robocze
+  checkDraftStatus();
+}
+
+// Zapisz wersję roboczą
+function saveDraftVersion() {
+  console.log('💾 [DRAFT] Zapisuję wersję roboczą...');
+  
+  // Zbierz wszystkie zmiany z interfejsu
+  const changes = collectDraftChanges();
+  console.log('💾 [DRAFT] Zebrano', changes.length, 'zmian do zapisania');
+  
+  if (changes.length === 0) {
+    showNotification('Brak zmian do zapisania', 'info');
+    return;
+  }
+  
+  // Wyłącz przyciski podczas zapisywania
+  const saveBtn = document.getElementById('save-draft-version');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisywanie...';
+  }
+  
+  // Wyślij dane do API
+  fetch('/api/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ changes, is_draft: true })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      showNotification('Błąd zapisywania: ' + data.error, 'error');
+      return;
+    }
+    
+    showNotification(`Wersja robocza zapisana! (${changes.length} zmian)`, 'success');
+    console.log('💾 [DRAFT] Wersja robocza zapisana pomyślnie');
+    // Odśwież status draft
+    checkDraftStatus();
+  })
+  .catch(error => {
+    console.error('Błąd zapisywania wersji roboczej:', error);
+    showNotification('Błąd zapisywania wersji roboczej', 'error');
+  })
+  .finally(() => {
+    // Przywróć przyciski
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Zapisz wersję roboczą';
+    }
+  });
+}
+
+// Sprawdź status wersji roboczej
+function checkDraftStatus() {
+  fetch('/api/draft/status', { credentials: 'include' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        console.error('Błąd sprawdzania statusu draft:', data.error);
+        return;
+      }
+      
+      // Status draft jest teraz tylko w trybie edycji
+      console.log('📊 [DRAFT] Status draft:', data);
+    })
+    .catch(error => {
+      console.error('Błąd sprawdzania statusu draft:', error);
+    });
+}
+
+// Opublikuj zmiany z draft
+function publishDraftChanges() {
+  console.log('🚀 [DRAFT] Publikuję zmiany z draft...');
+  
+  // Przycisk publikacji jest teraz w trybie edycji
+  
+  fetch('/api/draft/publish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      showNotification('Błąd publikacji: ' + data.error, 'error');
+    } else {
+      showNotification('Zmiany zostały opublikowane pomyślnie', 'success');
+      // Odśwież status draft
+      checkDraftStatus();
+      // Odśwież stronę aby pokazać nowe zmiany
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  })
+  .catch(error => {
+    console.error('Błąd publikacji draft:', error);
+    showNotification('Błąd publikacji zmian', 'error');
+  })
+  .finally(() => {
+    // Przycisk publikacji jest teraz w trybie edycji
+  });
+}
+
+// Odrzuć wersję roboczą
+function discardDraftChanges() {
+  console.log('🗑️ [DRAFT] Odrzucam wersję roboczą...');
+  
+  if (!confirm('Czy na pewno chcesz odrzucić wszystkie zmiany w wersji roboczej?')) {
+    return;
+  }
+  
+  // Przycisk odrzucania jest teraz w trybie edycji
+  
+  fetch('/api/draft/discard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      showNotification('Błąd odrzucania: ' + data.error, 'error');
+    } else {
+      showNotification('Wersja robocza została odrzucona', 'success');
+      // Odśwież status draft
+      checkDraftStatus();
+    }
+  })
+  .catch(error => {
+    console.error('Błąd odrzucania draft:', error);
+    showNotification('Błąd odrzucania wersji roboczej', 'error');
+  })
+  .finally(() => {
+    // Przycisk odrzucania jest teraz w trybie edycji
+  });
+}
+
+// Załaduj zapisane wersje robocze
+function loadDraftData() {
+  console.log('📥 [DRAFT] Ładowanie zapisanych wersji roboczych...');
+  
+  fetch('/api/draft/load', { credentials: 'include' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        console.error('Błąd ładowania draft:', data.error);
+        return;
+      }
+      
+      if (data.changes && data.changes.length > 0) {
+        console.log('📥 [DRAFT] Znaleziono', data.changes.length, 'zapisanych zmian');
+        applyDraftChanges(data.changes);
+        showNotification(`Załadowano ${data.changes.length} zapisanych zmian`, 'info');
+      } else {
+        console.log('📥 [DRAFT] Brak zapisanych wersji roboczych');
+      }
+    })
+    .catch(error => {
+      console.error('Błąd ładowania draft:', error);
+    });
+}
+
+// Zastosuj zmiany draft do interfejsu
+function applyDraftChanges(changes) {
+  console.log('🎨 [DRAFT] Zastosowuję zapisane zmiany...');
+  
+  // NAJPIERW: Wyczyść wszystkie sloty (usuń oficjalny grafik)
+  document.querySelectorAll('.slot[data-date][data-employee]').forEach(slot => {
+    slot.setAttribute('data-value', '');
+    slot.textContent = '';
+    slot.classList.remove('draft-slot');
+  });
+  
+  // Mapowanie pełnych nazw na skróty
+  const shiftTypeMapping = {
+    'DNIOWKA': 'D',
+    'NOCKA': 'N',
+    'POPOLUDNIOWKA': 'P',
+    'P ': 'P'  // Obsługa międzyzmiany z spacją
+  };
+  
+  // TERAZ: Zastosuj tylko zmiany z wersji roboczej
+  changes.forEach(change => {
+    const slot = document.querySelector(`[data-date="${change.date}"][data-employee="${change.employee}"]`);
+    if (slot) {
+      // Mapuj pełną nazwę na skrót
+      const displayValue = shiftTypeMapping[change.shift_type] || change.shift_type;
+      
+      slot.setAttribute('data-value', displayValue);
+      slot.textContent = displayValue;
+      slot.classList.add('draft-slot');
+      
+      console.log('🎨 [DRAFT] Zastosowano:', change.date, change.employee, change.shift_type, '->', displayValue);
+    }
+  });
+  
+  console.log('🎨 [DRAFT] Wersja robocza zastąpiła oficjalny grafik');
+}
+
+// Zbierz zmiany z interfejsu (TYLKO wersja robocza)
+function collectDraftChanges() {
+  const changes = [];
+  const slots = document.querySelectorAll('.slot[data-date][data-employee]');
+  
+  // Mapowanie skrótów na pełne nazwy
+  const reverseShiftTypeMapping = {
+    'D': 'DNIOWKA',
+    'N': 'NOCKA',
+    'P': 'POPOLUDNIOWKA'
+  };
+  
+  slots.forEach(slot => {
+    const date = slot.getAttribute('data-date');
+    const employee = slot.getAttribute('data-employee');
+    const value = slot.getAttribute('data-value') || '';
+    
+    if (date && employee) {
+      // Mapuj skrót na pełną nazwę przed zapisaniem
+      const fullShiftType = reverseShiftTypeMapping[value] || value;
+      
+      // Zapisuj TYLKO jeśli slot ma wartość (nie puste)
+      if (value && value.trim() !== '') {
+        changes.push({ 
+          date, 
+          employee, 
+          shift_type: fullShiftType 
+        });
+      }
+    }
+  });
+  
+  console.log('💾 [DRAFT] Zebrano', changes.length, 'zmian z wersji roboczej');
+  return changes;
+}
+
+// Inicjalizacja prostego systemu draft
+function initializeDraftSystem() {
+  console.log('🔧 [DRAFT] Inicjalizacja prostego systemu draft...');
+  
+  // Sprawdź czy użytkownik jest adminem
+  const isAdmin = document.body.classList.contains('admin-user');
+  if (!isAdmin) {
+    console.log('🔧 [DRAFT] Użytkownik nie jest adminem - tryb roboczy niedostępny');
+    return;
+  }
+  
+  // Dodaj event listener dla przycisku zapisu w trybie edycji
+  const saveBtn = document.getElementById('save-draft-version');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveDraftVersion);
+    console.log('🔧 [DRAFT] Event listener dla zapisu wersji roboczej dodany');
+  }
+  
+  // Przyciski panelu kontrolnego zostały usunięte - funkcjonalność tylko w trybie edycji
+  
+  // Sprawdź status draft przy inicjalizacji
+  checkDraftStatus();
+  
+  console.log('🔧 [DRAFT] Prosty system draft zainicjalizowany');
+}
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
+// Stare funkcje usunięte - zastąpione przez DraftManager
+
 // Sprawdź zmiany statusów po załadowaniu strony
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 [APP] DOM załadowany - inicjalizacja aplikacji...');
+  
   // Podświetl zalogowanego użytkownika
   highlightCurrentUser();
   
   // Inicjalizuj nawigację zmian
   initializeShiftNavigation();
+  
+  // Inicjalizuj system draft
+  console.log('🚀 [APP] Inicjalizuję system draft...');
+  initializeDraftSystem();
   
   // Poczekaj 2 sekundy po załadowaniu, żeby dane się załadowały
   setTimeout(checkStatusChanges, 2000);

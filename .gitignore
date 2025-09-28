@@ -2,6 +2,7 @@
 server.env
 production_secrets.txt
 cookies.txt
+users.json
 
 # Pliki środowiskowe z prawdziwymi danymi
 .env

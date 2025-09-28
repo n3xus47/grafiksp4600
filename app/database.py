@@ -65,6 +65,7 @@ def init_db():
         ensure_unavailability_table()
         ensure_schedule_changes_table()
         ensure_push_subscriptions_table()
+        ensure_draft_shifts_table()
         
         # Migruj tabelę users do nowej struktury
         migrate_users_table()
@@ -191,6 +192,35 @@ def ensure_push_subscriptions_table():
             
     except Exception as e:
         logger.error(f"Błąd podczas tworzenia tabeli push_subscriptions: {e}")
+        raise
+
+def ensure_draft_shifts_table():
+    """Tworzy tabelę draft_shifts jeśli nie istnieje"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='draft_shifts'")
+        if not cursor.fetchone():
+            db.execute('''
+                CREATE TABLE draft_shifts (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  date TEXT NOT NULL,
+                  shift_type TEXT NOT NULL,
+                  employee_id INTEGER NOT NULL,
+                  created_by INTEGER NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (employee_id) REFERENCES employees (id),
+                  FOREIGN KEY (created_by) REFERENCES users (id)
+                );
+            ''')
+            logger.info("Tabela draft_shifts utworzona")
+        else:
+            logger.info("Tabela draft_shifts już istnieje")
+            
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia tabeli draft_shifts: {e}")
         raise
 
 def save_push_subscription(user_id, subscription):

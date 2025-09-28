@@ -5377,3 +5377,160 @@ select {
   animation: slideOutTop 0.3s ease;
 }
 
+
+/* ============================================================================
+   PANEL TRYBU EDYCJI Z TRYBEM ROBOCZYM
+   ============================================================================ */
+
+.shifts-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid #ddd;
+}
+
+.edit-mode-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#edit-mode-status {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9em;
+}
+
+#toggle-draft-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.85em;
+}
+
+#toggle-draft-mode svg {
+  width: 14px;
+  height: 14px;
+}
+
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+
+/* Dark mode dla panelu edycji */
+.dark-mode .shifts-actions {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.dark-mode #edit-mode-status {
+  color: #e0e0e0;
+}
+
+/* Style dla przycisków trybu roboczego w trybie edycji */
+#toggle-draft-mode {
+  background: #ff9800;
+  color: white;
+  border: 2px solid #f57c00;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+#toggle-draft-mode:hover {
+  background: #f57c00;
+}
+
+#toggle-draft-mode.active {
+  background: #e65100;
+  border-color: #d84315;
+}
+
+#save-draft-version {
+  background: #ffc107;
+  color: #212529;
+  border: 2px solid #ffb300;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+#save-draft-version:hover {
+  background: #ffb300;
+  transform: translateY(-1px);
+}
+
+#save-draft-version:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#save-draft-shifts {
+  background: #ff9800;
+  color: white;
+  border-color: #f57c00;
+  font-weight: 600;
+}
+
+#save-draft-shifts:hover {
+  background: #f57c00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4);
+}
+
+#publish-draft-shifts {
+  background: #28a745;
+  color: white;
+  border-color: #1e7e34;
+  font-weight: 600;
+}
+
+#publish-draft-shifts:hover {
+  background: #1e7e34;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+/* Dark mode dla przycisków trybu roboczego */
+.dark-mode #toggle-draft-mode {
+  background: #ff9800;
+  color: white;
+}
+
+.dark-mode #toggle-draft-mode:hover {
+  background: #f57c00;
+}
+
+.dark-mode #save-draft-version {
+  background: #ffc107;
+  color: #212529;
+}
+
+.dark-mode #save-draft-shifts {
+  background: #ff9800;
+  color: white;
+}
+
+.dark-mode #publish-draft-shifts {
+  background: #28a745;
+  color: white;
+}
+
+
+
+
+
