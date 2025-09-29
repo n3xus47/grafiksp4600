@@ -54,14 +54,16 @@
   --font-weight-bold: 700;
 
   /* header i layout */
-  --header-h: 80px; /* Zwiększona wysokość dla lepszych proporcji logo */
+  --header-h: 72px; /* Wysokość header inspirowana Spotify */
+  --logo-size: 40px; /* Rozmiar logo - pomniejszony */
+  --logo-content-h: 32px; /* Wysokość części użytkowej logo */
   --wrap-vmargin: 1rem;
 
   /* tabela */
   --cell-fs: 13px;
   --cell-pad-v: 3px;
   --cell-pad-h: 3px;
-  --thead-h: 34px;
+  --thead-h: 18px;
   --section-title-h: 24px;
   --row-border: 1px;
   --thead-borders: 2px;
@@ -71,6 +73,8 @@
   --emp-col-w: auto;
   --date-col-w: auto;
   --day-col-w: auto;
+  --background-base: #121212;
+  --background-noise: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=");
 }
 
 /* Globalne wyłączenie zaznaczania tekstu dla całej aplikacji */
@@ -467,45 +471,107 @@ th.col-emp.current-user {
   margin-top: 4px !important;
 }
 
+.daily-shifts-container {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important; /* Zmienione z 16px na 8px - odstęp między panelami a grafikiem */
+  margin-left: 8px !important; /* Odstęp od lewej krawędzi ekranu */
+  margin-right: 8px !important; /* Odstęp od prawej krawędzi ekranu */
+  grid-row: 1; /* Explicitnie ustawiamy na 1. rząd */
+  grid-column: 1; /* Explicitnie ustawiamy na 1. kolumnę */
+  background: #000000; /* Kompletna czerń identyczna jak w headerze */
+}
+
 .daily-shifts-bar {
-  background: var(--card) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  margin-bottom: 16px !important;
-  padding: 16px !important;
+  /* Panel nad grafikiem - bez wpływu na inne elementy */
+  background-color: rgb(255, 193, 7); /* Żółty jako domyślny */
+  background-image: linear-gradient(rgba(0,0,0,1) 0,rgba(0,0,0,.6) 100%),var(--background-noise);
+  height: 256px;
+  flex: 1;
+  border-radius: 0 0 12px 12px; /* Zaokrąglone rogi tylko na dole */
+  padding: 16px;
+  position: relative; /* Potrzebne dla pseudo-elementu */
+}
+
+
+/* Kolory dla poszczególnych zmian */
+.dniowka-shift {
+  background-color: rgba(255, 193, 7, 0.8); /* Żółty dla dniówki */
+  color: #000000 !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
+
+.popoludniowka-shift {
+  background-color: rgba(40, 167, 69, 0.8); /* Zielony dla popołudniówki */
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
+
+.nocka-shift {
+  background-color: rgba(0, 123, 255, 0.8); /* Niebieski dla nocki */
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: none !important;
 }
 
 .shifts-content {
   display: flex !important;
-  gap: 24px !important;
-  justify-content: space-around !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  position: relative;
+  z-index: 10000; /* Nad zasłoną z najwyższym indexem */
+  align-items: center !important;
+  height: 100% !important;
+  width: 100% !important;
 }
 
 .shifts-section {
-  flex: 1 !important;
   text-align: center !important;
+  width: 100% !important;
 }
 
 .shifts-section h3 {
-  margin: 0 0 8px 0 !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
+  margin: 0 0 12px 0 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
   color: var(--text-primary) !important;
+  background: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 .shifts-section ul {
   list-style: none !important;
   padding: 0 !important;
   margin: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  justify-content: center !important;
 }
 
 .shifts-section li {
-  padding: 4px 8px !important;
-  margin: 2px 0 !important;
-  background: var(--bg-secondary) !important;
-  border-radius: 4px !important;
-  font-size: 12px !important;
+  padding: 8px 16px !important;
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
   color: var(--white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.shifts-section li:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 .shifts-section .muted {
@@ -524,41 +590,19 @@ th.col-emp.current-user {
 
 /* ===== KOLUMNA LICZNIKA ZMIAN (TYLKO DLA ADMINÓW) ===== */
 .col-summary {
-  min-width: 80px !important; /* Zmniejszona szerokość */
-  width: auto !important; /* Automatyczne skalowanie */
-  max-width: 100px !important; /* Maksymalna szerokość */
-  text-align: center !important;
-  vertical-align: middle !important;
-  padding: 6px !important;
-  background: var(--card) !important;
-  border-left: 1px solid var(--border) !important;
-  position: sticky !important;
-  right: 0 !important;
-  z-index: 10 !important;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1) !important;
   display: flex !important;
-  flex-direction: row !important; /* Poziomo jeden obok drugiego */
-  flex-wrap: nowrap !important; /* Bez zawijania */
+  flex-direction: row !important;
   justify-content: center !important;
-  align-items: center !important;
-  gap: 4px !important; /* Odstęp między elementami */
+  align-items: stretch !important;
+  gap: 1px !important;
 }
 
 .summary-item {
-  margin: 0 !important; /* Usunięte marginesy */
-  padding: 3px 6px !important;
-  border-radius: 4px !important;
-  font-size: 10px !important;
-  display: inline-block !important;
-  font-weight: 600 !important;
-  min-width: 24px !important;
-  width: 24px !important;
-  text-align: center !important;
-  background: var(--bg-secondary) !important;
-  color: var(--white) !important;
-  border: 1px solid var(--border) !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  flex: 1 !important;
 }
 
 .dniowka-count {
@@ -605,7 +649,7 @@ body.edit-mode .col-summary {
 
 html,body{margin:0;padding:0; overflow-x:hidden; overflow-y:auto}
 body{
-  background:var(--bg);color:var(--fg);font-family:var(--font);
+  background:#000000;color:var(--fg);font-family:var(--font);
   font-weight: var(--font-weight-normal);
   line-height:1.5;
   font-size: 14px;
@@ -622,68 +666,358 @@ body{
 
 /* Podstawowe style headera w stylu Spotify */
 .site-header {
-  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
-  border-bottom: 1px solid var(--border);
+  background: #000000; /* Czarny header */
   /* backdrop-filter: blur(10px); - Wyłączone dla lepszej wydajności */
   position: sticky;
   top: 0;
-  z-index: 100;
-  border-bottom: 1px solid var(--border);
+  z-index: 1000;
   height: var(--header-h);
+  width: 100%;
   display: flex;
   align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  width: 100%;
+  justify-content: center;
 }
 
-/* Kontener headera - grid 3-kolumnowy */
+/* Kontener headera - grid 3-kolumnowy jak w Spotify */
 .header-bar {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   width: 100%;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 0.5rem;
-  gap: 0.5rem;
+  padding: 0 1.5rem;
+  gap: 1rem;
+  position: relative;
 }
 
-/* Lewa sekcja - logo i przycisk PWA */
+/* Lewa sekcja - menu hamburger i logo */
 .header-left {
   justify-self: start;
   display: flex;
   align-items: center;
-  gap: 1rem; /* Odstęp między logo a przyciskiem PWA */
+  gap: 1rem; /* Odstęp między menu hamburger a logo */
 }
 
-/* Środkowa sekcja - nawigacja miesiąca */
+/* Środkowa sekcja - nawigacja dnia w stylu Spotify */
 .header-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  z-index: 1;
+  background: var(--card);
+  border-radius: 500px;
+  padding: 8px 16px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.22s ease-in, box-shadow 0.22s ease-in;
+  width: 320px;
+  justify-content: center;
+}
+
+.header-center:hover {
+  background: var(--card-hover);
+  box-shadow: inset 0 0 0 1px hsla(0,0%,100%,.1);
+}
+
+/* Strzałki w header-center - na stałych pozycjach */
+/* Strzałki w header-center (nawigator dnia) - bliżej krawędzi i na środku */
+.header-center .nav-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  position: relative;
+  align-self: center;
   justify-self: center;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
-/* Prawa sekcja - zegar */
-.header-right {
-  justify-self: end; /* Wyrównany do prawej strony */
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+/* Lewa strzałka - na lewej pozycji */
+.header-center .nav-btn:first-child {
+  justify-self: start;
 }
 
-/* Prosty, elegancki zegar */
-#clock {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #ffffff !important;
+/* Prawa strzałka - na prawej pozycji */
+.header-center .nav-btn:last-child {
+  justify-self: end;
+}
+
+/* Informacje o dniu - w środku header-center */
+.shift-date-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  text-align: center;
+}
+
+.shift-date-info h2 {
+  font-weight: var(--font-weight-bold);
+  color: var(--white);
+  font-size: 1.2rem;
   white-space: nowrap;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  margin: 0;
 }
+
+.shift-date-info span {
+  color: var(--gray-text);
+  font-size: 0.9rem;
+  margin-top: 2px;
+}
+
+
+/* Nawigator miesiąca pod tabelą - identyczny jak nawigator dnia */
+.month-navigation-below-table {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--card);
+  border-radius: 500px;
+  padding: 8px 16px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.22s ease-in, box-shadow 0.22s ease-in;
+  width: 320px;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  grid-row: 3; /* Explicitnie ustawiamy na 3. rząd */
+  grid-column: 1; /* Explicitnie ustawiamy na 1. kolumnę */
+}
+
+.month-navigation-below-table:hover {
+  background: var(--card-hover);
+  box-shadow: inset 0 0 0 1px hsla(0,0%,100%,.1);
+}
+
+
+.month-navigation-below-table .nav-btn {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  text-decoration: none;
+}
+
+.month-navigation-below-table .nav-btn:hover {
+  color: var(--red);
+  transform: translateY(-2px) scale(1.05);
+}
+
+
+/* Lewa strzałka w nawigatorze miesiąca - na lewej pozycji */
+.month-navigation-below-table .nav-btn:first-child {
+  justify-self: start;
+}
+
+/* Prawa strzałka w nawigatorze miesiąca - na prawej pozycji */
+.month-navigation-below-table .nav-btn:last-child {
+  justify-self: end;
+}
+
+.month-navigation-below-table .month-label {
+  font-weight: var(--font-weight-bold);
+  color: var(--white);
+  font-size: 1.2rem;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  justify-self: center;
+}
+
+
+/* Style dla przycisku wyloguj w hamburger menu */
+.menu-item-form {
+  display: contents; /* Pozwala formie zachowywać się jak element inline */
+}
+
+.logout-btn {
+  color: var(--red) !important; /* Czerwony kolor dla przycisku wyloguj */
+}
+
+.logout-btn:hover {
+  background: var(--red) !important;
+  color: var(--white) !important;
+}
+
+
+.header-center .nav-btn:hover {
+  color: var(--red);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Prawa sekcja - przyciski jak w Spotify */
+.header-right {
+  position: absolute;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 2;
+}
+
+/* Przyciski w stylu Spotify */
+.spotify-btn {
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+
+.spotify-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.spotify-btn:active {
+  transform: scale(0.95);
+}
+
+/* Przycisk "Pobierz" w stylu Spotify */
+.spotify-download-btn {
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.spotify-download-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+  text-decoration: none;
+  color: var(--white);
+}
+
+.spotify-download-btn:active {
+  transform: scale(0.98);
+}
+
+.spotify-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spotify-btn-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Przycisk menu hamburger */
+.hamburger-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.hamburger-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.hamburger-menu-btn:active {
+  transform: scale(0.95);
+}
+
+/* Ikona hamburger - 3 linie */
+.hamburger-icon {
+  width: 24px;
+  height: 18px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after,
+.hamburger-icon span {
+  content: '';
+  display: block;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon span {
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+/* Animacja hamburger na hover */
+.hamburger-menu-btn:hover .hamburger-icon::before {
+  transform: translateY(2px);
+}
+
+.hamburger-menu-btn:hover .hamburger-icon::after {
+  transform: translateY(-2px);
+}
+
 
 /* Przełącznik motywu */
 .theme-toggle {
@@ -735,21 +1069,33 @@ body{
   to { transform: rotate(360deg); }
 }
 
-/* Logo */
+/* Logo - zachowuje proporcje oryginalne (1552x1114) */
 .logo {
-  max-height: 43px; /* 36px * 1.2 = 43px */
-  height: auto;
-  width: auto;
+  height: var(--logo-size);
+  width: calc(var(--logo-size) * 1.4); /* Zachowaj proporcje 1.4:1 */
   display: block;
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  margin: 12px 8px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+  margin: 0 2rem; /* Zwiększony odstęp od krawędzi 2x */
+  position: relative;
+  cursor: pointer; /* Logo jest klikalne */
 }
+
+/* Ścieżki logo - biały kolor w trybie ciemnym */
+.logo-path {
+  fill: white;
+  transition: fill 0.8s ease;
+}
+
+/* Hover effect dla logo - czerwone wypełnienie */
+.logo:hover .logo-path {
+  fill: #d32f2f; /* Czerwony kolor */
+}
+
 
 /* Etykieta miesiąca - Spotify style */
 .month-label {
   font-weight: var(--font-weight-bold);
   color: var(--white);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   white-space: nowrap;
   transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   letter-spacing: 0.5px;
@@ -784,15 +1130,6 @@ body{
   color: var(--red);
 }
 
-/* Zegar - Spotify style */
-#clock {
-  font-size: 0.9rem;
-  color: var(--fg-secondary);
-  white-space: nowrap;
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.3px;
-}
 
 /* Przycisk PWA - Spotify style */
 .pwa-btn {
@@ -848,15 +1185,16 @@ body{
 /* Nowy układ pionowy - CZYSTY GRID */
 .grid3-vertical {
   display: grid;
-  grid-template-rows: auto auto auto auto auto auto;
+  grid-template-rows: auto auto auto;
   grid-template-columns: 1fr;
-  gap: 0 1rem; /* Usuwamy przerwę między paskiem a tabelą */
+  gap: 1rem 0; /* Odstęp między wierszami, brak między kolumnami */
   width: 100%;
   max-width: 100%; /* Zapewniamy, że nie przekracza szerokości ekranu */
   padding: 0; /* Usuwamy cały padding - tabela bezpośrednio pod headerem */
   box-sizing: border-box; /* Padding wliczony w szerokość */
   height: auto; /* Wysokość dostosowuje się do zawartości */
   overflow: visible; /* Cała zawartość widoczna */
+  background: transparent; /* Przezroczyste tło - dziedziczy z body */
 }
 
 /* Nagłówek dla dzisiejszych zmian - RZĄD 1 */
@@ -1282,13 +1620,45 @@ body{
   grid-row: 3;
   grid-column: 1;
   width: 100%;
+  background: #000000; /* Czarny odstęp między panelami a grafikiem */
+  border-radius: 12px; /* Zaokrąglone rogi jak panele */
+  padding: 8px; /* Odstęp od krawędzi strony */
   /* Usuwamy background - tabela bezpośrednio na tle */
 }
 
 .main-panel .table-wrap {
   width: 100%;
-  overflow: visible;
+  overflow: hidden; /* Zmienione z visible na hidden - potrzebne dla zaokrąglonych rogów */
   position: relative;
+  background: var(--card); /* Tło tabeli */
+  border-radius: 12px; /* Zaokrąglone rogi tabeli */
+  border: 1px solid var(--border); /* Ramka tabeli */
+}
+
+/* Zaokrąglone rogi narożnych komórek tabeli */
+.main-panel .table thead tr:first-child th:first-child {
+  border-top-left-radius: 12px !important;
+}
+
+.main-panel .table thead tr:first-child th:last-child {
+  border-top-right-radius: 12px !important;
+}
+
+.main-panel .table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 12px !important;
+}
+
+.main-panel .table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Dodatkowe style dla dolnych komórek - upewniamy się, że wszystkie narożne komórki są zaokrąglone */
+.main-panel .table tbody tr:last-child .col-date {
+  border-bottom-left-radius: 12px !important;
+}
+
+.main-panel .table tbody tr:last-child .col-summary {
+  border-bottom-right-radius: 12px !important;
 }
 
 /* Prawy panel - RZĄD 6, rozszerzony na całą szerokość - HIGH END DESIGN */
@@ -1358,12 +1728,12 @@ body{
 /* Responsywność - nowy układ pionowy */
 @media (max-width: 900px) {
   .grid3-vertical {
-    gap: 0 0.5rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.5rem 0; /* Odstęp między wierszami, brak między kolumnami */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle jak na 901px+ */
+    padding: 6px; /* Zmniejszony padding dla mniejszych ekranów */
   }
   
   .today-bar {
@@ -1396,12 +1766,12 @@ body{
 /* Wąskie tablety - dodatkowe dostosowanie dla 730px */
 @media (max-width: 730px) {
   .grid3-vertical {
-    gap: 0 0.4rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.4rem 0; /* Odstęp między wierszami, brak między kolumnami */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -1488,12 +1858,12 @@ body{
 /* Bardzo wąskie tablety - dla 650px */
 @media (max-width: 650px) {
   .grid3-vertical {
-    gap: 0 0.3rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.3rem 0; /* Odstęp między wierszami, brak między kolumnami */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -1580,12 +1950,12 @@ body{
 /* Bardzo wąskie ekrany - dla 600px i mniejszych */
 @media (max-width: 600px) {
   .grid3-vertical {
-    gap: 0 0.2rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.2rem 0; /* Odstęp między wierszami, brak między kolumnami */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
   .main-panel {
-    padding: 0;
+    padding: 2px; /* Minimalny padding dla bardzo małych ekranów */
   }
   
   .today-bar {
@@ -1672,12 +2042,12 @@ body{
 /* Ekstremalnie wąskie ekrany - dla 500px i mniejszych */
 @media (max-width: 500px) {
   .grid3-vertical {
-    gap: 0 0.1rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.1rem 0; /* Odstęp między wierszami, brak między kolumnami */
     padding: 0; /* Usuwamy padding - tabela bezpośrednio pod headerem */
   }
   
   .main-panel {
-    padding: 0;
+    padding: 2px; /* Minimalny padding dla bardzo małych ekranów */
   }
   
   .today-bar {
@@ -1851,6 +2221,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   position: relative;
 }
 
+/* Pozycjonowanie center-panel w grid */
+.center-panel {
+  grid-row: 2; /* Explicitnie ustawiamy na 2. rząd */
+  grid-column: 1; /* Explicitnie ustawiamy na 1. kolumnę */
+}
+
 /* Tabela w center-panel (dla kompatybilności) */
 .center-panel .table-wrap {
   width: 100%;
@@ -1887,10 +2263,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   border-bottom: 1px solid var(--border);
   border-right: 1px solid var(--border);
   color: var(--fg-secondary);
-  font-weight: var(--font-weight-bold);
-  font-size: 12px;
+  font-weight: 800;
+  font-size: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  padding: 6px 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .table thead th:first-child{ border-left:1px solid var(--border) }
 
@@ -1919,25 +2297,25 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 }
 
 .table th,.table td{
-  padding: var(--cell-pad-v) var(--cell-pad-h);
-  font-size: var(--cell-fs);
+  padding: 6px 4px;
+  font-size: 12px;
   text-align:center;
   overflow:visible; /* Cała zawartość widoczna */
   text-overflow:clip; /* Bez ellipsis */
   white-space:normal; /* Pozwala na zawijanie tekstu */
   word-wrap: break-word; /* Zawijanie długich słów */
   word-break: break-word; /* Łamanie długich słów */
-  background: var(--bg);
+  background: #0a0a0a;
   min-width: 0; /* Pozwala na zmniejszenie */
-  font-weight: var(--font-weight-medium);
+  font-weight: 500;
   transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  color: var(--fg);
+  color: #ffffff;
 }
 
 /* Komórki tabeli w panelu bez karty */
 .center-panel:not(.card) .table th,
 .center-panel:not(.card) .table td {
-  background: var(--bg);
+  background: #0a0a0a;
   border-color: var(--border);
 }
 
@@ -1945,32 +2323,53 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 .slot {
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  border-radius: 4px;
-  font-weight: var(--font-weight-medium);
+  border-radius: 0;
+  font-weight: 700;
+  font-size: 12px;
   position: relative;
+  padding: 1px 0px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: #0f0f0f;
+  color: #ffffff;
 }
 
 .slot:hover {
   background: var(--card-hover) !important;
   transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .slot:active {
   background: var(--card) !important;
 }
 
+/* Style dla pustych komórek */
+.slot:empty {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+}
+
+.slot:empty:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.3) !important;
+}
+
 /* weekendy i święta */
 .table tbody tr.off-day td,
 .table tbody tr.off-day th{
-  background: var(--gray);
+  background: rgba(128, 128, 128, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
   border: 1px solid var(--border);
 }
 
 /* Weekendy i święta w panelu bez karty */
 .center-panel:not(.card) .table tbody tr.off-day td,
 .center-panel:not(.card) .table tbody tr.off-day th {
-  background: var(--gray);
+  background: rgba(128, 128, 128, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
   border: 1px solid var(--border);
 }
 
@@ -2050,7 +2449,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   display:inline-block;
   transform: none;
   transform-origin: initial;
-  white-space: normal;
+  white-space: nowrap;
   font-size: 12px;
   line-height: 1.2;
   text-align: center;
@@ -2063,10 +2462,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 
 /* Dodatkowe style dla ukośnych nagłówków */
 .table thead th.col-emp .rot {
-  font-size: 11px; /* Jeszcze mniejsza czcionka dla ukośnych nagłówków */
-  line-height: 1.0;
+  font-size: 12px; /* Maksymalna czcionka dla ukośnych nagłówków */
+  line-height: 1.2;
   padding: 0 2px; /* Dodatkowy padding */
   transform-origin: bottom left; /* Lepsze pozycjonowanie ukośnego tekstu */
+  white-space: normal; /* Pozwala na zawijanie tekstu */
+  word-break: break-word; /* Łamanie długich słów */
 }
 
 /* ===== STYLE DLA KOLUMN Z IMIENIAMI PRACOWNIKÓW ===== */
@@ -2075,9 +2476,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   max-width: none; /* Usuwamy ograniczenie szerokości */
   overflow: visible; /* Cała zawartość widoczna */
   text-overflow: clip; /* Bez ellipsis */
-  white-space: normal; /* Pozwala na zawijanie tekstu */
-  word-break: break-word; /* Pozwala na łamanie długich słów */
-  hyphens: auto; /* Automatyczne dzielenie wyrazów */
+  white-space: nowrap; /* Nie pozwala na zawijanie tekstu */
+  overflow: hidden; /* Ukrywa nadmiar tekstu */
+  text-overflow: ellipsis; /* Dodaje ... na końcu */
   min-width: 0; /* Pozwala na zmniejszenie */
 }
 
@@ -2154,8 +2555,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 48px; /* 40px * 1.2 = 48px */
-    margin: 18px 12px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 32px;
+    width: 45px; /* 32 * 1.4 */
+    margin: 20px 1.2rem;
   }
   
   .pwa-btn {
@@ -2174,9 +2576,6 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 1.2rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.9rem;
-  }
 }
 
 /* Średnie ekrany - kompaktowy header */
@@ -2187,8 +2586,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 41px; /* 34px * 1.2 = 41px */
-    margin: 15px 10px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 28px;
+    width: 39px; /* 28 * 1.4 */
+    margin: 22px 1rem;
   }
   
   .pwa-btn {
@@ -2207,12 +2607,15 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 1rem;
   }
   
-  #clock {
-    font-size: 0.85rem;
-  }
   
   .header-right {
-    justify-self: center; /* Wycentrowany zegar */
+    justify-self: end; /* Przyciski po prawej */
+  }
+  
+  .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 
@@ -2224,8 +2627,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 36px; /* 30px * 1.2 = 36px */
-    margin: 12px 8px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 24px;
+    width: 34px; /* 24 * 1.4 */
+    margin: 24px 0.8rem;
   }
   
   .month-label {
@@ -2238,12 +2642,15 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 1.2rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.8rem;
-  }
   
   .header-right {
-    justify-self: center; /* Wycentrowany zegar */
+    justify-self: end; /* Przyciski po prawej */
+  }
+  
+  .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 
@@ -2256,8 +2663,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 31px; /* 26px * 1.2 = 31px */
-    margin: 9px 6px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 20px;
+    width: 28px; /* 20 * 1.4 */
+    margin: 26px 0.6rem;
   }
   
   .month-label {
@@ -2270,19 +2678,22 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 1.1rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.75rem;
-  }
   
   .header-right {
-    justify-self: center; /* Wycentrowany zegar */
+    justify-self: end; /* Przyciski po prawej */
+  }
+  
+  .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 
 /* Telefony - kompaktowy header z wszystkimi elementami */
 @media (max-width: 599px) {
   .site-header {
-    height: 70px; /* Zwiększona wysokość dla lepszych proporcji logo */
+    height: 72px; /* Wysokość header */
   }
   
   .header-bar {
@@ -2307,24 +2718,37 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     flex-shrink: 0;
   }
   
+  .spotify-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .spotify-download-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .hamburger-menu-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .hamburger-icon {
+    width: 18px;
+    height: 14px;
+  }
+  
   .header-center {
     justify-self: center;
     gap: 0.5rem;
     min-width: 0; /* Pozwala na skracanie */
   }
   
-  /* Prosty zegar na telefonach */
-  #clock {
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    color: #ffffff !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  }
   
   .logo {
-    max-height: 29px; /* 24px * 1.2 = 29px */
-    margin: 9px 6px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 18px;
+    width: 25px; /* 18 * 1.4 */
+    margin: 27px 0.5rem;
   }
   
   .month-label {
@@ -2341,16 +2765,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 1rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.7rem;
-    white-space: nowrap;
-  }
 }
 
 /* Bardzo małe telefony */
 @media (max-width: 480px) {
   .site-header {
-    height: 65px; /* Zwiększona wysokość dla lepszych proporcji logo */
+    height: 72px; /* Wysokość header */
   }
   
   .header-bar {
@@ -2367,18 +2787,11 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 26px; /* 22px * 1.2 = 26px */
-    margin: 8px 5px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 16px;
+    width: 22px; /* 16 * 1.4 */
+    margin: 28px 0.4rem;
   }
   
-  /* Prosty zegar na bardzo małych telefonach */
-  #clock {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.2px;
-    color: #ffffff !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  }
   
   .month-label {
     font-size: 0.85rem;
@@ -2390,15 +2803,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 0.9rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.65rem;
-  }
 }
 
 /* Bardzo małe ekrany */
 @media (max-width: 360px) {
   .site-header {
-    height: 60px; /* Zwiększona wysokość dla lepszych proporcji logo */
+    height: 72px; /* Wysokość header */
   }
   
   .header-bar {
@@ -2415,8 +2825,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .logo {
-    max-height: 24px; /* 20px * 1.2 = 24px */
-    margin: 6px 4px; /* Większy górny/dolny margines, mniejszy lewy/prawy */
+    height: 14px;
+    width: 20px; /* 14 * 1.4 */
+    margin: 29px 0.3rem;
   }
   
   .pwa-btn {
@@ -2441,15 +2852,12 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     font-size: 0.8rem; /* Powiększone strzałki */
   }
   
-  #clock {
-    font-size: 0.6rem;
-  }
 }
 
 /* Orientacja landscape na telefonach */
 @media (max-width: 768px) and (orientation: landscape) {
   .site-header {
-    height: 60px; /* Zwiększona wysokość dla lepszych proporcji logo */
+    height: 72px; /* Wysokość header */
   }
   
   .header-bar {
@@ -2470,7 +2878,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
 /* Tablet - średnie ekrany */
 @media (max-width: 1024px) {
   .grid3-vertical {
-    gap: 0 0.75rem; /* Usuwamy przerwę między paskiem a tabelą */
+    gap: 0.75rem 0; /* Odstęp między wierszami, brak między kolumnami */
   }
   
   .card {
@@ -2490,7 +2898,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     padding: 2px 3px;
     min-width: 0; /* Pozwala na zmniejszenie */
     max-width: none; /* Usuwamy ograniczenie szerokości */
-    white-space: normal; /* Pozwala na zawijanie tekstu */
+    white-space: nowrap; /* Pozwala na zawijanie tekstu */
     word-wrap: break-word; /* Zawijanie długich słów */
     word-break: break-word; /* Łamanie długich słów */
   }
@@ -2507,7 +2915,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -2584,7 +2992,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -2678,7 +3086,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -2781,7 +3189,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   }
   
   .main-panel {
-    padding: 0; /* Usuwamy padding - tabela bezpośrednio na tle */
+    padding: 4px; /* Jeszcze mniejszy padding dla węższych ekranów */
   }
   
   .today-bar {
@@ -2906,7 +3314,7 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
     border-width: 0.5px;
     min-width: 0; /* Pozwala na zmniejszenie */
     max-width: none; /* Usuwamy ograniczenie szerokości */
-    white-space: normal; /* Pozwala na zawijanie tekstu */
+    white-space: nowrap; /* Pozwala na zawijanie tekstu */
     word-wrap: break-word; /* Zawijanie długich słów */
     word-break: break-word; /* Łamanie długich słów */
   }
@@ -3033,7 +3441,7 @@ body.mobile-view .table .slot {
     padding: 0.5px;
     min-width: 0; /* Pozwala na zmniejszenie */
     max-width: none; /* Usuwamy ograniczenie szerokości */
-    white-space: normal; /* Pozwala na zawijanie tekstu */
+    white-space: nowrap; /* Pozwala na zawijanie tekstu */
     word-wrap: break-word; /* Zawijanie długich słów */
     word-break: break-word; /* Łamanie długich słów */
   }
@@ -3693,13 +4101,15 @@ body.mobile-view .table .slot {
 .emp-editor,
 #swap-editor,
 #compose-editor,
-#give-editor {
+#give-editor,
+#unavailability-modal,
+#shifts-editor {
   position: fixed; 
   inset: 0; 
   display: none; 
   align-items: center; 
   justify-content: center; 
-  z-index: 1000;
+  z-index: 10002; /* Najwyższy - nad menu hamburger (10001) */
   /* backdrop-filter: blur(8px); - Wyłączone dla lepszej wydajności */
   will-change: transform, opacity;
   transform: translateZ(0); /* Wymusza hardware acceleration */
@@ -4691,330 +5101,7 @@ select {
   background: var(--gray);
 }
 
-/* ============================================================================
-   TRYB JASNY - LIGHT MODE
-   ============================================================================ */
-
-/* Klasa dla trybu jasnego - tylko zamiana czarnego z białym */
-.light-mode {
-  --bg: var(--light-bg);
-  --bg-secondary: var(--light-bg-secondary);
-  --fg: var(--light-fg);
-  --fg-secondary: var(--light-fg-secondary);
-  --card: var(--light-card);
-  --card-hover: var(--light-card-hover);
-  --border: var(--light-border);
-  --border-light: var(--light-border-light);
-}
-
-/* Panel funkcji w trybie jasnym */
-.light-mode .right-panel {
-  background: var(--light-bg-secondary);
-  border-color: var(--light-border);
-  color: #000000 !important;
-}
-
-.light-mode .right-panel h2 {
-  color: #000000 !important;
-}
-
-.light-mode .right-panel h3 {
-  color: #000000 !important;
-}
-
-.light-mode .right-panel p,
-.light-mode .right-panel span,
-.light-mode .right-panel div {
-  color: #000000 !important;
-}
-
-.light-mode .right-panel .btn {
-  background: var(--red);
-  color: #000000 !important;
-}
-
-.light-mode .right-panel .btn:hover {
-  background: var(--red-hover);
-  color: #000000 !important;
-}
-
-.light-mode .right-panel .btn:disabled {
-  background: var(--light-fg-secondary);
-  color: #000000 !important;
-  border-color: var(--light-border);
-}
-
-/* Weekendy - bardzo jasny szary */
-.light-mode .weekend {
-  background: #e9ecef !important;
-}
-
-/* Święta - bardzo jasny szary */
-.light-mode .holiday {
-  background: #e9ecef !important;
-}
-
-/* Dni wolne (off-day) w trybie jasnym - bardzo jasny szary */
-.light-mode .center-panel:not(.card) .table tbody tr.off-day td,
-.light-mode .center-panel:not(.card) .table tbody tr.off-day th {
-  background: #e9ecef !important;
-  border: 1px solid var(--light-border) !important;
-}
-
-/* Dzisiejszy dzień - zielone tło + ciemny tekst */
-.light-mode .today {
-  background: #28a745 !important;
-  color: white !important;
-}
-
-/* Dostosowanie zegara dla trybu jasnego */
-.light-mode #clock {
-  color: var(--light-fg) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Główny tekst dla trybu jasnego - usunięto duplikat */
-
-.light-mode * {
-  color: inherit;
-}
-
-/* Przywróć domyślne kolory dla elementów które mają swoje specyficzne style */
-
-.light-mode .status-approved,
-.light-mode .status-pending,
-.light-mode .status-rejected {
-  color: white !important;
-}
-
-/* Dostosowanie przełącznika dla trybu jasnego */
-.light-mode .theme-toggle {
-  border-color: var(--light-border);
-  color: var(--light-fg);
-}
-
-.light-mode .theme-toggle:hover {
-  border-color: var(--red);
-  background: var(--light-card-hover);
-}
-
-.light-mode .theme-toggle svg {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-}
-
-/* Dostosowanie tabeli dla trybu jasnego */
-.light-mode .table {
-  background: var(--light-bg);
-  color: var(--light-fg);
-  border-color: var(--light-border);
-}
-
-.light-mode .table th {
-  background: var(--light-bg-secondary);
-  color: var(--light-fg) !important;
-  border-color: var(--light-border);
-}
-
-.light-mode .table td {
-  border-color: var(--light-border);
-}
-
-.light-mode .table tr:hover td {
-  background: var(--light-card-hover);
-}
-
-/* Weekendy hover - ciemniejszy szary */
-.light-mode .weekend:hover {
-  background: #d6d8db !important;
-}
-
-/* Inne miesiące w trybie jasnym */
-.light-mode .other-month {
-  background: var(--light-bg) !important;
-  color: var(--light-fg-secondary) !important;
-  border-color: var(--light-border-light) !important;
-}
-
-/* Obramowania komórek w trybie jasnym */
-.light-mode .table td,
-.light-mode .table th {
-  border: 1px solid var(--light-border) !important;
-}
-
-/* Nagłówki kolumn w trybie jasnym */
-.light-mode .col-date,
-.light-mode .col-day,
-.light-mode .col-emp {
-  border-color: var(--light-border) !important;
-  color: var(--light-fg) !important;
-}
-
-/* Podstawowe teksty w trybie jasnym - tylko tam gdzie potrzebne */
-.light-mode .month-label {
-  color: var(--light-fg) !important;
-}
-
-.light-mode .shift-date-info h2,
-.light-mode .shift-date-info span {
-  color: var(--light-fg) !important;
-}
-
-.light-mode .shifts-section h3 {
-  color: var(--light-fg) !important;
-}
-
-.light-mode .shifts-section p {
-  color: var(--light-fg) !important;
-}
-
-.light-mode .shifts-section ul li {
-  color: var(--light-fg) !important;
-}
-
-/* Dostosowanie kart dla trybu jasnego */
-.light-mode .card {
-  background: var(--light-card);
-  color: var(--light-fg);
-  border-color: var(--light-border);
-}
-
-.light-mode .card:hover {
-  background: var(--light-card-hover);
-}
-
-/* Dostosowanie przycisków dla trybu jasnego */
-.light-mode .btn {
-  background: var(--red);
-  color: white;
-  border-color: var(--red);
-}
-
-.light-mode .btn:hover {
-  background: var(--red-hover);
-  border-color: var(--red-hover);
-}
-
-.light-mode .btn:disabled {
-  background: var(--light-fg-secondary);
-  color: var(--light-bg);
-  border-color: var(--light-border);
-}
-
-/* Dostosowanie inputów dla trybu jasnego */
-.light-mode input,
-.light-mode select,
-.light-mode textarea {
-  background: var(--light-bg);
-  color: var(--light-fg);
-  border-color: var(--light-border);
-}
-
-.light-mode input:focus,
-.light-mode select:focus,
-.light-mode textarea:focus {
-  border-color: var(--red);
-  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
-}
-
-/* Dostosowanie modali dla trybu jasnego */
-.light-mode .emp-editor {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.light-mode .emp-container {
-  background: var(--light-card);
-  color: var(--light-fg);
-  border-color: var(--light-border);
-}
-
-/* Dostosowanie statusów dla trybu jasnego - usunięto duplikaty */
-
-/* Dostosowanie nawigacji dla trybu jasnego */
-.light-mode .nav-btn {
-  color: var(--light-fg);
-  border-color: var(--light-border);
-}
-
-.light-mode .nav-btn:hover {
-  background: var(--light-card-hover);
-  border-color: var(--red);
-}
-
-/* Dostosowanie header dla trybu jasnego */
-.light-mode .site-header {
-  background: var(--light-bg);
-  border-bottom-color: var(--light-border);
-}
-
-/* Duplikat usunięty - reguła już istnieje wyżej */
-
-/* Logo w trybie jasnym */
-.light-mode .logo {
-  filter: brightness(0.8) contrast(1.2);
-}
-
-/* Przycisk PWA w trybie jasnym */
-.light-mode .pwa-btn {
-  background: var(--red);
-  color: white;
-  border-color: var(--red);
-}
-
-.light-mode .pwa-btn:hover {
-  background: var(--red-hover);
-  border-color: var(--red-hover);
-}
-
-/* Dostosowanie zmian dla trybu jasnego */
-.light-mode .daily-shifts-bar {
-  background: var(--light-bg-secondary);
-  border-color: var(--light-border);
-}
-
-/* Duplikat usunięty - reguła już istnieje wyżej */
-
-.light-mode .shifts-section p.muted {
-  color: var(--light-fg-secondary);
-}
-
-/* Dostosowanie skrzynek dla trybu jasnego */
-.light-mode .emp-row {
-  border-color: var(--light-border);
-}
-
-.light-mode .emp-row:hover {
-  background: var(--light-card-hover);
-}
-
-.light-mode .email-meta {
-  color: var(--light-fg-secondary);
-}
-
-/* Dostosowanie przycisków usuwania dla trybu jasnego */
-.light-mode .btn-remove {
-  background: #dc3545 !important;
-  color: white !important;
-}
-
-.light-mode .btn-remove:hover {
-  background: #c82333 !important;
-}
-
-/* Dodatkowe style dla wszystkich elementów tekstowych - usunięto duplikaty */
-
-/* Wyjątki dla elementów które mają swoje specyficzne kolory */
-
-.light-mode .status-approved,
-.light-mode .status-pending,
-.light-mode .status-rejected {
-  color: white !important;
-}
-
-.light-mode .muted {
-  color: var(--light-fg-secondary) !important;
-}
-
-/* Kolorowe elementy zachowują oryginalne kolory */
+/* JASNY MOTYW USUNIĘTY */
 
 /* ============================================================================
    HAMBURGER MENU Z GÓRY - PEŁNA SZEROKOŚĆ
@@ -5043,7 +5130,7 @@ select {
   background: #121212 !important;
   border-bottom: 2px solid #2a2a2a;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 10001; /* Wyższy niż shifts-content (10000) */
   transform: translateY(-100%);
   transition: transform 0.3s ease;
   overflow: hidden;
@@ -5529,6 +5616,8 @@ select {
   background: #28a745;
   color: white;
 }
+
+/* JASNY MOTYW CAŁKOWICIE USUNIĘTY */
 
 
 

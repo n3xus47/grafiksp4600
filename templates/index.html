@@ -18,26 +18,43 @@
   <header class="site-header">
     <div class="wrap header-bar">
       <div class="header-left">
-        <img id="hamburger-menu" class="logo hamburger-trigger" src="{{ url_for('static', filename='PKN.WA.D.png') }}" alt="Logo firmy" title="Menu funkcji" />
-        <button class="pwa-btn" onclick="installPWA()" title="Zainstaluj aplikację">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-          POBIERZ
+        <button id="hamburger-menu" class="hamburger-menu-btn hamburger-trigger" aria-label="Menu funkcji" title="Menu funkcji">
+          <div class="hamburger-icon">
+            <span></span>
+          </div>
         </button>
+        <svg class="logo" viewBox="0 0 1552 1114" alt="Logo firmy" title="Grafik Stacji Paliw 4600">
+          <path class="logo-path" d="m559.7 0.8c-138.4 0-257.2 101.9-276.5 240h596.3c52.2 0 103.1 20.9 139.8 57.5l196.2 196.1c83.4 83.5 236.8 94.9 336-4.1l-340.2-340.8-19.8-21.1c-83.3-82-194.9-128.3-313.7-128.3"/>
+          <path class="logo-path" d="m239.9 280.8c-131.2 0-239.9 108.7-239.9 241.9 0 50.9 15.7 91.8 42.7 135.4-10.3-70.5 45.6-135.4 117.5-135.4h112.9c42.5 0 83.3 16.8 113.4 46.9l322.1 320.9 223.1 223.1c93.1-92.9 93.1-247.2 0-340.1l-223.1-223.4-148.2-148c-76.2-76.1-178.3-120-285.5-120"/>
+          <path class="logo-path" fill-rule="evenodd" d="m808.3 280.8c10.1 18.7 15.5 39.8 15.5 59.5 0 64.7-52.3 117-115.8 117-63.8 0-115.9-52.3-115.9-117 0-19.7 5.4-40.8 16.8-59.5"/>
+        </svg>
       </div>
+      <!-- Panel nawigacji dnia - na środku headera -->
       <div class="header-center">
-        <a class="nav-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="Poprzedni miesiąc">&#x25C0;</a>
-        <span class="month-label">{{ month_label }}</span>
-        <a class="nav-btn" href="/?year={{ next_year }}&month={{ next_month }}" aria-label="Następny miesiąc">&#x25B6;</a>
+        <button id="shift-prev-day" class="nav-btn" aria-label="Poprzedni dzień">&#x25C0;</button>
+        <div class="shift-date-info">
+          <h2 id="shift-date-label">DZISIAJ</h2>
+          <span id="shift-date-display">{{ today_date }}</span>
+        </div>
+        <button id="shift-next-day" class="nav-btn" aria-label="Następny dzień">&#x25B6;</button>
       </div>
+      
       <div class="header-right">
-        <button id="theme-toggle" class="theme-toggle" aria-label="Przełącz motyw" title="Przełącz między trybem jasnym a ciemnym">
+        
+        <a draggable="false" class="spotify-download-btn" href="/download" onclick="installPWA(); return false;">
+          <span aria-hidden="true" class="spotify-btn-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4.995 8.745a.75.75 0 0 1 1.06 0L7.25 9.939V4a.75.75 0 0 1 1.5 0v5.94l1.195-1.195a.75.75 0 1 1 1.06 1.06L8 12.811l-.528-.528-.005-.005-2.472-2.473a.75.75 0 0 1 0-1.06"></path>
+              <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13"></path>
+            </svg>
+          </span>
+          <span class="spotify-btn-text">Pobierz aplikację</span>
+        </a>
+        <button id="theme-toggle" class="spotify-btn" aria-label="Przełącz motyw" title="Przełącz między trybem jasnym a ciemnym">
           <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
           </svg>
         </button>
-        <span id="clock">Ładowanie...</span>
       </div>
     </div>
   </header>
@@ -119,6 +136,14 @@
               </svg>
               <span>Odśwież cache</span>
             </button>
+            <form action="/logout" method="post" class="menu-item-form">
+              <button type="submit" class="menu-item logout-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+                <span>Wyloguj</span>
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -127,46 +152,48 @@
 
   <main class="wrap">
     <div class="grid3-vertical">
-      <!-- Nagłówek dla zmian z nawigacją -->
-      <div class="shift-header daily-shifts-header">
-        <div class="shift-navigation">
-          <button id="shift-prev-day" class="nav-btn" aria-label="Poprzedni dzień">&#x25C0;</button>
-          <div class="shift-date-info">
-            <h2 id="shift-date-label">DZISIAJ</h2>
-            <span id="shift-date-display">{{ today_date }}</span>
-          </div>
-          <button id="shift-next-day" class="nav-btn" aria-label="Następny dzień">&#x25B6;</button>
-        </div>
-      </div>
       
-      <!-- Panel zmian z nawigacją -->
-      <section class="daily-shifts-bar">
-        <div class="shifts-content">
-          <div class="shifts-section">
-            <h3>DNIÓWKA</h3>
-            <div id="shifts-dniowka">
-              {% if shifts_today.dniowka %}
-                <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+      <!-- Panel zmian z nawigacją - NAD grafikiem -->
+      <div class="daily-shifts-container">
+        <section class="daily-shifts-bar dniowka-shift">
+          <div class="shifts-content">
+            <div class="shifts-section">
+              <h3>DNIÓWKA</h3>
+              <div id="shifts-dniowka">
+                {% if shifts_today.dniowka %}
+                  <ul>{% for name in shifts_today.dniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+                {% else %}<p class="muted">brak przypisań</p>{% endif %}
+              </div>
             </div>
           </div>
-          <div class="shifts-section">
-            <h3>POPOŁUDNIÓWKA</h3>
-            <div id="shifts-popoludniowka">
-              {% if shifts_today.popoludniowka %}
-                <ul>{% for name in shifts_today.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+        </section>
+        
+        <section class="daily-shifts-bar popoludniowka-shift">
+          <div class="shifts-content">
+            <div class="shifts-section">
+              <h3>POPOŁUDNIÓWKA</h3>
+              <div id="shifts-popoludniowka">
+                {% if shifts_today.popoludniowka %}
+                  <ul>{% for name in shifts_today.popoludniowka %}<li>{{ name }}</li>{% endfor %}</ul>
+                {% else %}<p class="muted">brak przypisań</p>{% endif %}
+              </div>
             </div>
           </div>
-          <div class="shifts-section">
-            <h3>NOCKA</h3>
-            <div id="shifts-nocka">
-              {% if shifts_today.nocka %}
-                <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
-              {% else %}<p class="muted">brak przypisań</p>{% endif %}
+        </section>
+        
+        <section class="daily-shifts-bar nocka-shift">
+          <div class="shifts-content">
+            <div class="shifts-section">
+              <h3>NOCKA</h3>
+              <div id="shifts-nocka">
+                {% if shifts_today.nocka %}
+                  <ul>{% for name in shifts_today.nocka %}<li>{{ name }}</li>{% endfor %}</ul>
+                {% else %}<p class="muted">brak przypisań</p>{% endif %}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+        
         <!-- Kontener dla przycisków akcji w trybie edycji -->
         <div id="shifts-actions" class="shifts-actions hidden">
           <div class="edit-mode-info">
@@ -191,7 +218,7 @@
             <button id="cancel-shifts" class="btn">Anuluj</button>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- Środek: tabelka grafik -->
       <section class="center-panel center-panel-no-title main-panel">
@@ -308,13 +335,11 @@
         </div>
       </section>
 
-
-
-      <!-- Przycisk wyloguj na dole -->
-      <div class="logout-area">
-        <form action="/logout" method="post">
-          <button class="btn w100" type="submit">WYLOGUJ</button>
-        </form>
+      <!-- Nawigator miesiąca pod tabelą -->
+      <div class="month-navigation-below-table">
+        <a class="nav-btn" href="/?year={{ prev_year }}&month={{ prev_month }}" aria-label="Poprzedni miesiąc">&#x25C0;</a>
+        <span class="month-label">{{ month_label }}</span>
+        <a class="nav-btn" href="/?year={{ next_year }}&month={{ next_month }}" aria-label="Następny miesiąc">&#x25B6;</a>
       </div>
     </div>
   </main>
