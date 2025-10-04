@@ -139,7 +139,7 @@ def auth_callback():
             return render_template("signin.html", error=f"Niepełne dane użytkownika: email='{email}', name='{name}', sub='{google_sub}'")
         
         # Sprawdź whitelistę emaili
-        whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        whitelist = os.environ.get('WHITELIST_EMAILS', '').split(',')
         whitelist = [email.strip().lower() for email in whitelist if email.strip()]
         
         logger.info(f"Whitelist: {whitelist}, User email: {email}")
@@ -245,7 +245,7 @@ def register():
             return render_template("signin.html", error=error_msg)
         
         # Sprawdź whitelistę emaili
-        whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+        whitelist = os.environ.get('WHITELIST_EMAILS', '').split(',')
         whitelist = [email.strip().lower() for email in whitelist if email.strip()]
         
         if whitelist and email not in whitelist:

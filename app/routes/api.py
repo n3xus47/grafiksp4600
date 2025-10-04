@@ -719,6 +719,13 @@ def api_swaps_boss():
         
         db.commit()
         
+        # Automatycznie archiwizuj zakończone prośby
+        try:
+            from ..database import archive_completed_requests
+            archive_completed_requests()
+        except Exception as e:
+            logger.warning(f"Błąd podczas automatycznej archiwizacji: {e}")
+        
         logger.info(f"Admin {session.get('user_email')} {status} prośbę o zamianę {request_id}")
         return jsonify(status="ok", message=f"Prośba została {status}")
         
@@ -726,24 +733,176 @@ def api_swaps_boss():
         logger.error(f"Błąd podczas przetwarzania prośby przez bossa: {e}")
         return jsonify(error="Wystąpił błąd podczas przetwarzania"), 500
 
-@bp.post("/swaps/clear")
+@bp.post("/requests/archive")
 @admin_required
-def api_swaps_clear():
-    """Czyści wszystkie prośby o zamianę (admin)"""
+def api_archive_requests():
+    """Archiwizuje zakończone prośby (admin)"""
     try:
-        from ..database import ensure_swaps_table
-        ensure_swaps_table()
-        db = get_db()
+        from ..database import ensure_request_history_table, archive_completed_requests
+        ensure_request_history_table()
         
-        db.execute("DELETE FROM swap_requests")
-        db.commit()
+        archived_count = archive_completed_requests()
         
-        logger.info(f"Admin {session.get('user_email')} wyczyścił wszystkie prośby o zamianę")
-        return jsonify(status="ok", message="Wszystkie prośby zostały wyczyszczone")
+        logger.info(f"Admin {session.get('user_email')} zarchiwizował {archived_count} próśb")
+        return jsonify(status="ok", message=f"Zarchiwizowano {archived_count} próśb", archived_count=archived_count)
         
     except Exception as e:
-        logger.error(f"Błąd podczas czyszczenia próśb: {e}")
-        return jsonify(error="Wystąpił błąd podczas czyszczenia"), 500
+        logger.error(f"Błąd podczas archiwizacji próśb: {e}")
+        return jsonify(error="Wystąpił błąd podczas archiwizacji"), 500
+
+@bp.get("/requests/history")
+@login_required
+def api_request_history():
+    """Pobiera historię próśb"""
+    try:
+        from ..database import ensure_request_history_table, get_request_history
+        ensure_request_history_table()
+        
+        # Pobierz parametry
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        request_type = request.args.get('type')  # 'swap' lub 'unavailability'
+        
+        # Sprawdź uprawnienia - tylko admin może widzieć wszystkie
+        user_role = session.get('user_role', 'USER')
+        if user_role != 'ADMIN':
+            return jsonify(error="Brak uprawnień"), 403
+        
+        history = get_request_history(limit=limit, offset=offset, request_type=request_type)
+        
+        return jsonify({
+            'items': history,
+            'total': len(history),
+            'limit': limit,
+            'offset': offset
+        })
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania historii: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania historii"), 500
+
+# ============================================================================
+# ENDPOINTY WHITELIST
+# ============================================================================
+
+@bp.get("/whitelist")
+@login_required
+@admin_required
+def api_whitelist_get():
+    """Pobiera listę whitelist z przypisanymi kontami (admin)"""
+    try:
+        import os
+        
+        # Pobierz whitelist z zmiennej środowiskowej
+        whitelist_emails = os.environ.get('WHITELIST_EMAILS', '').split(',')
+        whitelist_emails = [email.strip().lower() for email in whitelist_emails if email.strip()]
+        
+        db = get_db()
+        
+        # Pobierz informacje o użytkownikach z whitelist
+        whitelist_data = []
+        for email in whitelist_emails:
+            # Sprawdź czy użytkownik istnieje w bazie
+            user = db.execute("""
+                SELECT u.email, u.name as user_name, e.name as employee_name, e.id as employee_id
+                FROM users u
+                LEFT JOIN employees e ON u.id = e.user_id
+                WHERE u.email = ?
+            """, (email,)).fetchone()
+            
+            if user:
+                whitelist_data.append({
+                    'email': user['email'],
+                    'user_name': user['user_name'],
+                    'employee_name': user['employee_name'],
+                    'employee_id': user['employee_id'],
+                    'has_account': True
+                })
+            else:
+                whitelist_data.append({
+                    'email': email,
+                    'user_name': None,
+                    'employee_name': None,
+                    'employee_id': None,
+                    'has_account': False
+                })
+        
+        return jsonify(emails=whitelist_data)
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania whitelist: {e}")
+        return jsonify(error="Wystąpił błąd podczas pobierania whitelist"), 500
+
+@bp.post("/whitelist")
+@login_required
+@admin_required
+def api_whitelist_add():
+    """Dodaje email do whitelist (admin)"""
+    try:
+        import os
+        
+        data = safe_get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify(error="Email jest wymagany"), 400
+        
+        if not email.count('@') == 1:
+            return jsonify(error="Nieprawidłowy format email"), 400
+        
+        # Pobierz aktualną whitelist
+        current_whitelist = os.environ.get('WHITELIST_EMAILS', '').split(',')
+        current_whitelist = [e.strip().lower() for e in current_whitelist if e.strip()]
+        
+        # Sprawdź czy email już jest na whitelist
+        if email in current_whitelist:
+            return jsonify(error="Email już jest na whitelist"), 400
+        
+        # Dodaj email do whitelist
+        current_whitelist.append(email)
+        new_whitelist = ','.join(current_whitelist)
+        os.environ['WHITELIST_EMAILS'] = new_whitelist
+        
+        logger.info(f"Admin {session.get('user_email')} dodał email {email} do whitelist")
+        return jsonify(status="ok", message="Email został dodany do whitelist")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas dodawania do whitelist: {e}")
+        return jsonify(error="Wystąpił błąd podczas dodawania do whitelist"), 500
+
+@bp.delete("/whitelist")
+@login_required
+@admin_required
+def api_whitelist_remove():
+    """Usuwa email z whitelist (admin)"""
+    try:
+        import os
+        
+        data = safe_get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify(error="Email jest wymagany"), 400
+        
+        # Pobierz aktualną whitelist
+        current_whitelist = os.environ.get('WHITELIST_EMAILS', '').split(',')
+        current_whitelist = [e.strip().lower() for e in current_whitelist if e.strip()]
+        
+        # Sprawdź czy email jest na whitelist
+        if email not in current_whitelist:
+            return jsonify(error="Email nie jest na whitelist"), 404
+        
+        # Usuń email z whitelist
+        current_whitelist.remove(email)
+        new_whitelist = ','.join(current_whitelist)
+        os.environ['WHITELIST_EMAILS'] = new_whitelist
+        
+        logger.info(f"Admin {session.get('user_email')} usunął email {email} z whitelist")
+        return jsonify(status="ok", message="Email został usunięty z whitelist")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas usuwania z whitelist: {e}")
+        return jsonify(error="Wystąpił błąd podczas usuwania z whitelist"), 500
 
 # ============================================================================
 # ENDPOINTY ZMIAN DZIENNYCH
@@ -912,7 +1071,7 @@ def api_employees_create():
                 if email not in current_whitelist:
                     current_whitelist.append(email)
                     new_whitelist = ','.join(current_whitelist)
-                    os.environ['GOOGLE_WHITELIST'] = new_whitelist
+                    os.environ['WHITELIST_EMAILS'] = new_whitelist
                     logger.info(f"Email {email} został automatycznie dodany do whitelisty")
             except Exception as e:
                 logger.warning(f"Nie udało się dodać emaila do whitelisty: {e}")
@@ -979,7 +1138,7 @@ def api_employees_update(emp_id):
         # Synchronizuj whitelistę
         try:
             import os
-            current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
+            current_whitelist = os.environ.get('WHITELIST_EMAILS', '').split(',')
             current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
             
             # Usuń stary email z whitelisty (jeśli istniał)
@@ -1040,7 +1199,7 @@ def api_employees_delete(emp_id):
                 if emp_email in current_whitelist:
                     current_whitelist.remove(emp_email)
                     new_whitelist = ','.join(current_whitelist)
-                    os.environ['GOOGLE_WHITELIST'] = new_whitelist
+                    os.environ['WHITELIST_EMAILS'] = new_whitelist
                     logger.info(f"Email {emp_email} został usunięty z whitelisty")
             except Exception as e:
                 logger.warning(f"Nie udało się usunąć emaila z whitelisty: {e}")
@@ -1052,93 +1211,6 @@ def api_employees_delete(emp_id):
         logger.error(f"Błąd podczas usuwania pracownika: {e}")
         return jsonify(error="Wystąpił błąd podczas usuwania"), 500
 
-# ============================================================================
-# ENDPOINTY ZARZĄDZANIA WHITELISTĄ
-# ============================================================================
-
-@bp.get("/whitelist")
-@admin_required
-def api_whitelist_get():
-    """Pobiera aktualną whitelistę emaili (admin)"""
-    try:
-        import os
-        whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
-        whitelist = [email.strip() for email in whitelist if email.strip()]
-        
-        return jsonify({"emails": whitelist})
-        
-    except Exception as e:
-        logger.error(f"Błąd podczas pobierania whitelisty: {e}")
-        return jsonify(error="Wystąpił błąd podczas pobierania whitelisty"), 500
-
-@bp.post("/whitelist")
-@admin_required
-def api_whitelist_add():
-    """Dodaje email do whitelisty (admin)"""
-    try:
-        data = safe_get_json()
-        email = data.get('email', '').strip().lower()
-        
-        if not email:
-            return jsonify(error="Email jest wymagany"), 400
-        
-        # Sprawdź format emaila
-        import re
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            return jsonify(error="Nieprawidłowy format emaila"), 400
-        
-        import os
-        current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
-        current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
-        
-        if email in current_whitelist:
-            return jsonify(error="Email już jest na whitelistcie"), 400
-        
-        # Dodaj email do whitelisty
-        current_whitelist.append(email)
-        new_whitelist = ','.join(current_whitelist)
-        
-        # Zaktualizuj zmienną środowiskową (tylko dla tej sesji)
-        os.environ['GOOGLE_WHITELIST'] = new_whitelist
-        
-        logger.info(f"Admin {session.get('user_email')} dodał email do whitelisty: {email}")
-        return jsonify(status="ok", message="Email został dodany do whitelisty")
-        
-    except Exception as e:
-        logger.error(f"Błąd podczas dodawania do whitelisty: {e}")
-        return jsonify(error="Wystąpił błąd podczas dodawania do whitelisty"), 500
-
-@bp.delete("/whitelist")
-@admin_required
-def api_whitelist_remove():
-    """Usuwa email z whitelisty (admin)"""
-    try:
-        data = safe_get_json()
-        email = data.get('email', '').strip().lower()
-        
-        if not email:
-            return jsonify(error="Email jest wymagany"), 400
-        
-        import os
-        current_whitelist = os.environ.get('GOOGLE_WHITELIST', '').split(',')
-        current_whitelist = [e.strip() for e in current_whitelist if e.strip()]
-        
-        if email not in current_whitelist:
-            return jsonify(error="Email nie jest na whitelistcie"), 400
-        
-        # Usuń email z whitelisty
-        current_whitelist.remove(email)
-        new_whitelist = ','.join(current_whitelist)
-        
-        # Zaktualizuj zmienną środowiskową (tylko dla tej sesji)
-        os.environ['GOOGLE_WHITELIST'] = new_whitelist
-        
-        logger.info(f"Admin {session.get('user_email')} usunął email z whitelisty: {email}")
-        return jsonify(status="ok", message="Email został usunięty z whitelisty")
-        
-    except Exception as e:
-        logger.error(f"Błąd podczas usuwania z whitelisty: {e}")
-        return jsonify(error="Wystąpił błąd podczas usuwania z whitelisty"), 500
 
 # ============================================================================
 # ENDPOINTY SYSTEMOWE

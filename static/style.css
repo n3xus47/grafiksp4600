@@ -338,7 +338,6 @@ button, .btn, .nav-btn, a, [role="button"] {
 .btn:hover {
   background: var(--red-hover);
   transform: translate3d(0, -2px, 0);
-  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
 }
 
 .btn:active {
@@ -1282,7 +1281,6 @@ body{
 .pwa-btn:hover {
   background: var(--red-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
 }
 
 .pwa-btn:active {
@@ -1625,27 +1623,59 @@ body{
 .hours-inputs input:focus {
   outline: none;
   border-color: var(--red);
-  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
 }
 
+/* Przycisk p-confirm - styl z menu burgerowego */
 #p-confirm {
   width: 40px;
   height: 24px;
-  font-size: 0.65rem;
+  font-size: 0.6rem !important; /* Jeszcze mniejsza czcionka */
   padding: 0.2rem 0.4rem;
-  background: var(--green);
-  color: var(--white);
+  background: #2a2a2a !important; /* Szary jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
   border: none;
-  border-radius: var(--radius);
+  border-radius: 500px;
   cursor: pointer;
   align-self: center;
-  transition: all 0.1s ease-out;
+  transition: all 0.2s ease;
   margin-top: 0.25rem;
+  position: relative;
+  overflow: hidden;
+  font-weight: 600;
+  z-index: 10; /* Tekst nad pseudo-elementem */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.2rem !important; /* Odstęp między ikonką a tekstem */
+}
+
+/* Style dla ikon w p-confirm */
+#p-confirm svg {
+  flex-shrink: 0 !important;
+  z-index: 10 !important;
+}
+
+#p-confirm::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a;
+  transform: skew(30deg);
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
 }
 
 #p-confirm:hover {
-  background: var(--white);
-  color: var(--green);
+  background: #ff0000 !important; /* Czerwony jak w menu burgerowym */
+  color: #ffffff !important;
+  transform: translateY(-2px);
+}
+
+#p-confirm:hover::before {
+  transform: translate3d(100%, 0, 0);
 }
 
 /* Kolor zielony dla międzyzmian - tylko tekst w dzisiejszym dniu */
@@ -2668,11 +2698,9 @@ h3{margin:.25rem 0 .25rem 0;font-size:.95rem}
   background: rgba(211, 47, 47, 0.8); 
   border-color: var(--red);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
 }
 .btn:active{
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.2);
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -3605,13 +3633,59 @@ body.mobile-view .table .slot {
 }
 .slot-editor .row{display:flex; gap:6px; margin-bottom:6px}
 .slot-editor .row:last-child{margin-bottom:0}
-.slot-editor .opt{flex:1; padding:.35rem 0; border-radius:500px; border:none; background:var(--bg-secondary); color:var(--white); cursor:pointer;transition:all 0.2s; font-weight:var(--font-weight-medium)}
-.slot-editor .opt.center{flex:1; margin:0 2px}
-.slot-editor .opt:hover{
-  background: var(--red); 
-  border-color: var(--red); 
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
+/* Przyciski w slot-editor - styl z menu burgerowego */
+.slot-editor .opt {
+  flex: 1;
+  padding: 0.35rem 0;
+  border-radius: 500px;
+  border: none;
+  background: #2a2a2a !important; /* Szary jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 0.8rem !important; /* Zmniejszona czcionka */
+  position: relative;
+  overflow: hidden;
+  z-index: 10; /* Tekst nad pseudo-elementem */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.3rem !important; /* Odstęp między ikonką a tekstem */
+}
+
+/* Style dla ikon w slot editorze */
+.slot-editor .opt svg {
+  flex-shrink: 0 !important;
+  z-index: 10 !important;
+}
+
+.slot-editor .opt.center {
+  flex: 1;
+  margin: 0 2px;
+}
+
+.slot-editor .opt::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a;
+  transform: skew(30deg);
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+}
+
+.slot-editor .opt:hover {
+  background: #ff0000 !important; /* Czerwony jak w menu burgerowym */
+  color: #ffffff !important;
+  transform: translateY(-2px);
+}
+
+.slot-editor .opt:hover::before {
+  transform: translate3d(100%, 0, 0);
 }
 .slot-editor input{width:100%; padding:.3rem .4rem; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--white)}
 .slot-editor.show{display:block !important}
@@ -3751,13 +3825,11 @@ body.mobile-view .table .slot {
   font-size: 16px;
   width: 100%;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
 }
 
 .google-signin-btn:hover {
   background: rgba(211, 47, 47, 0.8);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
 }
 
 .google-signin-btn svg {
@@ -3857,7 +3929,6 @@ body.mobile-view .table .slot {
 .form-group input:focus {
   outline: none;
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
 }
 
 .form-group input::placeholder {
@@ -3881,7 +3952,6 @@ body.mobile-view .table .slot {
 .auth-btn:hover {
   background: var(--red-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
 }
 
 .auth-divider {
@@ -4056,6 +4126,14 @@ body.mobile-view .table .slot {
 
 /* --- Klasa .hidden dla ukrywania elementów --- */
 .hidden {
+  display: none !important;
+}
+
+/* Dodatkowe zabezpieczenie dla przycisków z klasą hidden */
+.hidden.btn,
+.hidden.btn-secondary,
+button.hidden,
+#toggle-draft-mode.hidden {
   display: none !important;
 }
 
@@ -4250,7 +4328,19 @@ body.mobile-view .table .slot {
   transform: translateZ(0); /* Wymusza hardware acceleration */
 }
 .emp-editor.show,
-#swap-editor.show,
+#swap-editor.show {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding-top: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  height: auto !important;
+}
+
 #compose-editor.show,
 #give-editor.show,
 #unavailability-modal.show,
@@ -4278,9 +4368,55 @@ body.mobile-view .table .slot {
 #unavailability-modal > *,
 #shifts-editor > * {position: relative; z-index: 1;}
 
-/* Modal container - 70% of viewport */
-.emp-editor .emp-container,
-#swap-editor .emp-container,
+/* Modal container - 80% of viewport width, full height from top */
+.emp-editor .emp-container {
+  position: relative; 
+  background: #000000;
+  background-image: radial-gradient(ellipse 100% 50% at 50% 100%, rgba(139, 0, 0, 0.9) 0%, transparent 70%);
+  border: none; 
+  border-radius: 0 0 16px 16px; 
+  padding: 1rem 2rem 2rem 2rem;
+  width: 80vw;
+  height: auto;
+  max-width: none;
+  min-width: none;
+  max-height: none;
+  overflow: visible;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: modalSlideInFromTop 0.3s ease-out;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  margin: 0 auto;
+  font-family: var(--font);
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* Panel skrzynki ma identyczny styl jak panel pracowników */
+#swap-editor .emp-container {
+  position: relative; 
+  background: #000000;
+  background-image: radial-gradient(ellipse 100% 50% at 50% 100%, rgba(139, 0, 0, 0.9) 0%, transparent 70%);
+  border: none; 
+  border-radius: 0 0 16px 16px; 
+  padding: 1rem 2rem 2rem 2rem;
+  width: 80vw;
+  height: auto;
+  max-width: none;
+  min-width: none;
+  max-height: none;
+  overflow: visible;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  animation: modalSlideInFromTop 0.3s ease-out;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  margin: 0 auto;
+  font-family: var(--font);
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* Inne modale zachowują poprzedni styl */
 #compose-editor .emp-container,
 #give-editor .emp-container {
   position: relative; 
@@ -4297,7 +4433,7 @@ body.mobile-view .table .slot {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   animation: modalSlideIn 0.2s ease-out;
   will-change: transform, opacity;
-  transform: translateZ(0); /* Hardware acceleration */
+  transform: translateZ(0);
 }
 
 /* Unavailability modal - auto height, no scrolling */
@@ -4332,40 +4468,228 @@ body.mobile-view .table .slot {
   }
 }
 
+@keyframes modalSlideInFromTop {
+  from {
+    transform: translateY(-100%) translateZ(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
 /* Modal header */
-.emp-editor .emp-head{
-  font-weight: 700; 
-  margin-bottom: 1.5rem; 
-  text-align: center; 
-  color: var(--white);
-  font-size: 1.5rem;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 1rem;
-}
-
-/* Modal content areas */
-.emp-editor .emp-list{
-  display: flex; 
-  flex-direction: column; 
-  gap: 0.5rem; 
-  max-height: 50vh; 
-  overflow: auto; 
-  background: var(--bg-secondary); 
-  border: 1px solid var(--border); 
-  border-radius: 12px; 
-  padding: 1rem;
+.emp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #fff;
 }
 
-.emp-editor .emp-add{
-  display: flex; 
-  gap: 0.75rem; 
-  margin-top: 1rem;
-  flex-wrap: wrap;
+.emp-header h3 {
+  font-family: var(--font);
+  color: var(--white);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
 }
 
-.emp-editor .emp-add input[type="email"] {
-  min-width: 250px;
+/* Nowy układ panelu pracowników */
+.emp-list-section {
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+/* Stare style h3 usunięte - przeniesione do emp-header */
+
+.emp-list-section .emp-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.emp-add-section {
+  margin-bottom: 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.emp-add-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #fff;
+}
+
+.emp-add-header h3 {
+  color: var(--white);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  font-family: inherit;
+}
+
+.emp-add-section .emp-add {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.emp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.emp-field label {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.emp-field input {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.emp-field input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.emp-field input:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.emp-field select,
+.emp-field textarea {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.emp-field select:focus,
+.emp-field textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.emp-field select:hover,
+.emp-field textarea:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.emp-field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Styl dla braku próśb w skrzynce */
+.no-requests {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2rem;
+  grid-column: 1 / -1;
+}
+
+/* Liczba pracowników */
+.emp-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.emp-count strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* Modal content areas - usunięte stare style dla emp-list */
+
+/* Stare style emp-add usunięte - zastąpione przez emp-add-section */
+
+/* Stare style usunięte */
+
+/* Style dla przycisku dodawania pracownika */
+#emp-add-btn {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: calc(0.75rem + 0.75rem + 1rem + 2px);
+}
+#emp-add-btn:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+#emp-add-btn:active {
+  transform: scale(0.95);
+}
+#emp-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .emp-editor .email-meta {
@@ -4383,52 +4707,34 @@ body.mobile-view .table .slot {
   background: #d32f2f !important;
 }
 
-.emp-editor .emp-add input, 
-.emp-editor .emp-add select, 
-.emp-editor .emp-add textarea{
-  flex: 1; 
-  min-width: 200px; 
-  border: 1px solid var(--border); 
-  border-radius: 8px; 
-  background: var(--bg); 
-  color: var(--white); 
-  padding: 0.75rem 1rem;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-.emp-editor .emp-add input:focus, 
-.emp-editor .emp-add select:focus, 
-.emp-editor .emp-add textarea:focus {
-  outline: none;
-  border-color: var(--red);
-  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
-}
+/* Stare style inputów usunięte - zastąpione przez emp-field */
 
 /* Close button - better positioned */
 .emp-editor .emp-close{
-  position: absolute; 
-  top: 20px; 
-  right: 20px; 
-  background: rgba(0, 0, 0, 0.6); 
-  border: none; 
-  color: var(--white); 
-  font-size: 20px; 
+  background: transparent;
+  border: none;
+  color: var(--white);
   cursor: pointer;
-  width: 40px;
-  height: 40px;
+  padding: 8px;
   border-radius: 50%;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  z-index: 2;
+  width: 40px;
+  height: 40px;
+  position: relative;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .emp-editor .emp-close:hover {
-  background: var(--red);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate3d(0, 0, 0) scale(1.02);
+}
+
+.emp-editor .emp-close:active {
+  transform: translate3d(0, 0, 0) scale(0.95);
 }
 
 /* Click outside to close */
@@ -4436,10 +4742,7 @@ body.mobile-view .table .slot {
   cursor: pointer;
 }
 
-/* Dodatkowe style dla emp-add */
-.emp-editor .emp-add-right {
-  justify-content: flex-end;
-}
+/* Stare style usunięte */
 
 .swap-clear-btn {
   display: none;
@@ -4451,65 +4754,226 @@ body.mobile-view .table .slot {
 
 .emp-row{
   display:flex; 
-  align-items:center; 
-  justify-content:space-between; 
-  gap:.5rem; 
-  border:1px solid var(--border); 
-  border-radius:8px; 
-  padding:.35rem .5rem;
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  justify-content: space-between;
+  align-items: flex-start;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px; 
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0;
+  height: 80px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .emp-row:hover {
-  background: var(--card-hover);
-  transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translate3d(0, -1px, 0) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
-.emp-row .meta{color:var(--muted); font-size:.85em}
+
+.emp-row .emp-name-display {
+  color: var(--white) !important;
+  font-weight: 700 !important;
+  font-size: 20px !important;
+}
+
+.emp-row .emp-code-display {
+  color: var(--white) !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+}
+
+.emp-row .emp-email-display {
+  color: var(--white) !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+}
+
+.emp-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--red);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+.emp-row:hover {
+  background: var(--bg-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: var(--red);
+}
+.emp-row:hover::before {
+  transform: scaleY(1);
+}
+.emp-row .meta{
+  color: var(--text-muted); 
+  font-size: .85em;
+  font-weight: 500;
+}
+.emp-row .email-meta {
+  color: var(--text-muted);
+  font-size: 0.8em;
+  font-style: italic;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Zawartość wiersza pracownika */
+.emp-row > div:first-child {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  justify-content: flex-start;
+}
+
+.emp-row .emp-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+/* Nazwa pracownika i kod w jednej linii */
+.emp-row > div:first-child {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.emp-row > div:first-child > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.emp-row .meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  display: inline;
+  flex-shrink: 0;
+  min-width: 60px;
+  text-align: right;
+}
+
+.emp-row .email-meta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-top: 0.1rem;
+  display: block;
+  word-break: break-all;
+  line-height: 1.1;
+}
+
+/* Style dla edycji inline */
+.emp-name-code-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.emp-name-edit,
+.emp-code-edit {
+  display: flex;
+  align-items: center;
+}
+
+.emp-name-input,
+.emp-code-input,
+.emp-email-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--white);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  width: 100%;
+  max-width: 120px;
+}
+
+.emp-name-input:focus,
+.emp-code-input:focus,
+.emp-email-input:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+}
+
+.emp-email-input {
+  max-width: 150px;
+  font-size: 0.75rem;
+}
+
+.emp-code-edit .emp-code-display {
+  min-width: 60px;
+  text-align: right;
+}
 
 /* Responsywność modali */
 @media (max-width: 1024px) {
-  .emp-editor .emp-container {
-    width: 80vw;
-    height: 80vh;
+  .emp-editor .emp-container,
+  #swap-editor .emp-container {
+    width: 90vw;
+    height: auto;
+    max-height: none;
   }
+  
+  .emp-list-section .emp-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .emp-add-section .emp-add {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .emp-add-section .emp-field:last-of-type {
+    grid-column: 1 / -1;
+  }
+  
+  /* Stare style usunięte */
 }
 
 @media (max-width: 768px) {
-  .emp-editor .emp-container {
-    width: 90vw;
-    height: 85vh;
-    padding: 1.5rem;
+  .emp-editor .emp-container,
+  #swap-editor .emp-container {
+    width: 95vw;
+    height: auto;
+    max-height: none;
   }
   
-  .emp-editor .emp-head {
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
+  .emp-list-section .emp-list {
+    grid-template-columns: 1fr;
   }
   
-  .emp-editor .emp-add {
-    flex-direction: column;
-    gap: 0.5rem;
+  .emp-add-section .emp-add {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
-  .emp-editor .emp-add input,
-  .emp-editor .emp-add select,
-  .emp-editor .emp-add textarea {
-    min-width: 100%;
-    padding: 0.75rem;
-    font-size: 16px; /* Zapobiega zoom na iOS */
-  }
-  
-  .emp-editor .emp-close {
-    top: 15px;
-    right: 15px;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-  }
+  /* Stare style usunięte */
 }
 
+
 @media (max-width: 480px) {
-  .emp-editor .emp-container {
+  .emp-editor .emp-container,
+  #swap-editor .emp-container {
     width: 95vw;
     height: 90vh;
     padding: 1rem;
@@ -4520,49 +4984,134 @@ body.mobile-view .table .slot {
     margin-bottom: 0.75rem;
   }
   
-  .emp-editor .emp-add input,
-  .emp-editor .emp-add select,
-  .emp-editor .emp-add textarea {
-    padding: 0.6rem;
-    font-size: 16px;
-  }
+  /* Stare style usunięte */
   
-  .emp-editor .emp-close {
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-  }
+  /* Stare style usunięte - przycisk teraz w flexbox */
 }
 
 /* Style dla akcji pracowników */
-.emp-actions{display:flex; gap:.25rem}
-.btn-edit{
-  background: var(--red); 
-  border-color: var(--red); 
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+.emp-actions{
+  display: flex; 
+  gap: 0.5rem;
+  align-items: center;
 }
-.btn-edit:hover{
-  background: rgba(211, 47, 47, 0.8); 
-  border-color: var(--red);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(211, 47, 47, 0.3);
+.emp-actions .btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: #000000;
 }
-.btn-edit:active{
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(211, 47, 47, 0.2);
+
+.emp-actions .btn svg {
+  color: #dc3545;
+  width: 14px;
+  height: 14px;
+}
+
+.emp-actions .btn:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.emp-actions .btn:active {
+  transform: scale(0.95);
+}
+.emp-actions .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 /* Style dla formularza edycji */
-.emp-edit-form{margin-top:.5rem}
-.emp-edit-actions{display:flex; gap:.5rem; margin-top:.5rem; justify-content:center}
+.emp-edit-form{
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.emp-edit-actions{
+  display: flex; 
+  gap: 1rem; 
+  margin-top: 1.5rem; 
+  justify-content: center;
+}
+.emp-edit-actions .btn {
+  padding: 0.75rem 2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 120px;
+  transition: all 0.2s ease;
+}
+.emp-edit-actions .btn:first-child {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+}
+.emp-edit-actions .btn:first-child:hover {
+  background: rgba(211, 47, 47, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
+}
+.emp-edit-actions .btn:last-child {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+.emp-edit-actions .btn:last-child:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
 
 /* Status indicators for swap requests */
 .status-approved{color:var(--white); font-weight:600}
 .status-rejected{color:var(--red); font-weight:600}
 .status-pending{color:var(--yellow); font-weight:600}
 .status-waiting{color:var(--gray); font-weight:600}
+
+/* Historia próśb */
+.status-display {
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  display: inline-block;
+}
+
+.comment-display {
+  margin-top: 5px;
+  font-style: italic;
+  color: #666;
+  font-size: 0.9em;
+}
+
+#history-modal .emp-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+#history-modal .emp-row {
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+
+#history-modal .emp-row:last-child {
+  border-bottom: none;
+}
 
 /* Comment styling for swap requests */
 .swap-comment{
@@ -4623,7 +5172,6 @@ select option {
 select:focus, input:focus, textarea:focus {
   outline: none;
   border-color: var(--red);
-  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
   transform: scale(1.02);
 }
 
@@ -6236,115 +6784,351 @@ select {
   text-align: center;
 }
 
-.shifts-actions .btn-secondary {
-  background: #808080 !important;
-  color: #fff !important;
+/* Layout dla układu 2x2 */
+.grid-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 1.5rem !important;
+}
+
+.row {
+  display: flex !important;
+  gap: 1rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
+}
+
+.cell {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+}
+
+.left-top {
+  justify-content: flex-start !important;
+}
+
+.right-top {
+  justify-content: center !important;
+}
+
+.left-bottom {
+  justify-content: center !important;
+}
+
+.right-bottom {
+  justify-content: center !important;
+}
+
+/* Ukryte przyciski trybu roboczego - teraz są dynamicznie przenoszone */
+.draft-mode-controls {
+  display: none !important;
+}
+
+.draft-mode-controls.hidden {
+  display: none !important;
+}
+
+/* Style dla przycisków w komórkach układu 2x2 */
+.cell button {
+  width: 90% !important;
+  max-width: 180px !important;
+  margin: 0 auto !important;
   min-width: 160px !important;
-  max-width: 160px !important;
+  font-size: 0.7rem !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  text-align: center !important;
+  padding: 0.8rem 0.5rem !important;
+}
+
+/* Jednakowa szerokość dla wszystkich napisów w przyciskach */
+.cell button span,
+.cell button {
   width: 160px !important;
+  text-align: center !important;
 }
 
-.shifts-actions .btn-secondary:hover {
-  background: #ff0000 !important;
-  color: #000 !important;
-  transform: translateY(-1px);
+/* Wyrównanie dla wszystkich komórek */
+.left-top,
+.right-top,
+.left-bottom,
+.right-bottom {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.5rem !important;
+  overflow: hidden !important;
 }
 
-.shifts-actions .btn-warning {
-  background: #808080 !important;
-  color: #fff !important;
-  min-width: 160px !important;
-  max-width: 160px !important;
-  width: 160px !important;
+/* Specjalne wyrównanie dla lewego górnego (tytuł) */
+.left-top {
+  justify-content: center !important;
 }
 
-.shifts-actions .btn-warning:hover {
-  background: #ff0000 !important;
-  color: #000 !important;
-  transform: translateY(-1px);
+.left-top h2 {
+  font-size: 0.9rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-.shifts-actions .btn-success {
-  background: #808080;
-  color: #fff;
-  min-width: 160px;
-  max-width: 160px;
-  width: 160px;
+/* Dodatkowe style dla przycisków w komórkach */
+.cell button {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
-.shifts-actions .btn-success:hover {
-  background: #ff0000;
-  color: #000;
-  transform: translateY(-1px);
+/* Style dla kontenerów przycisków */
+.edit-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+  align-items: center !important;
+  width: 100% !important;
 }
 
+/* Przyciski w trybie edycji - styl z menu burgerowego */
+.shifts-actions .btn-secondary,
+.shifts-actions .btn-warning,
+.shifts-actions .btn-success,
 .shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success) {
-  background: #4caf50;
-  color: #fff;
-  font-weight: bold;
-  font-family: 'Arial', sans-serif;
-  min-width: 160px;
-  max-width: 160px;
-  width: 160px;
+  outline: none !important;
+  cursor: pointer !important;
+  border: none !important;
+  padding: 1rem 1.5rem !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: 0.7rem !important; /* Mniejsza czcionka */
+  position: relative !important;
+  display: flex !important;
+  letter-spacing: 0.05rem !important;
+  font-weight: 600 !important;
+  border-radius: 500px !important;
+  overflow: hidden !important;
+  background: #2a2a2a !important; /* Szary domyślnie jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
+  min-width: 160px !important;
+  max-width: 160px !important;
+  width: 160px !important;
+  min-height: 50px !important;
+  text-align: center !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  z-index: 10 !important; /* Tekst nad pseudo-elementem */
+  gap: 0.5rem !important; /* Odstęp między ikonką a tekstem */
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  padding: 0.8rem 0.5rem !important;
 }
 
-.shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success):hover {
-  background: #45a049;
-  color: #fff;
-  transform: translateY(-1px);
+/* Style dla ikon w przyciskach */
+.shifts-actions .btn-secondary svg,
+.shifts-actions .btn-warning svg,
+.shifts-actions .btn-success svg,
+.shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success) svg {
+  flex-shrink: 0 !important;
+  z-index: 10 !important;
 }
 
+.shifts-actions .btn-secondary::before,
+.shifts-actions .btn-warning::before,
+.shifts-actions .btn-success::before,
+.shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success)::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -1 !important; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a !important; /* Szary domyślnie */
+  transform: skew(30deg) !important;
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1) !important;
+}
+
+/* Hover dla przycisku "Włącz tryb roboczy" - żółty */
+.shifts-actions .btn-secondary:hover {
+  background: #ffc107 !important; /* Żółty */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+/* Hover dla przycisku "Zapisz wersję roboczą" - niebieski */
+.shifts-actions .btn-warning:hover {
+  background: #007bff !important; /* Niebieski */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+/* Hover dla przycisku "Prześlij zmiany" - zielony */
+.shifts-actions .btn-success:hover {
+  background: #28a745 !important; /* Zielony */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+/* Hover dla przycisku "Zapisz" - zielony */
+#save-shifts:hover {
+  background: #28a745 !important; /* Zielony dla przycisku Zapisz */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+/* Hover dla przycisku "Anuluj" - czerwony */
+#cancel-shifts:hover {
+  background: #dc3545 !important; /* Czerwony dla przycisku Anuluj */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+.shifts-actions .btn-secondary:hover::before,
+.shifts-actions .btn-warning:hover::before,
+.shifts-actions .btn-success:hover::before,
+#save-shifts:hover::before,
+#cancel-shifts:hover::before {
+  transform: translate3d(100%, 0, 0) !important;
+}
+
+/* Przyciski trybu roboczego - styl z menu burgerowego */
 #toggle-draft-mode.active {
-  background: #e65100;
-  border-color: #d84315;
+  background: #ff0000 !important; /* Czerwony jak w menu burgerowym */
+  border-color: #ff0000;
 }
 
 #save-draft-version {
-  background: #ffc107;
-  color: #212529;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-weight: 600;
-  transition: all 0.2s ease;
+  background: #2a2a2a !important; /* Szary jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
+  padding: 0.6rem 1.2rem !important; /* Zmniejszony padding */
+  border-radius: 500px !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important; /* Zmniejszona czcionka */
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border: none !important;
+  z-index: 10 !important; /* Tekst nad pseudo-elementem */
+  width: 160px !important;
+  max-width: 160px !important;
+  min-width: 160px !important;
+}
+
+#save-draft-version::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -1 !important; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a !important;
+  transform: skew(30deg) !important;
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1) !important;
 }
 
 #save-draft-version:hover {
-  background: #ffb300;
-  transform: translateY(-1px);
+  background: #007bff !important; /* Niebieski dla zapisz wersję roboczą */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+#save-draft-version:hover::before {
+  transform: translate3d(100%, 0, 0) !important;
 }
 
 #save-draft-version:disabled {
-  background: #6c757d;
-  border-color: #6c757d;
-  color: #fff;
-  cursor: not-allowed;
-  transform: none;
+  background: #6c757d !important;
+  color: #fff !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+#save-draft-version:disabled::before {
+  display: none !important;
 }
 
 #save-draft-shifts {
-  background: #ff9800;
-  color: white;
-  border-color: #f57c00;
-  font-weight: 600;
+  background: #2a2a2a !important; /* Szary jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important; /* Zmniejszona czcionka */
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 500px !important;
+  padding: 0.6rem 1.2rem !important; /* Zmniejszony padding */
+  z-index: 10 !important; /* Tekst nad pseudo-elementem */
+}
+
+#save-draft-shifts::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -1 !important; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a !important;
+  transform: skew(30deg) !important;
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1) !important;
 }
 
 #save-draft-shifts:hover {
-  background: #f57c00;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4);
+  background: #ffc107 !important; /* Żółty dla zapisz wersję roboczą */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+#save-draft-shifts:hover::before {
+  transform: translate3d(100%, 0, 0) !important;
 }
 
 #publish-draft-shifts {
-  background: #28a745;
-  color: white;
-  border-color: #1e7e34;
-  font-weight: 600;
+  background: #2a2a2a !important; /* Szary jak w menu burgerowym */
+  color: #ffffff !important; /* Biały tekst widoczny od razu */
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important; /* Zmniejszona czcionka */
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 500px !important;
+  padding: 0.6rem 1.2rem !important; /* Zmniejszony padding */
+  z-index: 10 !important; /* Tekst nad pseudo-elementem */
+  width: 160px !important;
+  max-width: 160px !important;
+  min-width: 160px !important;
+}
+
+#publish-draft-shifts::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -1 !important; /* Zmienione na -1 żeby było za tekstem */
+  background: #2a2a2a !important;
+  transform: skew(30deg) !important;
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1) !important;
 }
 
 #publish-draft-shifts:hover {
-  background: #1e7e34;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+  background: #28a745 !important; /* Zielony dla prześlij zmiany */
+  color: #000000 !important; /* Czarny tekst */
+  transform: translateY(-2px) !important;
+}
+
+#publish-draft-shifts:hover::before {
+  transform: translate3d(100%, 0, 0) !important;
 }
 
 /* Dark mode dla przycisków trybu roboczego */

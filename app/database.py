@@ -243,6 +243,214 @@ def ensure_draft_shifts_table():
         logger.error(f"Błąd podczas tworzenia tabeli draft_shifts: {e}")
         raise
 
+def ensure_request_history_table():
+    """Tworzy tabelę request_history jeśli nie istnieje"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='request_history'")
+        if not cursor.fetchone():
+            db.execute('''
+                CREATE TABLE request_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    original_id INTEGER NOT NULL,
+                    type VARCHAR(20) NOT NULL, -- 'swap' lub 'unavailability'
+                    from_employee VARCHAR(100),
+                    to_employee VARCHAR(100),
+                    from_date TEXT,
+                    to_date TEXT,
+                    month_year TEXT,
+                    reason TEXT,
+                    comment_requester TEXT,
+                    final_status VARCHAR(50) NOT NULL, -- ZATWIERDZONE, ODRZUCONE, etc.
+                    admin_action VARCHAR(50), -- APPROVED, REJECTED
+                    admin_comment TEXT,
+                    created_at DATETIME NOT NULL,
+                    archived_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    archived_by INTEGER,
+                    FOREIGN KEY (archived_by) REFERENCES users (id)
+                );
+            ''')
+            
+            # Dodaj indeksy dla lepszej wydajności
+            db.execute('CREATE INDEX idx_request_history_type ON request_history(type)')
+            db.execute('CREATE INDEX idx_request_history_status ON request_history(final_status)')
+            db.execute('CREATE INDEX idx_request_history_archived_at ON request_history(archived_at)')
+            
+            logger.info("Tabela request_history utworzona")
+        else:
+            logger.info("Tabela request_history już istnieje")
+            
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia tabeli request_history: {e}")
+        raise
+
+def ensure_whitelist_table():
+    """Tworzy tabelę whitelist_emails jeśli nie istnieje"""
+    try:
+        db = get_db()
+        
+        # Sprawdź czy tabela istnieje
+        cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='whitelist_emails'")
+        if not cursor.fetchone():
+            db.execute('''
+                CREATE TABLE whitelist_emails (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    added_by INTEGER,
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (added_by) REFERENCES users (id)
+                );
+            ''')
+            
+            # Dodaj indeks dla lepszej wydajności
+            db.execute('CREATE INDEX idx_whitelist_emails_email ON whitelist_emails(email)')
+            
+            # Dodaj domyślne emaile do whitelist
+            default_emails = [
+                'nikodemboniecki1@gmail.com',
+                'official221team@gmail.com', 
+                'bonieckinikodem0@gmail.com'
+            ]
+            
+            for email in default_emails:
+                try:
+                    db.execute("INSERT INTO whitelist_emails (email) VALUES (?)", (email,))
+                except Exception as e:
+                    logger.warning(f"Email {email} już istnieje w whitelist: {e}")
+            
+            db.commit()
+            logger.info("Tabela whitelist_emails utworzona z domyślnymi emailami")
+        else:
+            logger.info("Tabela whitelist_emails już istnieje")
+            
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia tabeli whitelist_emails: {e}")
+        raise
+
+def archive_completed_requests():
+    """Archiwizuje zakończone prośby i ustawia status na OCZEKUJACE w skrzynce"""
+    try:
+        db = get_db()
+        
+        # Pobierz zakończone prośby o zamianę
+        completed_swaps = db.execute("""
+            SELECT * FROM swap_requests 
+            WHERE boss_status IN ('APPROVED', 'REJECTED')
+        """).fetchall()
+        
+        # Pobierz zakończone niedyspozycje
+        completed_unavail = db.execute("""
+            SELECT ur.*, e.name as employee_name
+            FROM unavailability_requests ur
+            JOIN employees e ON ur.employee_id = e.id
+            WHERE ur.status IN ('APPROVED', 'REJECTED')
+        """).fetchall()
+        
+        archived_count = 0
+        
+        # Archiwizuj prośby o zamianę
+        for swap in completed_swaps:
+            # Określ finalny status
+            if swap['boss_status'] == 'APPROVED':
+                final_status = 'ZATWIERDZONE'
+            else:
+                final_status = 'ODRZUCONE_PRZEZ_SZEFA'
+            
+            # Dodaj do historii
+            db.execute("""
+                INSERT INTO request_history (
+                    original_id, type, from_employee, to_employee, 
+                    from_date, to_date, comment_requester, final_status,
+                    admin_action, created_at, archived_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (
+                swap['id'], 'swap', swap['from_employee'], swap['to_employee'],
+                swap['from_date'], swap['to_date'], swap['comment_requester'],
+                final_status, swap['boss_status'], swap['created_at']
+            ))
+            
+            # Usuń z aktywnej skrzynki
+            db.execute("DELETE FROM swap_requests WHERE id = ?", (swap['id'],))
+            archived_count += 1
+        
+        # Archiwizuj niedyspozycje
+        for unavail in completed_unavail:
+            # Określ finalny status
+            if unavail['status'] == 'APPROVED':
+                final_status = 'ZATWIERDZONE'
+            else:
+                final_status = 'ODRZUCONE'
+            
+            # Dodaj do historii
+            db.execute("""
+                INSERT INTO request_history (
+                    original_id, type, from_employee, month_year, reason,
+                    final_status, admin_action, created_at, archived_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (
+                unavail['id'], 'unavailability', unavail['employee_name'],
+                unavail['month_year'], unavail['reason'], final_status,
+                unavail['status'], unavail['created_at']
+            ))
+            
+            # Usuń z aktywnej skrzynki
+            db.execute("DELETE FROM unavailability_requests WHERE id = ?", (unavail['id'],))
+            archived_count += 1
+        
+        db.commit()
+        logger.info(f"Zarchiwizowano {archived_count} zakończonych próśb")
+        return archived_count
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas archiwizacji próśb: {e}")
+        raise
+
+def get_request_history(limit=50, offset=0, request_type=None):
+    """Pobiera historię próśb"""
+    try:
+        db = get_db()
+        
+        query = "SELECT * FROM request_history"
+        params = []
+        
+        if request_type:
+            query += " WHERE type = ?"
+            params.append(request_type)
+        
+        query += " ORDER BY archived_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        history = db.execute(query, params).fetchall()
+        
+        # Konwertuj na listę słowników
+        history_list = []
+        for item in history:
+            history_list.append({
+                'id': item['id'],
+                'original_id': item['original_id'],
+                'type': item['type'],
+                'from_employee': item['from_employee'],
+                'to_employee': item['to_employee'],
+                'from_date': item['from_date'],
+                'to_date': item['to_date'],
+                'month_year': item['month_year'],
+                'reason': item['reason'],
+                'comment_requester': item['comment_requester'],
+                'final_status': item['final_status'],
+                'admin_action': item['admin_action'],
+                'admin_comment': item['admin_comment'],
+                'created_at': item['created_at'],
+                'archived_at': item['archived_at']
+            })
+        
+        return history_list
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas pobierania historii: {e}")
+        raise
+
 def save_push_subscription(user_id, subscription):
     """
     Zapisuje subskrypcję push w bazie danych

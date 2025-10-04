@@ -1027,16 +1027,8 @@ async function submitUnavailability() {
 
 // Funkcja toggleSwaps - przeniesiona z IIFE
 function toggleSwaps() {
-  const swapEditor = document.getElementById('swap-editor');
-  if (!swapEditor) return;
-  const show = !swapEditor.classList.contains('show');
-  swapEditor.classList.toggle('show', show);
-  if (show) {
-    // Wywołaj loadSwaps jeśli istnieje
-    if (typeof loadSwaps === 'function') {
-      loadSwaps();
-    }
-  }
+  // Użyj nowej funkcji toggleSwap
+  toggleSwap();
 }
 
 // Funkcja updateCalendar - przeniesiona z IIFE
@@ -1515,9 +1507,9 @@ async function initializePushSubscription() {
         registration.sync.register('check-notifications');
       }
       
-      // Sprawdź nowe prośby co 60 sekund - OPTYMALIZOWANE (zmniejszona częstotliwość)
-      console.log('⏰ Uruchamiam sprawdzanie nowych prośb co 60 sekund...');
-      setInterval(checkForNewRequests, 60000); // Increased from 30s to 60s for better performance
+      // Sprawdź nowe prośby co 30 sekund
+      console.log('⏰ Uruchamiam sprawdzanie nowych prośb co 30 sekund...');
+      startNotificationChecking();
       
       console.log('🎉 Web Push Notifications zainicjalizowane pomyślnie!');
     } else {
@@ -1674,12 +1666,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const empName = document.getElementById('emp-name');
   const empCode = document.getElementById('emp-code');
   const empEmail = document.getElementById('emp-email');
-  const empAddBtn = document.getElementById('emp-add-btn');
   const empClose = document.getElementById('emp-close');
   const btnSwaps = document.getElementById('btn-swaps-admin') || document.getElementById('btn-swaps-user');
-  const swapEditor = document.getElementById('swap-editor');
-  const swapClose = document.getElementById('swap-close');
-  const swapList = document.getElementById('swap-list');
   const btnWhitelist = document.getElementById('btn-whitelist');
   const whitelistEditor = document.getElementById('whitelist-editor');
   const whitelistClose = document.getElementById('whitelist-close');
@@ -2255,6 +2243,24 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnSaveToday) btnSaveToday.addEventListener('click', save);
   if (btnCancelToday) btnCancelToday.addEventListener('click', cancel);
   
+  // Event delegation dla przycisków save/cancel (dla dynamicznie tworzonych przycisków)
+  const shiftsActions = document.getElementById('shifts-actions');
+  if (shiftsActions) {
+    shiftsActions.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'save-shifts') {
+        e.preventDefault();
+        if (typeof save === 'function') {
+          save();
+        }
+      } else if (e.target && e.target.id === 'cancel-shifts') {
+        e.preventDefault();
+        if (typeof cancel === 'function') {
+          cancel();
+        }
+      }
+    });
+  }
+  
   // Event listener dla przycisku publikacji draft
   const btnPublishDraft = document.getElementById('publish-draft-shifts');
   if (btnPublishDraft) btnPublishDraft.addEventListener('click', publishDraftChanges);
@@ -2275,39 +2281,76 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.createElement('div');
         row.className = 'emp-row';
         row.innerHTML = `
-          <div>${emp.name} <span class="meta">(${emp.code || '-'})</span> ${emp.email ? `<br><small class="email-meta">${emp.email}</small>` : ''}</div>
+          <div>
+            <div class="emp-name-code-line">
+              <div class="emp-name-edit">
+                <input type="text" class="emp-name-input" value="${emp.name}" data-id="${emp.id}" data-field="name" style="display: none;">
+                <span class="emp-name-display">${emp.name}</span>
+              </div>
+              <div class="emp-code-edit">
+                <input type="text" class="emp-code-input" value="${emp.code || ''}" data-id="${emp.id}" data-field="code" style="display: none;">
+                <span class="emp-code-display">(${emp.code || '-'})</span>
+              </div>
+            </div>
+            <div class="emp-email-edit">
+              <input type="email" class="emp-email-input" value="${emp.email || ''}" data-id="${emp.id}" data-field="email" style="display: none;">
+              <small class="emp-email-display" style="${emp.email ? '' : 'display: none;'}">${emp.email || ''}</small>
+            </div>
+          </div>
           <div class="emp-actions">
-            <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
-            <button data-id="${emp.id}" class="btn">Usuń</button>
+            <button data-id="${emp.id}" class="btn btn-edit">
+              Edytuj
+            </button>
+            <button data-id="${emp.id}" class="btn btn-save" style="display: none;">
+              Zapisz
+            </button>
+            <button data-id="${emp.id}" class="btn btn-cancel" style="display: none;">
+              Anuluj
+            </button>
+            <button data-id="${emp.id}" class="btn">
+              Usuń
+            </button>
           </div>
         `;
         
         // Przycisk edycji
         row.querySelector('.btn-edit').addEventListener('click', () => {
-          showEditEmployeeDialog(emp);
+          startInlineEdit(row, emp);
+        });
+        
+        // Przycisk zapisz
+        row.querySelector('.btn-save').addEventListener('click', () => {
+          saveInlineEdit(row, emp);
+        });
+        
+        // Przycisk anuluj
+        row.querySelector('.btn-cancel').addEventListener('click', () => {
+          cancelInlineEdit(row, emp);
         });
         
         // Przycisk usuwania
-        row.querySelector('.btn:not(.btn-edit)').addEventListener('click', () => {
-          if (confirm(`Czy na pewno chcesz usunąć pracownika "${emp.name}"?`)) {
-            fetch(`/api/employees/${emp.id}`, { method: 'DELETE' })
+        const deleteBtn = Array.from(row.querySelectorAll('.btn')).find(btn => btn.textContent.trim() === 'Usuń');
+        console.log('🔍 Znaleziony przycisk usuwania:', deleteBtn);
+        if (deleteBtn) deleteBtn.addEventListener('click', () => {
+          fetch(`/api/employees/${emp.id}`, { 
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': window.csrfToken },
+            credentials: 'include'
+          })
               .then(response => response.json())
               .then(data => {
                 if (data.error) {
-                  alert('Błąd podczas usuwania: ' + data.error);
+                  console.error('Błąd podczas usuwania:', data.error);
                 } else {
                   // Zaktualizuj cache
-                  employeesCache = employeesCache.filter(e => e.id !== emp.id);
-                  employeesCacheTime = Date.now();
+                  window.employeesCache = window.employeesCache.filter(e => e.id !== emp.id);
+                  window.employeesCacheTime = Date.now();
                   loadEmployees();
-                  alert('Pracownik został usunięty');
                 }
               })
               .catch(error => {
                 console.error('Błąd podczas usuwania pracownika:', error);
-                alert('Wystąpił błąd podczas usuwania pracownika');
               });
-          }
         });
         
         fragment.appendChild(row);
@@ -2319,136 +2362,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  function showEditEmployeeDialog(emp) {
-    // Utwórz dialog edycji
-    const dialog = document.createElement('div');
-    dialog.className = 'emp-editor show';
-    dialog.innerHTML = `
-      <div class="emp-container">
-        <button type="button" class="emp-close" aria-label="Zamknij">✕</button>
-        <div class="emp-head">Edytuj pracownika</div>
-        <div class="emp-edit-form">
-          <div class="emp-add">
-            <input id="edit-emp-name" placeholder="imię" value="${emp.name}" />
-            <input id="edit-emp-code" placeholder="id" value="${emp.code || ''}" />
-            <input id="edit-emp-email" placeholder="email" type="email" value="${emp.email || ''}" />
-          </div>
-          <div class="emp-edit-actions">
-            <button id="edit-emp-save" class="btn">Zapisz</button>
-            <button id="edit-emp-cancel" class="btn">Anuluj</button>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // Dodaj do body
-    document.body.appendChild(dialog);
-    
-    // Event listeners
-    const closeBtn = dialog.querySelector('.emp-close');
-    const cancelBtn = dialog.querySelector('#edit-emp-cancel');
-    const saveBtn = dialog.querySelector('#edit-emp-save');
-    const nameInput = dialog.querySelector('#edit-emp-name');
-    const codeInput = dialog.querySelector('#edit-emp-code');
-    const emailInput = dialog.querySelector('#edit-emp-email');
-    
-    function closeDialog() {
-      dialog.remove();
-    }
-    
-    closeBtn.addEventListener('click', closeDialog);
-    cancelBtn.addEventListener('click', closeDialog);
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) closeDialog();
-    });
-    
-    // Zapisz zmiany
-    saveBtn.addEventListener('click', () => {
-      const newName = nameInput.value.trim();
-      const newCode = codeInput.value.trim();
-      const newEmail = emailInput.value.trim();
-      
-      if (!newName) {
-        alert('Imię jest wymagane');
-        return;
-      }
-      
-      fetch(`/api/employees/${emp.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, code: newCode, email: newEmail })
-      })
-      .then(async r => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          throw new Error(data.error || 'Błąd podczas edycji');
-        }
-        return data;
-      })
-      .then(() => {
-        closeDialog();
-        loadEmployees(); // Odśwież listę
-        alert('Pracownik został zaktualizowany!');
-      })
-      .catch((err) => {
-        alert('Błąd: ' + err.message);
-      });
-    });
-    
-    // Enter w polach
-    nameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') saveBtn.click();
-    });
-    codeInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') saveBtn.click();
-    });
-  }
   
-  function loadEmployees() {
-    fetch('/api/employees', { credentials: 'include' })
-      .then(response => response.json())
-      .then(data => { 
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        // Zaktualizuj cache
-        employeesCache = data.employees || [];
-        employeesCacheTime = Date.now();
-        renderEmployees(employeesCache); 
-      })
-      .catch(error => {
-        console.error('Błąd podczas ładowania pracowników:', error);
-        alert('Błąd podczas ładowania listy pracowników');
-      });
-  }
   
-  // Cache dla pracowników
-  let employeesCache = null;
-  let employeesCacheTime = 0;
-  const CACHE_DURATION = 30000; // 30 sekund
 
-  function toggleEmps() {
-    if (!empEditor) return;
-    const show = !empEditor.classList.contains('show');
-    
-    if (show) {
-      // Pokaż modal najpierw
-      empEditor.classList.add('show');
-      
-      // Użyj requestAnimationFrame dla lepszej wydajności
-      requestAnimationFrame(() => {
-        // Użyj cache jeśli jest świeży
-        const now = Date.now();
-        if (employeesCache && (now - employeesCacheTime) < CACHE_DURATION) {
-          renderEmployees(employeesCache);
-        } else {
-          loadEmployees();
-        }
-      });
-    } else {
-      empEditor.classList.remove('show');
-    }
-  }
   
   function closeEmps() { 
     if (empEditor) empEditor.classList.remove('show') 
@@ -2459,16 +2375,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const name = (empName.value || '').trim();
     const code = (empCode.value || '').trim();
     const email = (empEmail.value || '').trim();
-    if (!name) return;
+    
+    // Walidacja
+    if (!name) {
+      alert('Imię pracownika jest wymagane');
+      empName.focus();
+      return;
+    }
+    
+    if (email && !isValidEmail(email)) {
+      alert('Podaj prawidłowy adres email');
+      empEmail.focus();
+      return;
+    }
+    
+    // Pokaż loading state
+    const addBtn = document.getElementById('emp-add-btn');
+    const originalText = addBtn.textContent;
+    addBtn.textContent = 'Dodawanie...';
+    addBtn.disabled = true;
     
     fetch('/api/employees', { 
       method: 'POST', 
-      headers: {'Content-Type': 'application/json'}, 
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': window.csrfToken
+      }, 
       body: JSON.stringify({ code, name, email }),
       credentials: 'include'
     })
     .then(async r => { 
-      const data = await r.json().catch(() => ({})); 
+      let data;
+      try {
+        data = await r.json();
+      } catch (e) {
+        data = { error: 'Błąd parsowania odpowiedzi serwera' };
+      }
       if (!r.ok) throw data; 
       return data; 
     })
@@ -2477,12 +2419,74 @@ document.addEventListener('DOMContentLoaded', function() {
       empCode.value = ''; 
       empEmail.value = ''; 
       loadEmployees(); 
-      alert('Pracownik został dodany!');
+      showNotification('Pracownik został dodany!', 'success');
     })
     .catch((err) => { 
-      console.warn('Dodawanie pracownika nie powiodło się', err);
-      alert('Błąd podczas dodawania pracownika: ' + (err.error || 'Nieznany błąd'));
+      console.error('Dodawanie pracownika nie powiodło się', err);
+      const errorMessage = err.error || err.message || 'Nieznany błąd serwera';
+      showNotification('Błąd podczas dodawania pracownika: ' + errorMessage, 'error');
+    })
+    .finally(() => {
+      // Przywróć przycisk
+      addBtn.textContent = originalText;
+      addBtn.disabled = false;
     });
+  }
+  
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+  
+  function showNotification(message, type = 'info') {
+    // Utwórz element powiadomienia
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Style powiadomienia
+    Object.assign(notification.style, {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      padding: '12px 20px',
+      borderRadius: '8px',
+      color: 'white',
+      fontWeight: '500',
+      zIndex: '10003',
+      maxWidth: '300px',
+      wordWrap: 'break-word',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+      transform: 'translateX(100%)',
+      transition: 'transform 0.3s ease'
+    });
+    
+    // Kolory w zależności od typu
+    const colors = {
+      success: '#28a745',
+      error: '#dc3545',
+      info: '#17a2b8',
+      warning: '#ffc107'
+    };
+    notification.style.backgroundColor = colors[type] || colors.info;
+    
+    // Dodaj do DOM
+    document.body.appendChild(notification);
+    
+    // Animacja wejścia
+    setTimeout(() => {
+      notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Usuń po 3 sekundach
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
   }
   
   // Event listeners dla zarządzania pracownikami
@@ -2490,9 +2494,30 @@ document.addEventListener('DOMContentLoaded', function() {
   if (empCode) empCode.addEventListener('keydown', (e) => { if (e.key == 'Enter') addEmp(); });
   if (empEmail) empEmail.addEventListener('keydown', (e) => { if (e.key == 'Enter') addEmp(); });
   if (btnEmps) btnEmps.addEventListener('click', toggleEmps);
+  
+  // Event listener dla przycisku dodawania
+  const empAddBtn = document.getElementById('emp-add-btn');
   if (empAddBtn) empAddBtn.addEventListener('click', addEmp);
   if (empClose) empClose.addEventListener('click', closeEmps);
   if (empEditor) empEditor.addEventListener('click', (e) => { if (e.target === empEditor) closeEmps(); });
+
+  // Event listenery dla skrzynki
+  const swapClose = document.getElementById('swap-close');
+  const swapAddBtn = document.getElementById('swap-add-btn');
+  const swapHistoryBtn = document.getElementById('swap-history-btn');
+  const swapEditor = document.getElementById('swap-editor');
+  
+  function closeSwap() { 
+    if (swapEditor) swapEditor.classList.remove('show');
+  }
+  
+  if (swapClose) swapClose.addEventListener('click', closeSwap);
+  if (swapAddBtn) swapAddBtn.addEventListener('click', addSwapRequest);
+  if (swapHistoryBtn) swapHistoryBtn.addEventListener('click', () => {
+    // TODO: Implementacja historii skrzynki
+    alert('Historia skrzynki - funkcja w trakcie implementacji');
+  });
+  if (swapEditor) swapEditor.addEventListener('click', (e) => { if (e.target === swapEditor) closeSwap(); });
 
   // --- Zarządzanie whitelistą ---
   function toggleWhitelist() {
@@ -2527,22 +2552,65 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
-  function renderWhitelist(emails) {
+  function renderWhitelist(whitelistData) {
     if (!whitelistList) return;
     
     const fragment = document.createDocumentFragment();
     
-    for (const email of emails) {
+    // Sprawdź czy dane to tablica emaili czy obiektów z kontami
+    const items = Array.isArray(whitelistData) ? whitelistData : whitelistData.emails || [];
+    
+    for (const item of items) {
       const row = document.createElement('div');
       row.className = 'emp-row';
-      row.innerHTML = `
-        <div>${email}</div>
-        <div class="emp-actions">
-          <button data-email="${email}" class="btn btn-remove">Usuń</button>
-        </div>
-      `;
+      
+      // Jeśli item to obiekt z kontem, pokaż szczegóły
+      if (typeof item === 'object' && item.email) {
+        let accountInfo;
+        if (item.has_account) {
+          if (item.employee_name) {
+            accountInfo = `👤 ${item.employee_name} (ID: ${item.employee_id || 'N/A'})`;
+          } else if (item.user_name) {
+            accountInfo = `👤 ${item.user_name} (użytkownik)`;
+          } else {
+            accountInfo = '👤 Konto użytkownika (brak danych)';
+          }
+        } else {
+          accountInfo = '❌ Brak konta w systemie';
+        }
+        
+        row.innerHTML = `
+          <div>
+            <div class="emp-name-code-line">
+              <div class="emp-name-display">📧 ${item.email}</div>
+            </div>
+            <div class="emp-email-edit">
+              <small class="emp-email-display">${accountInfo}</small>
+            </div>
+          </div>
+          <div class="emp-actions">
+            <button data-email="${item.email}" class="btn btn-remove">Usuń</button>
+          </div>
+        `;
+      } else {
+        // Jeśli item to tylko email (stary format)
+        row.innerHTML = `
+          <div>
+            <div class="emp-name-code-line">
+              <div class="emp-name-display">📧 ${item}</div>
+            </div>
+            <div class="emp-email-edit">
+              <small class="emp-email-display">❓ Brak informacji o koncie</small>
+            </div>
+          </div>
+          <div class="emp-actions">
+            <button data-email="${item}" class="btn btn-remove">Usuń</button>
+          </div>
+        `;
+      }
       
       // Przycisk usuwania
+      const email = typeof item === 'object' ? item.email : item;
       row.querySelector('.btn-remove').addEventListener('click', () => {
         if (confirm(`Czy na pewno chcesz usunąć email "${email}" z whitelisty?`)) {
           removeFromWhitelist(email);
@@ -2644,7 +2712,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const isBoss = !!swapsData.is_boss;
         
         if (swapList) swapList.innerHTML = '';
-        if (swapClear) swapClear.style.display = isBoss ? 'inline-flex' : 'none';
+        // Przycisk "Wyczyść" został usunięty - zastąpiony systemem historii
+        
+        // Dodaj przycisk "Historia" dla adminów
+        if (isBoss && !document.getElementById('swap-history-btn')) {
+          const historyBtn = document.createElement('button');
+          historyBtn.id = 'swap-history-btn';
+          historyBtn.className = 'btn btn-secondary';
+          historyBtn.innerHTML = '📋 Historia';
+          historyBtn.style.marginLeft = '10px';
+          
+          if (swapEditor) {
+            const header = swapEditor.querySelector('.emp-header');
+            if (header) {
+              header.appendChild(historyBtn);
+            }
+          }
+          
+          historyBtn.addEventListener('click', () => {
+            loadRequestHistory();
+          });
+        }
         
         const me = (table && table.getAttribute('data-current-user')) || '';
         
@@ -2842,24 +2930,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnSwaps) btnSwaps.addEventListener('click', toggleSwaps);
   if (swapClose) swapClose.addEventListener('click', closeSwaps);
   if (swapEditor) swapEditor.addEventListener('click', (e) => { if (e.target === swapEditor) closeSwaps(); });
-  if (swapClear) swapClear.addEventListener('click', () => { 
-    if (confirm('Czy na pewno chcesz wyczyścić wszystkie prośby o zamianę?')) {
-      fetch('/api/swaps/clear', { method: 'POST', credentials: 'include' })
-        .then(response => response.json())
-        .then(data => {
-          if (data.error) {
-            alert('Błąd podczas czyszczenia: ' + data.error);
-          } else {
-            loadSwaps();
-            alert(`Wyczyszczono ${data.deleted} próśb o zamianę`);
-          }
-        })
-        .catch(error => {
-          console.error('Błąd podczas czyszczenia próśb:', error);
-          alert('Wystąpił błąd podczas czyszczenia próśb');
-        });
-    }
-  });
+  // Przycisk "Wyczyść" został usunięty - zastąpiony systemem historii
 
   // --- Zunifikowany panel zmian ---
   
@@ -3709,10 +3780,41 @@ function toggleEmps() {
   }
 }
 
+// Funkcja do otwierania/zamykania modala skrzynki
+function toggleSwap() {
+  const swapEditor = document.getElementById('swap-editor');
+  if (!swapEditor) return;
+  const show = !swapEditor.classList.contains('show');
+  
+  if (show) {
+    // Pokaż modal najpierw
+    swapEditor.classList.add('show');
+    
+    // Użyj requestAnimationFrame dla lepszej wydajności
+    requestAnimationFrame(() => {
+      // Użyj cache jeśli jest świeży
+      const now = Date.now();
+      if (window.swapCache && (now - window.swapCacheTime) < 30000) {
+        console.log('📦 Używam cache skrzynki');
+        renderSwap(window.swapCache);
+      } else {
+        console.log('🌐 Ładuję skrzynkę z serwera');
+        loadSwap();
+      }
+    });
+  } else {
+    swapEditor.classList.remove('show');
+  }
+}
+
 
 // Globalne zmienne cache dla pracowników
 window.employeesCache = null;
 window.employeesCacheTime = 0;
+
+// Globalne zmienne cache dla skrzynki
+window.swapCache = null;
+window.swapCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 sekund
 
 // Globalne funkcje pomocnicze
@@ -3747,39 +3849,85 @@ function renderEmployees(items) {
       const row = document.createElement('div');
       row.className = 'emp-row';
       row.innerHTML = `
-        <div>${emp.name} <span class="meta">(${emp.code || '-'})</span> ${emp.email ? `<br><small class="email-meta">${emp.email}</small>` : ''}</div>
+        <div>
+          <div class="emp-name-code-line">
+            <div class="emp-name-edit">
+              <input type="text" class="emp-name-input" value="${emp.name}" data-id="${emp.id}" data-field="name" style="display: none;">
+              <span class="emp-name-display">${emp.name}</span>
+            </div>
+            <div class="emp-code-edit">
+              <input type="text" class="emp-code-input" value="${emp.code || ''}" data-id="${emp.id}" data-field="code" style="display: none;">
+              <span class="emp-code-display">(${emp.code || '-'})</span>
+            </div>
+          </div>
+          <div class="emp-email-edit">
+            <input type="email" class="emp-email-input" value="${emp.email || ''}" data-id="${emp.id}" data-field="email" style="display: none;">
+            <small class="emp-email-display" style="${emp.email ? '' : 'display: none;'}">${emp.email || ''}</small>
+          </div>
+        </div>
         <div class="emp-actions">
-          <button data-id="${emp.id}" class="btn btn-edit">Edytuj</button>
-          <button data-id="${emp.id}" class="btn">Usuń</button>
+          <button data-id="${emp.id}" class="btn btn-edit">
+            Edytuj
+          </button>
+          <button data-id="${emp.id}" class="btn btn-save" style="display: none;">
+            Zapisz
+          </button>
+          <button data-id="${emp.id}" class="btn btn-cancel" style="display: none;">
+            Anuluj
+          </button>
+          <button data-id="${emp.id}" class="btn">
+            Usuń
+          </button>
         </div>
       `;
       
       // Przycisk edycji
       row.querySelector('.btn-edit').addEventListener('click', () => {
-        showEditEmployeeDialog(emp);
+        startInlineEdit(row, emp);
+      });
+      
+      // Przycisk zapisz
+      row.querySelector('.btn-save').addEventListener('click', () => {
+        saveInlineEdit(row, emp);
+      });
+      
+      // Przycisk anuluj
+      row.querySelector('.btn-cancel').addEventListener('click', () => {
+        cancelInlineEdit(row, emp);
       });
       
       // Przycisk usuwania
-      row.querySelector('.btn:not(.btn-edit)').addEventListener('click', () => {
-        if (confirm(`Czy na pewno chcesz usunąć pracownika "${emp.name}"?`)) {
-          fetch(`/api/employees/${emp.id}`, { method: 'DELETE' })
-            .then(response => response.json())
-            .then(data => {
-              if (data.error) {
-                alert('Błąd podczas usuwania: ' + data.error);
-              } else {
-                // Zaktualizuj cache
-                window.employeesCache = window.employeesCache.filter(e => e.id !== emp.id);
-                window.employeesCacheTime = Date.now();
-                loadEmployees();
-                alert('Pracownik został usunięty');
-              }
-            })
-            .catch(error => {
-              console.error('Błąd podczas usuwania pracownika:', error);
-              alert('Wystąpił błąd podczas usuwania pracownika');
-            });
-        }
+      const deleteBtn = Array.from(row.querySelectorAll('.btn')).find(btn => btn.textContent.trim() === 'Usuń');
+      console.log('🔍 Znaleziony przycisk usuwania (funkcja 2):', deleteBtn);
+      if (deleteBtn) deleteBtn.addEventListener('click', () => {
+        const originalText = deleteBtn.textContent;
+        deleteBtn.textContent = 'Usuwanie...';
+        deleteBtn.disabled = true;
+        
+        fetch(`/api/employees/${emp.id}`, { 
+          method: 'DELETE',
+          headers: { 'X-CSRFToken': window.csrfToken },
+          credentials: 'include'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              console.error('Błąd podczas usuwania:', data.error);
+            } else {
+              // Zaktualizuj cache
+              window.employeesCache = window.employeesCache.filter(e => e.id !== emp.id);
+              window.employeesCacheTime = Date.now();
+              loadEmployees();
+            }
+          })
+          .catch(error => {
+            console.error('Błąd podczas usuwania pracownika:', error);
+          })
+          .finally(() => {
+            // Przywróć przycisk
+            deleteBtn.textContent = originalText;
+            deleteBtn.disabled = false;
+          });
       });
       
       fragment.appendChild(row);
@@ -3788,9 +3936,416 @@ function renderEmployees(items) {
     // Wyczyść i dodaj wszystkie elementy jednocześnie
     empList.innerHTML = '';
     empList.appendChild(fragment);
+    
+    // Zaktualizuj statystyki
+    updateEmployeeStats(items);
   });
 }
 
+function updateEmployeeStats(employees) {
+  const totalCount = document.getElementById('emp-total-count');
+  const withEmailCount = document.getElementById('emp-with-email-count');
+  const withCodeCount = document.getElementById('emp-with-code-count');
+  
+  if (totalCount) totalCount.textContent = employees.length;
+  if (withEmailCount) withEmailCount.textContent = employees.filter(emp => emp.email).length;
+  if (withCodeCount) withCodeCount.textContent = employees.filter(emp => emp.code).length;
+}
+
+
+// Funkcje edycji inline
+function startInlineEdit(row, emp) {
+  // Ukryj przycisk edycji, pokaż zapisz/anuluj
+  row.querySelector('.btn-edit').style.display = 'none';
+  row.querySelector('.btn-save').style.display = 'inline-block';
+  row.querySelector('.btn-cancel').style.display = 'inline-block';
+  
+  // Ukryj wyświetlane wartości, pokaż inputy
+  row.querySelector('.emp-name-display').style.display = 'none';
+  row.querySelector('.emp-code-display').style.display = 'none';
+  row.querySelector('.emp-email-display').style.display = 'none';
+  
+  row.querySelector('.emp-name-input').style.display = 'inline-block';
+  row.querySelector('.emp-code-input').style.display = 'inline-block';
+  row.querySelector('.emp-email-input').style.display = 'inline-block';
+  
+  // Skup się na pierwszym polu
+  row.querySelector('.emp-name-input').focus();
+}
+
+function saveInlineEdit(row, emp) {
+  const nameInput = row.querySelector('.emp-name-input');
+  const codeInput = row.querySelector('.emp-code-input');
+  const emailInput = row.querySelector('.emp-email-input');
+  
+  const newName = nameInput.value.trim();
+  const newCode = codeInput.value.trim();
+  const newEmail = emailInput.value.trim();
+  
+  if (!newName) {
+    alert('Imię jest wymagane');
+    nameInput.focus();
+    return;
+  }
+  
+  // Walidacja emaila
+  if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    alert('Podaj prawidłowy adres email');
+    emailInput.focus();
+    return;
+  }
+  
+  // Pokaż loading
+  const saveBtn = row.querySelector('.btn-save');
+  const originalText = saveBtn.textContent;
+  saveBtn.textContent = 'Zapisywanie...';
+  saveBtn.disabled = true;
+  
+  
+  fetch(`/api/employees/${emp.id}`, {
+    method: 'PUT',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-CSRFToken': window.csrfToken
+    },
+    body: JSON.stringify({ name: newName, code: newCode, email: newEmail }),
+    credentials: 'include'
+  })
+  .then(async r => {
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      throw new Error(data.error || 'Błąd podczas edycji');
+    }
+    return data;
+  })
+  .then(() => {
+    // Zaktualizuj wyświetlane wartości
+    row.querySelector('.emp-name-display').textContent = newName;
+    row.querySelector('.emp-code-display').textContent = `(${newCode || '-'})`;
+    
+    const emailDisplay = row.querySelector('.emp-email-display');
+    if (newEmail) {
+      emailDisplay.textContent = newEmail;
+      emailDisplay.style.display = 'block';
+    } else {
+      emailDisplay.style.display = 'none';
+    }
+    
+    // Zaktualizuj obiekt emp
+    emp.name = newName;
+    emp.code = newCode;
+    emp.email = newEmail;
+    
+    // Zaktualizuj cache
+    if (window.employeesCache) {
+      const empIndex = window.employeesCache.findIndex(e => e.id === emp.id);
+      if (empIndex !== -1) {
+        window.employeesCache[empIndex] = { ...emp, name: newName, code: newCode, email: newEmail };
+      }
+    }
+    
+    // Wyjdź z trybu edycji
+    cancelInlineEdit(row, emp);
+  })
+  .catch(error => {
+    console.error('Błąd podczas edycji pracownika:', error);
+    alert('Wystąpił błąd podczas edycji pracownika');
+  })
+  .finally(() => {
+    saveBtn.textContent = originalText;
+    saveBtn.disabled = false;
+  });
+}
+
+function cancelInlineEdit(row, emp) {
+  // Przywróć oryginalne wartości
+  const nameInput = row.querySelector('.emp-name-input');
+  const codeInput = row.querySelector('.emp-code-input');
+  const emailInput = row.querySelector('.emp-email-input');
+  
+  nameInput.value = emp.name;
+  codeInput.value = emp.code || '';
+  emailInput.value = emp.email || '';
+  
+  // Ukryj inputy, pokaż wyświetlane wartości
+  nameInput.style.display = 'none';
+  codeInput.style.display = 'none';
+  emailInput.style.display = 'none';
+  
+  row.querySelector('.emp-name-display').style.display = 'inline';
+  row.querySelector('.emp-code-display').style.display = 'inline';
+  row.querySelector('.emp-email-display').style.display = emp.email ? 'block' : 'none';
+  
+  // Ukryj zapisz/anuluj, pokaż edytuj
+  row.querySelector('.btn-edit').style.display = 'inline-block';
+  row.querySelector('.btn-save').style.display = 'none';
+  row.querySelector('.btn-cancel').style.display = 'none';
+}
+
+// Funkcje dla skrzynki
+function loadSwap() {
+  // Sprawdź czy mamy świeże dane w cache
+  const now = Date.now();
+  if (window.swapCache && (now - window.swapCacheTime) < 30000) {
+    console.log('📦 Używam cache skrzynki');
+    renderSwap(window.swapCache);
+    return;
+  }
+  
+  // Jeśli nie ma API endpointu, użyj przykładowych danych
+  console.log('🌐 Ładuję przykładowe dane skrzynki');
+  renderSwap([]); // Pusty array spowoduje załadowanie przykładowych danych
+}
+
+function renderSwap(requests) {
+  const swapList = document.getElementById('swap-list');
+  if (!swapList) return;
+  
+  if (!requests || requests.length === 0) {
+    swapList.innerHTML = '<div class="no-requests">Brak próśb w skrzynce</div>';
+    updateSwapStats([]);
+    return;
+  }
+  
+  // Sortuj według daty (najnowsze na górze)
+  const sortedRequests = requests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  swapList.innerHTML = sortedRequests.map(req => `
+    <div class="emp-row">
+      <div>
+        <div class="emp-name-code-line">
+          <div class="emp-name-edit">
+            <span class="emp-name-display">${req.type === 'swap' ? 'Zamiana' : req.type === 'unavailability' ? 'Niedyspozycja' : 'Inne'}</span>
+          </div>
+          <div class="emp-code-edit">
+            <span class="emp-code-display">(${new Date(req.created_at).toLocaleDateString()})</span>
+          </div>
+        </div>
+        <div class="emp-email-edit">
+          <small class="emp-email-display">${req.message || 'Brak wiadomości'}</small>
+        </div>
+      </div>
+      <div class="emp-actions">
+        <button data-id="${req.id}" class="btn btn-edit">Edytuj</button>
+        <button data-id="${req.id}" class="btn btn-save" style="display: none;">Zapisz</button>
+        <button data-id="${req.id}" class="btn btn-cancel" style="display: none;">Anuluj</button>
+        <button data-id="${req.id}" class="btn">Usuń</button>
+      </div>
+    </div>
+  `).join('');
+  
+  // Dodaj event listenery
+  swapList.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const requestId = e.target.dataset.id;
+      const request = requests.find(r => r.id == requestId);
+      if (request) startSwapEdit(e.target.closest('.emp-row'), request);
+    });
+  });
+  
+  // Event listenery dla przycisków Zapisz i Anuluj
+  swapList.querySelectorAll('.btn-save').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const requestId = e.target.dataset.id;
+      const request = requests.find(r => r.id == requestId);
+      if (request) saveSwapEdit(e.target.closest('.emp-row'), request);
+    });
+  });
+  
+  swapList.querySelectorAll('.btn-cancel').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const requestId = e.target.dataset.id;
+      const request = requests.find(r => r.id == requestId);
+      if (request) cancelSwapEdit(e.target.closest('.emp-row'), request);
+    });
+  });
+  
+  // Event listenery dla przycisków Usuń
+  swapList.querySelectorAll('.btn:not(.btn-edit):not(.btn-save):not(.btn-cancel)').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const requestId = e.target.dataset.id;
+      deleteSwapRequest(requestId);
+    });
+  });
+  
+  updateSwapStats(requests);
+}
+
+function updateSwapStats(requests) {
+  const totalCount = document.getElementById('swap-total-count');
+  if (totalCount) totalCount.textContent = requests.length;
+}
+
+function addSwapRequest() {
+  const type = document.getElementById('swap-type').value;
+  const date = document.getElementById('swap-date').value;
+  const message = document.getElementById('swap-message').value;
+  
+  if (!type || !date) {
+    alert('Proszę wypełnić wszystkie wymagane pola');
+    return;
+  }
+  
+  const addBtn = document.getElementById('swap-add-btn');
+  const originalText = addBtn.textContent;
+  addBtn.textContent = 'Dodawanie...';
+  addBtn.disabled = true;
+  
+  fetch('/api/swap-requests', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': window.csrfToken
+    },
+    body: JSON.stringify({ type, date, message }),
+    credentials: 'include'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert('Błąd podczas dodawania prośby: ' + data.error);
+    } else {
+      // Wyczyść formularz
+      document.getElementById('swap-type').value = 'swap';
+      document.getElementById('swap-date').value = '';
+      document.getElementById('swap-message').value = '';
+      
+      // Odśwież listę
+      loadSwap();
+    }
+  })
+  .catch(error => {
+    console.error('Błąd podczas dodawania prośby:', error);
+    alert('Błąd podczas dodawania prośby');
+  })
+  .finally(() => {
+    addBtn.textContent = originalText;
+    addBtn.disabled = false;
+  });
+}
+
+function deleteSwapRequest(requestId) {
+  fetch(`/api/swap-requests/${requestId}`, {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': window.csrfToken },
+    credentials: 'include'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      console.error('Błąd podczas usuwania:', data.error);
+    } else {
+      // Zaktualizuj cache
+      window.swapCache = window.swapCache.filter(r => r.id != requestId);
+      window.swapCacheTime = Date.now();
+      loadSwap();
+    }
+  })
+  .catch(error => {
+    console.error('Błąd podczas usuwania:', error);
+  });
+}
+
+function startSwapEdit(row, request) {
+  // Ukryj przycisk edycji, pokaż zapisz/anuluj
+  row.querySelector('.btn-edit').style.display = 'none';
+  row.querySelector('.btn-save').style.display = 'inline-block';
+  row.querySelector('.btn-cancel').style.display = 'inline-block';
+  
+  // Ukryj wyświetlane wartości, pokaż inputy
+  row.querySelector('.emp-name-display').style.display = 'none';
+  row.querySelector('.emp-code-display').style.display = 'none';
+  row.querySelector('.emp-email-display').style.display = 'none';
+  
+  // Dodaj inputy do edycji
+  const nameEdit = row.querySelector('.emp-name-edit');
+  const codeEdit = row.querySelector('.emp-code-edit');
+  const emailEdit = row.querySelector('.emp-email-edit');
+  
+  // Usuń istniejące inputy
+  const existingInputs = row.querySelectorAll('.emp-name-input, .emp-code-input, .emp-email-input');
+  existingInputs.forEach(input => input.remove());
+  
+  // Dodaj nowe inputy
+  nameEdit.innerHTML = `
+    <input type="text" class="emp-name-input" value="${request.type === 'swap' ? 'Zamiana' : request.type === 'unavailability' ? 'Niedyspozycja' : 'Inne'}" data-id="${request.id}" data-field="type" style="display: inline-block;">
+    <span class="emp-name-display" style="display: none;">${request.type === 'swap' ? 'Zamiana' : request.type === 'unavailability' ? 'Niedyspozycja' : 'Inne'}</span>
+  `;
+  
+  codeEdit.innerHTML = `
+    <input type="text" class="emp-code-input" value="${new Date(request.created_at).toLocaleDateString()}" data-id="${request.id}" data-field="date" style="display: inline-block;">
+    <span class="emp-code-display" style="display: none;">(${new Date(request.created_at).toLocaleDateString()})</span>
+  `;
+  
+  emailEdit.innerHTML = `
+    <textarea class="emp-email-input" data-id="${request.id}" data-field="message" style="display: inline-block;">${request.message || ''}</textarea>
+    <small class="emp-email-display" style="display: none;">${request.message || 'Brak wiadomości'}</small>
+  `;
+  
+  // Fokus na pierwszy input
+  row.querySelector('.emp-name-input').focus();
+}
+
+function saveSwapEdit(row, request) {
+  const newType = row.querySelector('.emp-name-input').value;
+  const newDate = row.querySelector('.emp-code-input').value;
+  const newMessage = row.querySelector('.emp-email-input').value;
+  
+  if (!newType || !newDate) {
+    alert('Proszę wypełnić wszystkie wymagane pola');
+    return;
+  }
+  
+  const saveBtn = row.querySelector('.btn-save');
+  const originalText = saveBtn.textContent;
+  saveBtn.textContent = 'Zapisywanie...';
+  saveBtn.disabled = true;
+  
+  // Symulacja zapisu (w rzeczywistości tutaj byłby API call)
+  setTimeout(() => {
+    // Aktualizuj obiekt request
+    request.type = newType.toLowerCase();
+    request.message = newMessage;
+    request.created_at = new Date(newDate).toISOString();
+    
+    // Aktualizuj cache
+    const index = window.swapCache.findIndex(r => r.id === request.id);
+    if (index !== -1) {
+      window.swapCache[index] = request;
+    }
+    
+    // Zakończ edycję
+    cancelSwapEdit(row, request);
+    
+    saveBtn.textContent = originalText;
+    saveBtn.disabled = false;
+  }, 500);
+}
+
+function cancelSwapEdit(row, request) {
+  // Przywróć oryginalne wartości
+  const nameInput = row.querySelector('.emp-name-input');
+  const codeInput = row.querySelector('.emp-code-input');
+  const emailInput = row.querySelector('.emp-email-input');
+  
+  if (nameInput) nameInput.value = request.type === 'swap' ? 'Zamiana' : request.type === 'unavailability' ? 'Niedyspozycja' : 'Inne';
+  if (codeInput) codeInput.value = new Date(request.created_at).toLocaleDateString();
+  if (emailInput) emailInput.value = request.message || '';
+  
+  // Ukryj inputy, pokaż wyświetlane wartości
+  if (nameInput) nameInput.style.display = 'none';
+  if (codeInput) codeInput.style.display = 'none';
+  if (emailInput) emailInput.style.display = 'none';
+  
+  row.querySelector('.emp-name-display').style.display = 'inline';
+  row.querySelector('.emp-code-display').style.display = 'inline';
+  row.querySelector('.emp-email-display').style.display = request.message ? 'block' : 'none';
+  
+  // Ukryj zapisz/anuluj, pokaż edytuj
+  row.querySelector('.btn-edit').style.display = 'inline-block';
+  row.querySelector('.btn-save').style.display = 'none';
+  row.querySelector('.btn-cancel').style.display = 'none';
+}
 
 function showEditEmployeeDialog(emp) {
   // Utwórz dialog edycji
@@ -3841,15 +4396,32 @@ function showEditEmployeeDialog(emp) {
     const newCode = codeInput.value.trim();
     const newEmail = emailInput.value.trim();
     
+    // Walidacja
     if (!newName) {
-      alert('Imię jest wymagane');
+      showNotification('Imię jest wymagane', 'error');
+      nameInput.focus();
       return;
     }
     
+    if (newEmail && !isValidEmail(newEmail)) {
+      showNotification('Podaj prawidłowy adres email', 'error');
+      emailInput.focus();
+      return;
+    }
+    
+    // Pokaż loading state
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Zapisywanie...';
+    saveBtn.disabled = true;
+    
     fetch(`/api/employees/${emp.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName, code: newCode, email: newEmail })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRFToken': window.csrfToken
+      },
+      body: JSON.stringify({ name: newName, code: newCode, email: newEmail }),
+      credentials: 'include'
     })
     .then(async r => {
       const data = await r.json().catch(() => ({}));
@@ -3861,10 +4433,15 @@ function showEditEmployeeDialog(emp) {
     .then(() => {
       closeDialog();
       loadEmployees(); // Odśwież listę
-      alert('Pracownik został zaktualizowany!');
+      showNotification('Pracownik został zaktualizowany!', 'success');
     })
     .catch((err) => {
-      alert('Błąd: ' + err.message);
+      showNotification('Błąd: ' + err.message, 'error');
+    })
+    .finally(() => {
+      // Przywróć przycisk
+      saveBtn.textContent = originalText;
+      saveBtn.disabled = false;
     });
   });
   
@@ -3881,6 +4458,30 @@ function showEditEmployeeDialog(emp) {
 }
 
 // ===== SYSTEM POWIADOMIEŃ PWA =====
+
+// Globalna zmienna dla interwału powiadomień
+let notificationInterval = null;
+
+// Funkcja do zarządzania sprawdzaniem powiadomień
+function startNotificationChecking() {
+  // Wyczyść istniejący interwał jeśli istnieje
+  if (notificationInterval) {
+    clearInterval(notificationInterval);
+  }
+  
+  // Uruchom nowy interwał
+  notificationInterval = setInterval(checkForNewRequests, 30000);
+  console.log('🔔 Sprawdzanie powiadomień uruchomione co 30 sekund');
+}
+
+// Funkcja do zatrzymania sprawdzania powiadomień
+function stopNotificationChecking() {
+  if (notificationInterval) {
+    clearInterval(notificationInterval);
+    notificationInterval = null;
+    console.log('🔔 Sprawdzanie powiadomień zatrzymane');
+  }
+}
 
 // Inicjalizacja powiadomień
 async function initializeNotifications() {
@@ -3919,7 +4520,7 @@ async function initializeNotifications() {
     }
     
     // Sprawdź nowe prośby co 30 sekund
-    setInterval(checkForNewRequests, 30000);
+    startNotificationChecking();
     
   } catch (error) {
     console.error('Błąd rejestracji Service Worker:', error);
@@ -4205,6 +4806,102 @@ async function checkStatusChanges() {
   await checkForNewRequests();
 }
 
+// Funkcja do ładowania historii próśb
+async function loadRequestHistory() {
+  try {
+    console.log('📋 Ładuję historię próśb...');
+    
+    const response = await fetch('/api/requests/history', { 
+      credentials: 'include' 
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      alert('Błąd: ' + data.error);
+      return;
+    }
+    
+    // Wyświetl historię w modalu
+    showHistoryModal(data.items);
+    
+  } catch (error) {
+    console.error('Błąd podczas ładowania historii:', error);
+    alert('Wystąpił błąd podczas ładowania historii');
+  }
+}
+
+// Funkcja do wyświetlania modalu z historią
+function showHistoryModal(historyItems) {
+  // Utwórz modal historii
+  const modal = document.createElement('div');
+  modal.id = 'history-modal';
+  modal.className = 'emp-editor show';
+  modal.innerHTML = `
+    <div class="emp-container">
+      <div class="emp-header">
+        <h3>📋 Historia Próśb</h3>
+        <button type="button" id="history-close" class="emp-close" aria-label="Zamknij">✕</button>
+      </div>
+      <div class="emp-list-section">
+        <div class="emp-list" id="history-list"></div>
+      </div>
+    </div>
+  `;
+  
+  // Dodaj do body
+  document.body.appendChild(modal);
+  
+  // Wypełnij listę historią
+  const historyList = document.getElementById('history-list');
+  if (historyItems.length === 0) {
+    historyList.innerHTML = '<div class="no-requests">Brak historii próśb</div>';
+  } else {
+    historyList.innerHTML = historyItems.map(item => `
+      <div class="emp-row">
+        <div>
+          <div class="emp-name-code-line">
+            <div class="emp-name-display">
+              ${item.type === 'swap' ? '🔄 Zamiana' : '📅 Niedyspozycja'}
+            </div>
+            <div class="emp-code-display">
+              (${new Date(item.archived_at).toLocaleDateString()})
+            </div>
+          </div>
+          <div class="emp-email-edit">
+            <small class="emp-email-display">
+              ${item.type === 'swap' 
+                ? `${item.from_employee} → ${item.to_employee} (${item.from_date} ⇄ ${item.to_date})`
+                : `${item.from_employee} - ${item.month_year}`
+              }
+            </small>
+          </div>
+          <div class="status-display ${getStatusClass(item.final_status)}">
+            ${getStatusText(item.final_status)}
+          </div>
+          ${item.comment_requester ? `<div class="comment-display">💬 ${escapeHtml(item.comment_requester)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Event listeners
+  const closeBtn = document.getElementById('history-close');
+  closeBtn.addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
 // Funkcja eksportu do Excel (tylko dla adminów)
 function exportToExcel(event) {
   console.log('🚀 Rozpoczynam eksport do Excel...');
@@ -4227,7 +4924,7 @@ function exportToExcel(event) {
   }
   
   const originalText = button.textContent;
-  button.textContent = '⏳ EKSPORTUJĘ...';
+  button.innerHTML = '⏳ EKSPORTUJĘ...';
   button.disabled = true;
   
   // Pobierz aktualny miesiąc i rok z URL lub użyj bieżący miesiąc
@@ -4316,8 +5013,18 @@ function exportToExcel(event) {
       alert(`❌ Wystąpił błąd podczas eksportu do Excel: ${error.message}\n\nSprawdź konsolę przeglądarki (F12) dla szczegółów.`);
     })
     .finally(() => {
-      // Przywróć przycisk
-      button.textContent = originalText;
+      // Przywróć przycisk z oryginalnym HTML
+      button.innerHTML = `
+        <span>
+          <div class="spotify-function-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              <path d="M8,12H16V14H8V12M8,16H13V18H8V16Z"/>
+            </svg>
+          </div>
+          <div class="spotify-function-text">EKSPORT</div>
+        </span>
+      `;
       button.disabled = false;
     });
 }
@@ -4587,17 +5294,6 @@ function toggleEdit() {
     if (globalEditMode) {
       console.log('🔧 [EDIT] Włączam tryb edycji - globalEditMode:', globalEditMode);
       
-      // Gdy włączamy tryb edycji, dodaj event listener dla przycisku draft (tylko raz)
-      const toggleDraftBtn = document.getElementById('toggle-draft-mode');
-      if (toggleDraftBtn && !toggleDraftBtn.hasAttribute('data-listener-added')) {
-        console.log('🔧 [EDIT] Dodaję event listener do przycisku draft w trybie edycji');
-        toggleDraftBtn.addEventListener('click', function(e) {
-          console.log('🔧 [EDIT] Kliknięto przycisk trybu roboczego w trybie edycji!', e);
-          toggleDraftMode();
-        });
-        toggleDraftBtn.setAttribute('data-listener-added', 'true');
-      }
-      
       // Zaktualizuj interfejs trybu roboczego
       updateDraftUI();
     }
@@ -4627,9 +5323,21 @@ let draftChanges = new Map();
 
 // Prosta funkcja włączania/wyłączania trybu roboczego
 async function toggleDraftMode() {
+  console.log('🔄 [DRAFT] Toggle draft mode - current state:', isDraftMode);
+  
+  // Sprawdź czy użytkownik jest adminem
+  const isAdmin = document.body.classList.contains('admin-user');
+  if (!isAdmin) {
+    console.log('🔧 [DRAFT] Użytkownik nie jest adminem - tryb roboczy niedostępny');
+    showNotification('Tryb roboczy dostępny tylko dla administratorów', 'warning');
+    return;
+  }
+  
   if (isDraftMode) {
+    console.log('🔄 [DRAFT] Wyłączam tryb roboczy...');
     await exitDraftMode();
   } else {
+    console.log('🔄 [DRAFT] Włączam tryb roboczy...');
     await enterDraftMode();
   }
 }
@@ -4640,27 +5348,50 @@ async function enterDraftMode() {
   isDraftMode = true;
   updateDraftUI();
   
-  // NAJPIERW: Załaduj oficjalny grafik i ustaw data-official-value
-  console.log('🔄 [DRAFT] Ładuję oficjalny grafik jako punkt odniesienia...');
-  await loadOfficialScheduleForDraft();
-  
-  // TERAZ: Załaduj zapisane wersje robocze
-  loadDraftData();
+  try {
+    // NAJPIERW: Załaduj oficjalny grafik i ustaw data-official-value
+    console.log('🔄 [DRAFT] Ładuję oficjalny grafik jako punkt odniesienia...');
+    await loadOfficialScheduleForDraft();
+    
+    // TERAZ: Załaduj zapisane wersje robocze
+    await loadDraftData();
+    
+    // Upewnij się że UI jest poprawnie zaktualizowany po wszystkich operacjach
+    updateDraftUI();
+    console.log('🔧 [DRAFT] UI zaktualizowane - isDraftMode:', isDraftMode);
+  } catch (error) {
+    console.error('Błąd podczas włączania trybu roboczego:', error);
+    showNotification('Błąd podczas włączania trybu roboczego', 'error');
+    
+    // Wyłącz tryb roboczy w przypadku błędu
+    isDraftMode = false;
+    updateDraftUI();
+  }
 }
 
 // Wyłącz tryb roboczy
 async function exitDraftMode() {
   console.log('🔄 [DRAFT] Wyłączam tryb roboczy...');
-  isDraftMode = false;
-  draftChanges.clear();
   
-  // Usuń zapisane zmiany draft z serwera (bez potwierdzenia)
-  await discardDraftChanges(false);
-  
-  // Przywróć oficjalny grafik
-  await restoreOfficialSchedule();
-  
-  updateDraftUI();
+  try {
+    // Usuń zapisane zmiany draft z serwera (bez potwierdzenia)
+    await discardDraftChanges(false);
+    
+    // Przywróć oficjalny grafik
+    await restoreOfficialSchedule();
+    
+    console.log('🔄 [DRAFT] Tryb roboczy wyłączony pomyślnie');
+  } catch (error) {
+    console.error('Błąd podczas wyłączania trybu roboczego:', error);
+    showNotification('Błąd podczas wyłączania trybu roboczego', 'error');
+  } finally {
+    // Zawsze ustaw tryb na normalny i wyczyść zmiany (nawet w przypadku błędu)
+    isDraftMode = false;
+    draftChanges.clear();
+    
+    // Zaktualizuj UI na końcu
+    updateDraftUI();
+  }
 }
 
 // Załaduj oficjalny grafik dla trybu draft (ustawia data-official-value)
@@ -4708,7 +5439,7 @@ async function loadOfficialScheduleForDraft() {
       
       if (!dataFound) {
         console.error('Nie znaleziono danych shiftsData w HTML');
-        return;
+        throw new Error('Nie znaleziono danych shiftsData w HTML');
       }
       
       // Ustaw data-official-value na oficjalne wartości (bez zmiany wyświetlania)
@@ -4739,10 +5470,9 @@ async function loadOfficialScheduleForDraft() {
 function restoreOfficialSchedule() {
   console.log('🔄 [DRAFT] Przywracam oficjalny grafik...');
   
-  // Wyczyść wszystkie sloty
+  // Wyczyść wszystkie sloty (NIE czyść data-official-value - to jest potrzebne do porównywania)
   document.querySelectorAll('.slot[data-date][data-employee]').forEach(slot => {
     slot.setAttribute('data-value', '');
-    slot.setAttribute('data-official-value', '');
     slot.textContent = '';
     slot.classList.remove('draft-slot');
   });
@@ -4789,7 +5519,7 @@ function restoreOfficialSchedule() {
       if (!dataFound) {
         console.error('Nie znaleziono danych shiftsData w HTML');
         showNotification('Błąd ładowania oficjalnego grafiku', 'error');
-        return;
+        throw new Error('Nie znaleziono danych shiftsData w HTML');
       }
       
       // Zastosuj oficjalny grafik
@@ -4827,57 +5557,219 @@ function restoreOfficialSchedule() {
     })
     .catch(error => {
       console.error('Błąd ładowania oficjalnego grafiku:', error);
+      throw error; // Rzuć błąd dalej dla obsługi w exitDraftMode
     });
 }
 
 // Aktualizuj interfejs trybu roboczego
 function updateDraftUI() {
   const toggleBtn = document.getElementById('toggle-draft-mode');
-  const draftModeControls = document.querySelector('.draft-mode-controls');
   const exitDraftBtn = document.getElementById('exit-draft-mode');
-  const saveBtn = document.getElementById('save-draft-version');
+  const saveDraftBtn = document.getElementById('save-draft-version');
   const normalSaveBtn = document.getElementById('save-shifts');
   const cancelBtn = document.getElementById('cancel-shifts');
   const publishBtn = document.getElementById('publish-draft-shifts');
   
-  if (toggleBtn) {
-    if (isDraftMode) {
-      toggleBtn.classList.add('hidden');
-    } else {
-      toggleBtn.classList.remove('hidden');
+  // Znajdź komórki układu 2x2
+  const rightTopCell = document.querySelector('.cell.right-top');
+  const leftBottomCell = document.querySelector('.cell.left-bottom');
+  const rightBottomCell = document.querySelector('.cell.right-bottom');
+  
+  console.log('🔍 [DRAFT] Komórki UI:', {
+    rightTopCell: !!rightTopCell,
+    leftBottomCell: !!leftBottomCell,
+    rightBottomCell: !!rightBottomCell,
+    toggleBtn: !!toggleBtn,
+    exitDraftBtn: !!exitDraftBtn,
+    normalSaveBtn: !!normalSaveBtn,
+    cancelBtn: !!cancelBtn
+  });
+  
+  if (isDraftMode) {
+    // TRYB ROBOCZY - zmień przyciski w układzie 2x2
+    
+    // Prawy górny: Wyłącz tryb roboczy
+    if (rightTopCell) {
+      console.log('🧹 [DRAFT] Czyśzczę rightTopCell przed włączeniem trybu roboczego');
+      
+      // Wyczyść CAŁKOWICIE komórkę
+      rightTopCell.innerHTML = '';
+      console.log('🧹 [DRAFT] Wyczyściłem rightTopCell całkowicie');
+      
+      // Dodaj przycisk "Wyłącz tryb roboczy"
+      if (exitDraftBtn) {
+        // Usuń przycisk z kontenera hidden
+        exitDraftBtn.remove();
+        
+        // Styl przycisku dla widoczności
+        exitDraftBtn.style.display = 'block';
+        exitDraftBtn.style.visibility = 'visible';
+        exitDraftBtn.style.position = 'relative';
+        exitDraftBtn.classList.remove('hidden');
+        
+        // Dodaj do komórki
+        rightTopCell.appendChild(exitDraftBtn);
+        console.log('🔧 [DRAFT] Przeniosłem exit-draft-btn do rightTopCell');
+      }
+    }
+    
+    // Lewy dolny: Zapisz wersję roboczą
+    if (leftBottomCell) {
+      console.log('🧹 [DRAFT] Czyśzczę leftBottomCell przed włączeniem trybu roboczego');
+      
+      // Wyczyść CAŁKOWICIE komórkę
+      leftBottomCell.innerHTML = '';
+      console.log('🧹 [DRAFT] Wyczyściłem leftBottomCell całkowicie');
+      
+      // Dodaj przycisk "Zapisz wersję roboczą"
+      if (saveDraftBtn) {
+        // Usuń przycisk z kontenera hidden
+        saveDraftBtn.remove();
+        
+        // Styl przycisku dla widoczności
+        saveDraftBtn.style.display = 'block';
+        saveDraftBtn.style.visibility = 'visible';
+        saveDraftBtn.style.position = 'relative';
+        saveDraftBtn.classList.remove('hidden');
+        
+        // Dodaj do komórki
+        leftBottomCell.appendChild(saveDraftBtn);
+        console.log('🔧 [DRAFT] Przeniosłem save-draft-btn do leftBottomCell');
+      }
+    }
+    
+    // Prawy dolny: Prześlij zmiany
+    if (rightBottomCell) {
+      console.log('🧹 [DRAFT] Czyśzczę rightBottomCell przed włączeniem trybu roboczego');
+      
+      // Wyczyść CAŁKOWICIE komórkę
+      rightBottomCell.innerHTML = '';
+      console.log('🧹 [DRAFT] Wyczyściłem rightBottomCell całkowicie');
+      
+      // Dodaj przycisk "Prześlij zmiany"
+      if (publishBtn) {
+        // Usuń przycisk z kontenera hidden
+        publishBtn.remove();
+        
+        // Styl przycisku dla widoczności
+        publishBtn.style.display = 'block';
+        publishBtn.style.visibility = 'visible';
+        publishBtn.style.position = 'relative';
+        publishBtn.classList.remove('hidden');
+        
+        // Dodaj do komórki
+        rightBottomCell.appendChild(publishBtn);
+        console.log('🔧 [DRAFT] Przeniosłem publish-draft-btn do rightBottomCell');
+      }
+    }
+    
+  } else {
+    // TRYB NORMALNY - przywróć oryginalne przyciski
+    console.log('🔄 [DRAFT] Przywracam oryginalne przyciski...');
+    
+    // Prawy górny: Włącz tryb roboczy
+    if (rightTopCell) {
+      console.log('🧹 [DRAFT] Przywracam normalne przyciski dla rightTopCell');
+      
+      // Usuń przycisk draft z komórki
+      const exitDraftBtn = rightTopCell.querySelector('#exit-draft-mode');
+      if (exitDraftBtn) {
+        exitDraftBtn.remove();
+        // Znajdź kontener ukryty i dodaj z powrotem
+        const draftControls = document.querySelector('.draft-mode-controls');
+        if (draftControls) {
+          draftControls.appendChild(exitDraftBtn);
+          exitDraftBtn.style.display = '';
+          console.log('🔙 [DRAFT] Przywróciłem exit-draft-btn do kontenera ukrytego');
+        }
+      }
+      
+      // Wyczyść komórkę i przywróć oryginalny przycisk
+      rightTopCell.innerHTML = `
+        <button id="toggle-draft-mode" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+          </svg>
+          tryb<br>roboczy
+        </button>
+      `;
+      console.log('🔧 [DRAFT] Przywróciłem toggleBtn');
+    }
+    
+    // Lewy dolny: Zapisz
+    if (leftBottomCell) {
+      console.log('🧹 [DRAFT] Przywracam normalne przyciski dla leftBottomCell');
+      
+      // Usuń przycisk draft z komórki
+      const saveDraftBtn = leftBottomCell.querySelector('#save-draft-version');
+      if (saveDraftBtn) {
+        saveDraftBtn.remove();
+        // Znajdź kontener ukryty i dodaj z powrotem
+        const draftControls = document.querySelector('.draft-mode-controls');
+        if (draftControls) {
+          draftControls.appendChild(saveDraftBtn);
+          saveDraftBtn.style.display = '';
+          console.log('🔙 [DRAFT] Przywróciłem save-draft-btn do kontenera ukrytego');
+        }
+      }
+      
+      // Wyczyść komórkę i przywróć oryginalny przycisk
+      leftBottomCell.innerHTML = `
+        <button id="save-shifts" class="btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+          </svg>
+          Zapisz
+        </button>
+      `;
+      console.log('🔧 [DRAFT] Przywróciłem saveBtn');
+      
+      // Ponownie przypisz event listener do nowego przycisku
+      const newSaveBtn = document.getElementById('save-shifts');
+      if (newSaveBtn && typeof save === 'function') {
+        newSaveBtn.addEventListener('click', save);
+        console.log('🔧 [DRAFT] Przypisałem event listener do nowego saveBtn');
+      }
+    }
+    
+    // Prawy dolny: Anuluj
+    if (rightBottomCell) {
+      console.log('🧹 [DRAFT] Przywracam normalne przyciski dla rightBottomCell');
+      
+      // Usuń przycisk draft z komórki
+      const publishBtn = rightBottomCell.querySelector('#publish-draft-shifts');
+      if (publishBtn) {
+        publishBtn.remove();
+        // Znajdź kontener ukryty i dodaj z powrotem
+        const draftControls = document.querySelector('.draft-mode-controls');
+        if (draftControls) {
+          draftControls.appendChild(publishBtn);
+          publishBtn.style.display = '';
+          console.log('🔙 [DRAFT] Przywróciłem publish-draft-btn do kontenera ukrytego');
+        }
+      }
+      
+      // Wyczyść komórkę i przywróć oryginalny przycisk
+      rightBottomCell.innerHTML = `
+        <button id="cancel-shifts" class="btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+          Anuluj
+        </button>
+      `;
+      console.log('🔧 [DRAFT] Przywróciłem cancelBtn');
+      
+      // Ponownie przypisz event listener do nowego przycisku
+      const newCancelBtn = document.getElementById('cancel-shifts');
+      if (newCancelBtn && typeof cancel === 'function') {
+        newCancelBtn.addEventListener('click', cancel);
+        console.log('🔧 [DRAFT] Przypisałem event listener do nowego cancelBtn');
+      }
     }
   }
   
-  if (draftModeControls) {
-    if (isDraftMode) {
-      draftModeControls.classList.remove('hidden');
-    } else {
-      draftModeControls.classList.add('hidden');
-    }
-  }
-  
-  // Ukryj/pokaż przyciski normalnego trybu edycji
-  if (normalSaveBtn) {
-    if (isDraftMode) {
-      normalSaveBtn.classList.add('hidden');
-    } else {
-      normalSaveBtn.classList.remove('hidden');
-    }
-  }
-  
-  if (cancelBtn) {
-    if (isDraftMode) {
-      cancelBtn.classList.add('hidden');
-    } else {
-      cancelBtn.classList.remove('hidden');
-    }
-  }
-  
-  // Przycisk publikacji będzie pokazywany/ukrywany przez checkDraftStatus
-  // Tutaj tylko ukryj jeśli nie jesteśmy w trybie draft
-  if (publishBtn && !isDraftMode) {
-    publishBtn.classList.add('hidden');
-  }
+  console.log('🔧 [DRAFT] UI zaktualizowane - isDraftMode:', isDraftMode);
   
   // Sprawdź czy istnieją zapisane wersje robocze
   checkDraftStatus();
@@ -5020,7 +5912,12 @@ function discardDraftChanges(showConfirmation = true) {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include'
   })
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.error) {
       if (showConfirmation) {
@@ -5039,34 +5936,37 @@ function discardDraftChanges(showConfirmation = true) {
   .catch(error => {
     console.error('Błąd odrzucania draft:', error);
     if (showConfirmation) {
-      showNotification('Błąd odrzucania wersji roboczej', 'error');
+      showNotification('Błąd odrzucania wersji roboczej: ' + error.message, 'error');
     }
   });
 }
 
 // Załaduj zapisane wersje robocze
-function loadDraftData() {
+async function loadDraftData() {
   console.log('📥 [DRAFT] Ładowanie zapisanych wersji roboczych...');
   
-  fetch('/api/draft/load', { credentials: 'include' })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        console.error('Błąd ładowania draft:', data.error);
-        return;
-      }
-      
-      if (data.changes && data.changes.length > 0) {
-        console.log('📥 [DRAFT] Znaleziono', data.changes.length, 'zapisanych zmian');
-        applyDraftChanges(data.changes);
-        showNotification(`Załadowano ${data.changes.length} zapisanych zmian`, 'info');
-      } else {
-        console.log('📥 [DRAFT] Brak zapisanych wersji roboczych');
-      }
-    })
-    .catch(error => {
-      console.error('Błąd ładowania draft:', error);
-    });
+  try {
+    const response = await fetch('/api/draft/load', { credentials: 'include' });
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error('Błąd ładowania draft:', data.error);
+      showNotification('Błąd ładowania wersji roboczej: ' + data.error, 'error');
+      return;
+    }
+    
+    if (data.changes && data.changes.length > 0) {
+      console.log('📥 [DRAFT] Znaleziono', data.changes.length, 'zapisanych zmian');
+      applyDraftChanges(data.changes);
+      showNotification(`Załadowano ${data.changes.length} zapisanych zmian`, 'info');
+    } else {
+      console.log('📥 [DRAFT] Brak zapisanych wersji roboczych');
+    }
+  } catch (error) {
+    console.error('Błąd ładowania draft:', error);
+    showNotification('Błąd ładowania wersji roboczej: ' + error.message, 'error');
+    throw error; // Rzuć błąd dalej dla obsługi w enterDraftMode
+  }
 }
 
 // Zastosuj zmiany draft do interfejsu
@@ -5086,7 +5986,8 @@ function applyDraftChanges(changes) {
     'DNIOWKA': 'D',
     'NOCKA': 'N',
     'POPOLUDNIOWKA': 'P',
-    'P ': 'P'  // Obsługa międzyzmiany z spacją
+    'P ': 'P',  // Obsługa międzyzmiany z spacją
+    'P': 'P'    // Obsługa międzyzmiany bez spacji
   };
   
   // TERAZ: Zastosuj tylko zmiany z wersji roboczej
@@ -5251,11 +6152,15 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Uniwersalny event listener dla przycisków draft mode
   document.addEventListener('click', function(e) {
+    console.log('🔄 [DRAFT] Kliknięto element:', e.target.id, e.target);
     if (e.target && e.target.id === 'toggle-draft-mode') {
       console.log('🔄 [DRAFT] Kliknięto przycisk toggle-draft-mode');
       toggleDraftMode();
     } else if (e.target && e.target.id === 'exit-draft-mode') {
       console.log('🔄 [DRAFT] Kliknięto przycisk exit-draft-mode');
+      exitDraftMode();
+    } else if (e.target && e.target.closest && e.target.closest('#exit-draft-mode')) {
+      console.log('🔄 [DRAFT] Kliknięto element wewnątrz exit-draft-mode');
       exitDraftMode();
     }
   });

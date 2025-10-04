@@ -248,6 +248,13 @@ def api_unavailability_respond():
         
         db.commit()
         
+        # Automatycznie archiwizuj zakończone prośby
+        try:
+            from ..database import archive_completed_requests
+            archive_completed_requests()
+        except Exception as e:
+            logger.warning(f"Błąd podczas automatycznej archiwizacji: {e}")
+        
         logger.info(f"Admin {session.get('user_email')} {status} zgłoszenie niedyspozycji {request_id}")
         return jsonify(status="ok", message=f"Zgłoszenie zostało {status}")
         
