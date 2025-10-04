@@ -15,138 +15,169 @@
   <meta name="apple-mobile-web-app-title" content="Grafik SP4600">
 </head>
 <body{% if is_admin %} class="admin-user"{% endif %}>
-  <header class="site-header">
-    <div class="wrap header-bar">
-      <div class="header-left">
-        <button id="hamburger-menu" class="hamburger-menu-btn hamburger-trigger" aria-label="Menu funkcji" title="Menu funkcji">
-          <div class="hamburger-icon">
-            <span></span>
-          </div>
-        </button>
-        <svg class="logo" viewBox="0 0 1552 1114" alt="Logo firmy" title="Grafik Stacji Paliw 4600">
-          <path class="logo-path" d="m559.7 0.8c-138.4 0-257.2 101.9-276.5 240h596.3c52.2 0 103.1 20.9 139.8 57.5l196.2 196.1c83.4 83.5 236.8 94.9 336-4.1l-340.2-340.8-19.8-21.1c-83.3-82-194.9-128.3-313.7-128.3"/>
-          <path class="logo-path" d="m239.9 280.8c-131.2 0-239.9 108.7-239.9 241.9 0 50.9 15.7 91.8 42.7 135.4-10.3-70.5 45.6-135.4 117.5-135.4h112.9c42.5 0 83.3 16.8 113.4 46.9l322.1 320.9 223.1 223.1c93.1-92.9 93.1-247.2 0-340.1l-223.1-223.4-148.2-148c-76.2-76.1-178.3-120-285.5-120"/>
-          <path class="logo-path" fill-rule="evenodd" d="m808.3 280.8c10.1 18.7 15.5 39.8 15.5 59.5 0 64.7-52.3 117-115.8 117-63.8 0-115.9-52.3-115.9-117 0-19.7 5.4-40.8 16.8-59.5"/>
-        </svg>
-      </div>
-      <!-- Panel nawigacji dnia - na środku headera -->
-      <div class="header-center">
-        <button id="shift-prev-day" class="nav-btn" aria-label="Poprzedni dzień">&#x25C0;</button>
-        <div class="shift-date-info">
-          <h2 id="shift-date-label">DZISIAJ</h2>
-          <span id="shift-date-display">{{ today_date }}</span>
-        </div>
-        <button id="shift-next-day" class="nav-btn" aria-label="Następny dzień">&#x25B6;</button>
-      </div>
-      
-      <div class="header-right">
-        
-        <a draggable="false" class="spotify-download-btn" href="/download" onclick="installPWA(); return false;">
-          <span aria-hidden="true" class="spotify-btn-icon">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4.995 8.745a.75.75 0 0 1 1.06 0L7.25 9.939V4a.75.75 0 0 1 1.5 0v5.94l1.195-1.195a.75.75 0 1 1 1.06 1.06L8 12.811l-.528-.528-.005-.005-2.472-2.473a.75.75 0 0 1 0-1.06"></path>
-              <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13"></path>
-            </svg>
-          </span>
-          <span class="spotify-btn-text">Pobierz aplikację</span>
-        </a>
-        <button id="theme-toggle" class="spotify-btn" aria-label="Przełącz motyw" title="Przełącz między trybem jasnym a ciemnym">
-          <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+  <!-- Kontener dla headera i panelu -->
+  <div class="header-container">
+    <header class="site-header">
+      <div class="wrap header-bar">
+        <div class="header-left">
+          <button id="hamburger-menu" class="hamburger-menu-btn hamburger-trigger" aria-label="Menu funkcji" title="Menu funkcji">
+            <div class="hamburger-icon">
+              <span></span>
+            </div>
+          </button>
+          <svg class="logo" viewBox="0 0 1552 1114" alt="Logo firmy" title="Grafik Stacji Paliw 4600">
+            <path class="logo-path" d="m559.7 0.8c-138.4 0-257.2 101.9-276.5 240h596.3c52.2 0 103.1 20.9 139.8 57.5l196.2 196.1c83.4 83.5 236.8 94.9 336-4.1l-340.2-340.8-19.8-21.1c-83.3-82-194.9-128.3-313.7-128.3"/>
+            <path class="logo-path" d="m239.9 280.8c-131.2 0-239.9 108.7-239.9 241.9 0 50.9 15.7 91.8 42.7 135.4-10.3-70.5 45.6-135.4 117.5-135.4h112.9c42.5 0 83.3 16.8 113.4 46.9l322.1 320.9 223.1 223.1c93.1-92.9 93.1-247.2 0-340.1l-223.1-223.4-148.2-148c-76.2-76.1-178.3-120-285.5-120"/>
+            <path class="logo-path" fill-rule="evenodd" d="m808.3 280.8c10.1 18.7 15.5 39.8 15.5 59.5 0 64.7-52.3 117-115.8 117-63.8 0-115.9-52.3-115.9-117 0-19.7 5.4-40.8 16.8-59.5"/>
           </svg>
-        </button>
+        </div>
+        <!-- Panel nawigacji dnia - na środku headera -->
+        <div class="header-center">
+          <button id="shift-prev-day" class="nav-btn" aria-label="Poprzedni dzień">&#x25C0;</button>
+          <div class="shift-date-info">
+            <h2 id="shift-date-label">DZISIAJ</h2>
+            <span id="shift-date-display">{{ today_date }}</span>
+          </div>
+          <button id="shift-next-day" class="nav-btn" aria-label="Następny dzień">&#x25B6;</button>
+        </div>
+        
+        <div class="header-right">
+          
+          <a draggable="false" class="spotify-download-btn" href="/download" onclick="installPWA(); return false;">
+            <span aria-hidden="true" class="spotify-btn-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.995 8.745a.75.75 0 0 1 1.06 0L7.25 9.939V4a.75.75 0 0 1 1.5 0v5.94l1.195-1.195a.75.75 0 1 1 1.06 1.06L8 12.811l-.528-.528-.005-.005-2.472-2.473a.75.75 0 0 1 0-1.06"></path>
+                <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13"></path>
+              </svg>
+            </span>
+            <span class="spotify-btn-text">Pobierz aplikację</span>
+          </a>
+          <button id="theme-toggle" class="spotify-btn" aria-label="Przełącz motyw" title="Przełącz między trybem jasnym a ciemnym">
+            <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Hamburger Menu z góry -->
-  <div id="hamburger-menu-panel" class="hamburger-menu-panel hidden">
-    <div class="hamburger-menu-content">
-      <div class="hamburger-menu-header">
-        <h3>Funkcje</h3>
-        <button id="hamburger-close" class="hamburger-close" aria-label="Zamknij menu">✕</button>
-      </div>
-      <div class="hamburger-menu-items">
-        {% if is_admin %}
-        <div class="menu-section">
-          <h4>Administracja</h4>
-          <div class="menu-row">
-            <button id="menu-btn-swaps-admin" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-              </svg>
-              <span>Skrzynka</span>
-            </button>
-            <button id="menu-btn-employees" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01.99L14 10.5 12.01 8.99A2.5 2.5 0 0 0 10 8H8.46c-.8 0-1.54.37-2.01.99L4 10.5V22h2v-6h2.5l2.5 2.5L11.5 16H14v6h2z"/>
-              </svg>
-              <span>Pracownicy</span>
-            </button>
+    <!-- Spotify-style Function Panel -->
+    <div id="hamburger-menu-panel" class="spotify-panel hidden">
+    <div class="spotify-panel-content">
+      <!-- Header z tytułem, filtrami, przyciskami funkcji i przyciskiem zamknięcia -->
+      <header class="spotify-panel-header">
+        <div class="spotify-panel-title-section">
+          <div class="spotify-title-with-icon">
+            <svg class="spotify-functions-icon" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <h1 class="spotify-panel-title">Funkcje</h1>
           </div>
-        </div>
-        <div class="menu-section">
-          <h4>Grafik</h4>
-          <div class="menu-row">
-            <button id="menu-btn-edit" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-              </svg>
-              <span>Ręczne wprowadzanie zmian</span>
+          
+          
+          <!-- Przyciski funkcji przeniesione do headera -->
+          <div class="spotify-function-buttons">
+            {% if is_admin %}
+            <!-- Przyciski dla admina -->
+            <button id="menu-btn-swaps-admin" class="spotify-function-card" title="Skrzynka">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">SKRZYNKA</div>
+              </span>
             </button>
-            <button id="menu-btn-export" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-              </svg>
-              <span>Eksport do Excel</span>
+            <button id="menu-btn-employees" class="spotify-function-card" title="Pracownicy">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">PRACOWNICY</div>
+              </span>
             </button>
-          </div>
-        </div>
-        {% else %}
-        <div class="menu-section">
-          <h4>Moje funkcje</h4>
-          <div class="menu-row">
-            <button id="menu-btn-swaps-user" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-              </svg>
-              <span>Skrzynka</span>
+            {% else %}
+            <!-- Przyciski dla zwykłych użytkowników -->
+            <button id="menu-btn-swaps-user" class="spotify-function-card" title="Skrzynka">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">SKRZYNKA</div>
+              </span>
             </button>
-            <button id="menu-btn-unavailability" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              <span>Zgłoś niedyspozycję</span>
+            <button id="menu-btn-unavailability" class="spotify-function-card" title="Niedyspozycja">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">NIEDYSPOZYCJA</div>
+              </span>
             </button>
-            <button id="menu-btn-shifts" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-              </svg>
-              <span>Zmiany</span>
+            <button id="menu-btn-shifts" class="spotify-function-card" title="Zmiany">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">ZMIANY</div>
+              </span>
             </button>
-          </div>
-        </div>
-        {% endif %}
-        <div class="menu-section">
-          <h4>System</h4>
-          <div class="menu-row">
-            <button id="menu-btn-refresh" class="menu-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-              </svg>
-              <span>Odśwież cache</span>
+            {% endif %}
+            
+            <!-- Przycisk ręcznej edycji dla admina -->
+            {% if is_admin %}
+            <button id="menu-btn-edit" class="spotify-function-card" title="Ręczna edycja">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">EDYCJA</div>
+              </span>
             </button>
-            <form action="/logout" method="post" class="menu-item-form">
-              <button type="submit" class="menu-item logout-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                </svg>
-                <span>Wyloguj</span>
+            {% endif %}
+            
+            <!-- Przyciski systemowe -->
+            <button id="menu-btn-refresh" class="spotify-function-card" title="Odśwież cache">
+              <span>
+                <div class="spotify-function-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                  </svg>
+                </div>
+                <div class="spotify-function-text">ODŚWIEŻ</div>
+              </span>
+            </button>
+            <form action="/logout" method="post" class="spotify-function-card-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
+              <button type="submit" class="spotify-function-card logout-card" title="Wyloguj">
+                <span>
+                  <div class="spotify-function-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    </svg>
+                  </div>
+                  <div class="spotify-function-text">WYLOGUJ</div>
+                </span>
               </button>
             </form>
           </div>
         </div>
-      </div>
+        
+        <!-- Przycisk X usunięty - burger menu służy do zamykania -->
+      </header>
+
+    </div>
     </div>
   </div>
 
@@ -194,28 +225,28 @@
           </div>
         </section>
         
-        <!-- Kontener dla przycisków akcji w trybie edycji -->
+        <!-- Panel akcji zmian - podział poziomy na 3 -->
         <div id="shifts-actions" class="shifts-actions hidden">
-          <div class="edit-mode-info">
-            <span id="edit-mode-status">Tryb edycji</span>
-            <button id="toggle-draft-mode" class="btn btn-secondary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              Tryb roboczy
-            </button>
-            <button id="save-draft-version" class="btn btn-warning hidden">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-              </svg>
-              Zapisz wersję roboczą
-            </button>
-          </div>
-          <div class="edit-actions">
-            <button id="save-shifts" class="btn">Zapisz</button>
-            <button id="save-draft-shifts" class="btn btn-warning hidden">Zapisz tryb roboczy</button>
-            <button id="publish-draft-shifts" class="btn btn-success hidden">Prześlij zmiany z trybu roboczego</button>
-            <button id="cancel-shifts" class="btn">Anuluj</button>
+          <div class="horizontal-container">
+            <div class="section top-section">
+              <h2 id="edit-mode-status" style="display: block;">TRYB EDYCJI</h2>
+            </div>
+            <div class="section middle-section">
+              <div class="draft-controls">
+                <button id="toggle-draft-mode" class="btn btn-secondary" data-listener-added="true">Włącz tryb roboczy</button>
+                <div class="draft-mode-controls hidden">
+                  <button id="exit-draft-mode" class="btn btn-secondary">Wyłącz tryb roboczy</button>
+                  <button id="save-draft-version" class="btn btn-warning">Zapisz wersję roboczą</button>
+                  <button id="publish-draft-shifts" class="btn btn-success">Prześlij zmiany</button>
+                </div>
+              </div>
+            </div>
+            <div class="section bottom-section">
+              <div class="edit-actions">
+                <button id="save-shifts" class="btn">Zapisz</button>
+                <button id="cancel-shifts" class="btn">Anuluj</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -273,7 +304,7 @@
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
-                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="Ania i Bożena" data-value="{{ display_value }}">{{ display_value }}</td>
+                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="Ania i Bożena" data-value="{{ display_value }}" data-official-value="{{ display_value }}">{{ display_value }}</td>
                     {% set ns_row.pair_done = true %}
                   {% elif emp.name in pair and ns_row.pair_done %}
                     {# skip duplicate from pair #}
@@ -290,7 +321,7 @@
                     {% else %}
                       {% set display_value = '' %}
                     {% endif %}
-                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="{{ emp.name }}" data-value="{{ display_value }}">{{ display_value }}</td>
+                    <td class="col-emp slot{% if row.is_today %} today{% endif %}" data-date="{{ row.iso }}" data-employee="{{ emp.name }}" data-value="{{ display_value }}" data-official-value="{{ display_value }}">{{ display_value }}</td>
                   {% endif %}
                 {% endfor %}
                 {% if is_admin %}
@@ -571,5 +602,10 @@
       </div>
     </div>
   </div>
+  
+  <!-- CSRF Token dla JavaScript -->
+  <script>
+    window.csrfToken = '{{ csrf_token }}';
+  </script>
 </body>
 </html>

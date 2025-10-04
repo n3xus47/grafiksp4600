@@ -7,6 +7,7 @@ Zachowuje pełną kompatybilność z istniejącą funkcjonalnością
 import os
 import logging
 from flask import Flask, request, jsonify
+from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 
 # Ładowanie zmiennych środowiskowych
@@ -30,13 +31,23 @@ def create_app():
     app = Flask(__name__)
     
     # Podstawowa konfiguracja
-    app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+    app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "5G5_hLlJRHaOAwQH-YvDcrQhp7T7TQ6rxtQdI07x9k")
     app.config['DATABASE_PATH'] = os.path.join(os.path.dirname(__file__), "app.db")
     
     # Konfiguracja VAPID dla Web Push Notifications (z zmiennych środowiskowych)
     app.config['VAPID_PUBLIC_KEY'] = os.environ.get("VAPID_PUBLIC_KEY", "")
     app.config['VAPID_PRIVATE_KEY'] = os.environ.get("VAPID_PRIVATE_KEY", "")
     app.config['VAPID_CLAIM_EMAIL'] = os.environ.get("VAPID_CLAIM_EMAIL", "admin@grafik4600.com")
+    
+    # CSRF Protection - KRYTYCZNE dla bezpieczeństwa
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+    
+    # Dodaj csrf_token do kontekstu szablonów
+    @app.context_processor
+    def inject_csrf_token():
+        from flask_wtf.csrf import generate_csrf
+        return dict(csrf_token=generate_csrf())
     
     # Import modułów po utworzeniu aplikacji
     from app import database

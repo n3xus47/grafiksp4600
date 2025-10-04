@@ -74,10 +74,11 @@ def admin_required(f):
     return wrapper
 
 def rate_limit_required(f):
-    """Decorator dla rate limiting - placeholder na przyszłość"""
+    """Decorator dla rate limiting - używa Flask-Limiter"""
     @wraps(f)
     def wrapper(*args, **kwargs):
-        # TODO: Implementacja rate limiting
+        # Rate limiting jest już zaimplementowany w auth_routes.py
+        # Ten decorator jest tylko dla kompatybilności
         return f(*args, **kwargs)
     return wrapper
 

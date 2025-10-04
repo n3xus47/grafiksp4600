@@ -8,11 +8,21 @@ import logging
 import os
 from flask import Blueprint, request, jsonify, session
 from ..auth import login_required, admin_required, rate_limit_required
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from ..database import get_db
+from ..cache import cache, cached, invalidate_cache_pattern
+from ..performance import monitor_performance, perf_counter
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Rate limiter dla API - optimized limits
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per minute"]  # Increased from 100 to 200 for better UX
+)
 
 def safe_get_json():
     """Bezpieczne pobieranie JSON z requestu"""
@@ -28,7 +38,7 @@ def safe_get_json():
 
 @bp.post("/save")
 @login_required
-@rate_limit_required
+@limiter.limit("20 per minute")  # Increased from 10 to 20 for better UX
 def api_save():
     """Zapisuje zmiany w grafiku"""
     try:
@@ -172,10 +182,22 @@ def api_save():
                         VALUES (?, ?, ?, ?, ?)
                     """, (date, employee, old_shift_type, '', user_email))
         
-        db.commit()
-        
-        logger.info(f"Zapisano {len(changes)} zmian przez {user_email}")
-        return jsonify(status="ok", message="Zmiany zapisane pomyślnie")
+        # Użyj transakcji dla atomowości
+        try:
+            db.commit()
+            
+            # Invalidate cache for affected dates
+            for change in changes:
+                date = change.get('date')
+                if date:
+                    cache.delete(f"shifts:{date}")
+            
+            logger.info(f"Zapisano {len(changes)} zmian przez {user_email}")
+            return jsonify(status="ok", message="Zmiany zapisane pomyślnie")
+        except Exception as commit_error:
+            db.rollback()
+            logger.error(f"Błąd podczas commit: {commit_error}")
+            return jsonify(error="Błąd podczas zapisywania zmian"), 500
         
     except Exception as e:
         logger.error(f"Błąd podczas zapisywania zmian: {e}")
@@ -729,8 +751,9 @@ def api_swaps_clear():
 
 @bp.get("/shifts/<date>")
 @login_required
+@monitor_performance
 def api_shifts_for_date(date):
-    """Pobiera zmiany dla konkretnej daty"""
+    """Pobiera zmiany dla konkretnej daty z cache"""
     try:
         import datetime as dt
         
@@ -739,6 +762,12 @@ def api_shifts_for_date(date):
             target_date = dt.datetime.strptime(date, '%Y-%m-%d').date()
         except ValueError:
             return jsonify(error="Nieprawidłowy format daty. Użyj YYYY-MM-DD"), 400
+        
+        # Check cache first
+        cache_key = f"shifts:{date}"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return jsonify(cached_result)
         
         db = get_db()
         
@@ -762,11 +791,13 @@ def api_shifts_for_date(date):
             shift_type = shift['shift_type']
             name = shift['name']
             
-            if shift_type == 'DNIOWKA':
+            # Rozpoznaj typ zmiany na podstawie różnych formatów
+            if shift_type == 'DNIOWKA' or shift_type == 'D':
                 shifts_by_type['DNIOWKA'].append(name)
-            elif shift_type == 'POPOLUDNIOWKA':
+            elif (shift_type == 'POPOLUDNIOWKA' or shift_type == 'P' or 
+                  (shift_type and shift_type.startswith('P '))):
                 shifts_by_type['POPOLUDNIOWKA'].append(name)
-            elif shift_type == 'NOCKA':
+            elif shift_type == 'NOCKA' or shift_type == 'N':
                 shifts_by_type['NOCKA'].append(name)
         
         # Dodaj małe litery dla kompatybilności z frontendem
@@ -776,6 +807,9 @@ def api_shifts_for_date(date):
             'popoludniowka': shifts_by_type['POPOLUDNIOWKA'],
             'nocka': shifts_by_type['NOCKA']
         }
+        
+        # Cache result for 5 minutes
+        cache.set(cache_key, result, 300)
         
         return jsonify(result)
         
@@ -790,8 +824,14 @@ def api_shifts_for_date(date):
 @bp.get("/employees")
 @admin_required
 def api_employees_list():
-    """Pobiera listę pracowników (admin)"""
+    """Pobiera listę pracowników (admin) z cache"""
     try:
+        # Check cache first
+        cache_key = "employees:list"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return jsonify(cached_result)
+        
         from ..database import ensure_employees_code_column, ensure_employees_email_column
         ensure_employees_code_column()  # Upewnij się, że kolumna code istnieje
         ensure_employees_email_column()  # Upewnij się, że kolumna email istnieje
@@ -808,7 +848,12 @@ def api_employees_list():
                 'email': emp['email'] or ''  # Zwróć pusty string jeśli email jest None
             })
         
-        return jsonify({"employees": employees_list})
+        result = {"employees": employees_list}
+        
+        # Cache result for 10 minutes
+        cache.set(cache_key, result, 600)
+        
+        return jsonify(result)
         
     except Exception as e:
         logger.error(f"Błąd podczas pobierania pracowników: {e}")
@@ -853,6 +898,9 @@ def api_employees_create():
         # Dodaj pracownika
         cursor = db.execute("INSERT INTO employees (name, code, email) VALUES (?, ?, ?)", (name, code or None, email or None))
         db.commit()
+        
+        # Invalidate employees cache
+        cache.delete("employees:list")
         
         # Jeśli podano email, dodaj go automatycznie do whitelisty
         if email:
@@ -925,6 +973,9 @@ def api_employees_update(emp_id):
         db.execute("UPDATE employees SET name = ?, code = ?, email = ? WHERE id = ?", (name, code or None, email or None, emp_id))
         db.commit()
         
+        # Invalidate employees cache
+        cache.delete("employees:list")
+        
         # Synchronizuj whitelistę
         try:
             import os
@@ -975,6 +1026,9 @@ def api_employees_delete(emp_id):
         
         db.execute("DELETE FROM employees WHERE id = ?", (emp_id,))
         db.commit()
+        
+        # Invalidate employees cache
+        cache.delete("employees:list")
         
         # Usuń email z whitelisty (jeśli istniał)
         if emp_email:
@@ -1266,13 +1320,13 @@ def api_draft_save():
             
             emp_id = emp_row['id']
             
-            # Zapisz tylko jeśli shift_type nie jest puste
-            if shift_type and shift_type.strip() and shift_type != '-':
-                db.execute("""
-                    INSERT INTO draft_shifts (date, shift_type, employee_id, created_by)
-                    VALUES (?, ?, ?, ?)
-                """, (date, shift_type, emp_id, user_id))
-                logger.info(f"DRAFT ZAPISANO: {date} - {employee} - {shift_type}")
+            # Zapisz zmianę (może być pusta jeśli usuwamy zmianę)
+            # Pusta wartość oznacza że użytkownik usunął zmianę z oficjalnego grafiku
+            db.execute("""
+                INSERT INTO draft_shifts (date, shift_type, employee_id, created_by)
+                VALUES (?, ?, ?, ?)
+            """, (date, shift_type or '', emp_id, user_id))
+            logger.info(f"DRAFT ZAPISANO: {date} - {employee} - {shift_type or 'PUSTE'}")
         
         db.commit()
         
@@ -1313,6 +1367,8 @@ def api_draft_load():
                 'shift_type': shift['shift_type']
             })
         
+        logger.info(f"📥 [DRAFT] Ładowanie draft dla użytkownika {user_id}: znaleziono {len(changes)} zmian")
+        
         return jsonify({
             'status': 'ok',
             'changes': changes,
@@ -1348,47 +1404,58 @@ def api_draft_publish():
         if not draft_shifts:
             return jsonify(error="Brak zmian do publikacji"), 400
         
-        # Zastosuj zmiany do głównej tabeli shifts
+        # Znajdź wszystkie unikalne daty w draft
+        draft_dates = list(set([shift['date'] for shift in draft_shifts]))
+        logger.info(f"📅 Daty do zastąpienia w oficjalnym grafiku: {draft_dates}")
+        
+        # KROK 1: Wyczyść wszystkie zmiany w oficjalnym grafiku dla dat z draft
+        for date in draft_dates:
+            # Pobierz wszystkie istniejące zmiany dla tej daty (dla historii)
+            existing_shifts = db.execute("""
+                SELECT s.shift_type, e.name as employee_name
+                FROM shifts s
+                JOIN employees e ON s.employee_id = e.id
+                WHERE s.date = ?
+            """, (date,)).fetchall()
+            
+            # Usuń wszystkie zmiany dla tej daty
+            deleted_count = db.execute("DELETE FROM shifts WHERE date = ?", (date,)).rowcount
+            logger.info(f"🗑️ Usunięto {deleted_count} zmian z oficjalnego grafiku dla daty {date}")
+            
+            # Zapisz usunięcia do historii zmian
+            for old_shift in existing_shifts:
+                db.execute("""
+                    INSERT INTO schedule_changes (date, employee_name, old_shift, new_shift, changed_by)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (date, old_shift['employee_name'], old_shift['shift_type'], '', user_email))
+        
+        # KROK 2: Dodaj wszystkie zmiany z draft do oficjalnego grafiku
         for shift in draft_shifts:
             date = shift['date']
             employee_name = shift['employee_name']
             shift_type = shift['shift_type']
             employee_id = shift['employee_id']
             
-            # Pobierz starą zmianę przed usunięciem
-            old_shift = db.execute("SELECT shift_type FROM shifts WHERE date = ? AND employee_id = ?", 
-                                 (date, employee_id)).fetchone()
-            old_shift_type = old_shift['shift_type'] if old_shift else None
-            
-            # Usuń istniejącą zmianę
-            db.execute("DELETE FROM shifts WHERE date = ? AND employee_id = ?", (date, employee_id))
-            
-            # Dodaj nową zmianę
+            # Dodaj zmianę tylko jeśli nie jest pusta
             if shift_type and shift_type.strip() and shift_type != '-':
                 db.execute("INSERT INTO shifts (date, shift_type, employee_id) VALUES (?, ?, ?)", 
                           (date, shift_type, employee_id))
                 
-                # Zapisz historię zmian (teraz już z powiadomieniami)
-                action = "DODANO" if not old_shift_type else "ZMIENIONO"
+                # Zapisz dodanie do historii zmian
                 db.execute("""
                     INSERT INTO schedule_changes (date, employee_name, old_shift, new_shift, changed_by)
                     VALUES (?, ?, ?, ?, ?)
-                """, (date, employee_name, old_shift_type or '', shift_type, user_email))
-            else:
-                # Zapisz usunięcie do schedule_changes
-                if old_shift_type:
-                    db.execute("""
-                        INSERT INTO schedule_changes (date, employee_name, old_shift, new_shift, changed_by)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (date, employee_name, old_shift_type, '', user_email))
+                """, (date, employee_name, '', shift_type, user_email))
+                logger.info(f"✅ Dodano zmianę: {date} - {employee_name} - {shift_type}")
         
         # Usuń drafty po publikacji
         db.execute("DELETE FROM draft_shifts WHERE created_by = ?", (user_id,))
         
         db.commit()
         
-        logger.info(f"Opublikowano {len(draft_shifts)} zmian z draft przez {user_email}")
-        return jsonify(status="ok", message=f"Opublikowano {len(draft_shifts)} zmian")
+        logger.info(f"🚀 Opublikowano {len(draft_shifts)} zmian z draft przez {user_email}")
+        logger.info(f"📊 Zastąpiono oficjalny grafik dla {len(draft_dates)} dat: {draft_dates}")
+        return jsonify(status="ok", message=f"Opublikowano {len(draft_shifts)} zmian dla {len(draft_dates)} dat")
         
     except Exception as e:
         logger.error(f"Błąd podczas publikacji draft: {e}")

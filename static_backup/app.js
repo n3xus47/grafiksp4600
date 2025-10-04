@@ -406,35 +406,52 @@ function initializeHamburgerMenu() {
   
   const hamburgerBtn = document.getElementById('hamburger-menu');
   const hamburgerPanel = document.getElementById('hamburger-menu-panel');
+  const hamburgerClose = document.getElementById('hamburger-close');
   
   console.log('🔍 Elementy function panel:', {
     hamburgerBtn: !!hamburgerBtn,
-    hamburgerPanel: !!hamburgerPanel
+    hamburgerPanel: !!hamburgerPanel,
+    hamburgerClose: !!hamburgerClose
   });
   
-  if (!hamburgerBtn || !hamburgerPanel) {
+  if (!hamburgerBtn || !hamburgerPanel || !hamburgerClose) {
     console.warn('⚠️ Nie znaleziono elementów function panel');
     return;
   }
   
-  // Toggle panel (otwórz/zamknij)
+  // Otwórz panel
   hamburgerBtn.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (hamburgerPanel.classList.contains('hidden')) {
-      openHamburgerMenu();
-    } else {
-      closeHamburgerMenu();
-    }
+    openSpotifyPanel();
   });
   
-  // Panel można zamknąć tylko przyciskiem X lub klawiszem Escape
+  // Zamknij panel
+  hamburgerClose.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeSpotifyPanel();
+  });
+  
+  // Zamknij panel po kliknięciu w overlay (z debouncing i event delegation) - OPTYMALIZOWANE
+  let clickTimeout;
+  document.addEventListener('click', function(e) {
+    if (!hamburgerPanel.classList.contains('hidden') && 
+        !hamburgerPanel.contains(e.target) && 
+        !hamburgerBtn.contains(e.target)) {
+      
+      // Debounce kliknięć - zwiększony timeout dla lepszej wydajności
+      clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        closeSpotifyPanel();
+      }, 50); // Increased from 10ms to 50ms for better performance
+    }
+  }, { passive: true });
   
   // Zamknij panel po naciśnięciu Escape
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !hamburgerPanel.classList.contains('hidden')) {
-      closeHamburgerMenu();
+      closeSpotifyPanel();
     }
   }, { passive: true });
   
@@ -591,54 +608,28 @@ function openHamburgerMenu() {
   
   if (!hamburgerPanel || !hamburgerBtn) return;
   
-  // Dodaj klasę active do przycisku (zmiana burger → X)
-  hamburgerBtn.classList.add('active');
-  
-  // Reset animacji - usuń klasy animacji i dodaj je ponownie
-  const title = hamburgerPanel.querySelector('.spotify-panel-title');
-  const icon = hamburgerPanel.querySelector('.spotify-functions-icon');
-  const buttons = hamburgerPanel.querySelectorAll('.spotify-function-card');
-  
-  // Reset animacji
-  if (title) {
-    title.style.animation = 'none';
-    title.style.opacity = '0';
-    title.style.transform = 'translateY(20px)';
-  }
-  if (icon) {
-    icon.style.animation = 'none';
-    icon.style.opacity = '0';
-    icon.style.transform = 'translateY(20px)';
-  }
-  buttons.forEach(button => {
-    button.style.animation = 'none';
-    button.style.opacity = '0';
-    button.style.transform = 'translateY(20px)';
-  });
-  
-  // Usuń klasę hidden - animacja zadziała przez transition
+  // Usuń klasę hidden
   hamburgerPanel.classList.remove('hidden');
   
-  // Przywróć animacje po krótkim opóźnieniu
-  setTimeout(() => {
-    if (title) {
-      title.style.animation = 'fadeInUpTitle 0.6s ease 0.2s forwards';
-    }
-    if (icon) {
-      icon.style.animation = 'fadeInUpIcon 0.6s ease 0.1s forwards';
-    }
-    buttons.forEach((button, index) => {
-      button.style.animation = `fadeInUpButton 0.5s ease ${0.3 + index * 0.1}s forwards`;
-    });
-  }, 50);
+  // Dodaj overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'hamburger-menu-overlay';
+  overlay.id = 'hamburger-overlay';
+  document.body.appendChild(overlay);
   
-  // Focus na pierwszy element menu po animacji
+  // Dodaj animację
+  hamburgerPanel.classList.add('slide-in');
+  
+  // Zablokuj scroll na body
+  document.body.style.overflow = 'hidden';
+  
+  // Focus na pierwszy element menu
   setTimeout(() => {
-    const firstButton = hamburgerPanel.querySelector('.spotify-function-card');
-    if (firstButton) {
-      firstButton.focus();
+    const firstMenuItem = hamburgerPanel.querySelector('.menu-item');
+    if (firstMenuItem) {
+      firstMenuItem.focus();
     }
-  }, 800); // Po zakończeniu wszystkich animacji
+  }, 100);
   
   console.log('✅ Hamburger menu otwarte');
 }
@@ -647,17 +638,27 @@ function closeHamburgerMenu() {
   console.log('🍔 Zamykam hamburger menu...');
   
   const hamburgerPanel = document.getElementById('hamburger-menu-panel');
-  const hamburgerBtn = document.getElementById('hamburger-menu');
+  const overlay = document.getElementById('hamburger-overlay');
   
-  if (!hamburgerPanel || !hamburgerBtn) return;
+  if (!hamburgerPanel) return;
   
-  // Usuń klasę active z przycisku (zmiana X → burger)
-  hamburgerBtn.classList.remove('active');
+  // Dodaj animację zamykania
+  hamburgerPanel.classList.remove('slide-in');
+  hamburgerPanel.classList.add('slide-out');
   
-  // Dodaj klasę hidden - animacja zadziała przez transition
-  hamburgerPanel.classList.add('hidden');
+  // Usuń overlay
+  if (overlay) {
+    overlay.remove();
+  }
   
-  // Nie trzeba przywracać scroll - nie był blokowany
+  // Przywróć scroll na body
+  document.body.style.overflow = '';
+  
+  // Ukryj panel po animacji
+  setTimeout(() => {
+    hamburgerPanel.classList.add('hidden');
+    hamburgerPanel.classList.remove('slide-out');
+  }, 300);
   
   console.log('✅ Hamburger menu zamknięte');
 }
@@ -666,7 +667,77 @@ function closeHamburgerMenu() {
 // SPOTIFY-STYLE PANEL FUNCTIONS
 // ============================================================================
 
-// Funkcje Spotify panel zostały usunięte - używamy hamburger menu
+function openSpotifyPanel() {
+  console.log('🎵 Otwieram Spotify-style panel...');
+  
+  const panel = document.getElementById('hamburger-menu-panel');
+  if (!panel) return;
+  
+  // Usuń klasę hidden
+  panel.classList.remove('hidden');
+  
+  // Dodaj overlay dla lepszego UX
+  const overlay = document.createElement('div');
+  overlay.className = 'spotify-panel-overlay';
+  overlay.id = 'spotify-overlay';
+  overlay.addEventListener('click', closeSpotifyPanel);
+  document.body.appendChild(overlay);
+  
+  // Zablokuj scroll na body
+  document.body.style.overflow = 'hidden';
+  
+  // Użyj requestAnimationFrame dla płynnej animacji
+  requestAnimationFrame(() => {
+    panel.style.willChange = 'transform';
+    
+    // Focus na pierwszy element panelu
+    setTimeout(() => {
+      const firstChip = panel.querySelector('.spotify-chip.active');
+      if (firstChip) {
+        firstChip.focus();
+      }
+      
+      // Usuń will-change po zakończeniu animacji
+      setTimeout(() => {
+        panel.style.willChange = 'auto';
+      }, 300);
+    }, 100);
+  });
+  
+  console.log('✅ Spotify panel otwarty');
+}
+
+function closeSpotifyPanel() {
+  console.log('🎵 Zamykam Spotify-style panel...');
+  
+  const panel = document.getElementById('hamburger-menu-panel');
+  const overlay = document.getElementById('spotify-overlay');
+  
+  if (!panel) return;
+  
+  // Użyj requestAnimationFrame dla płynnej animacji
+  requestAnimationFrame(() => {
+    panel.style.willChange = 'transform';
+    
+    // Dodaj klasę hidden
+    panel.classList.add('hidden');
+    
+    // Usuń overlay
+    if (overlay) {
+      overlay.remove();
+    }
+    
+    // Przywróć scroll na body
+    document.body.style.overflow = '';
+    
+    // Usuń will-change po zakończeniu animacji
+    setTimeout(() => {
+      panel.style.willChange = 'auto';
+    }, 300);
+  });
+  
+  console.log('✅ Spotify panel zamknięty');
+}
 
 // Nowa funkcja dla filtrów Spotify
 function setupSpotifyFilters() {
@@ -2254,10 +2325,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (table) table.addEventListener('click', onCellClick);
   if (btnSaveToday) btnSaveToday.addEventListener('click', save);
   if (btnCancelToday) btnCancelToday.addEventListener('click', cancel);
-  
-  // Event listener dla przycisku publikacji draft
-  const btnPublishDraft = document.getElementById('publish-draft-shifts');
-  if (btnPublishDraft) btnPublishDraft.addEventListener('click', publishDraftChanges);
   
   document.addEventListener('click', (e) => {
     if (!editor.classList.contains('show')) return;
@@ -4626,113 +4693,37 @@ let isDraftMode = false;
 let draftChanges = new Map();
 
 // Prosta funkcja włączania/wyłączania trybu roboczego
-async function toggleDraftMode() {
+function toggleDraftMode() {
   if (isDraftMode) {
-    await exitDraftMode();
+    exitDraftMode();
   } else {
-    await enterDraftMode();
+    enterDraftMode();
   }
 }
 
 // Włącz tryb roboczy
-async function enterDraftMode() {
+function enterDraftMode() {
   console.log('🔄 [DRAFT] Włączam tryb roboczy...');
   isDraftMode = true;
   updateDraftUI();
   
-  // NAJPIERW: Załaduj oficjalny grafik i ustaw data-official-value
-  console.log('🔄 [DRAFT] Ładuję oficjalny grafik jako punkt odniesienia...');
-  await loadOfficialScheduleForDraft();
-  
-  // TERAZ: Załaduj zapisane wersje robocze
+  // Załaduj zapisane wersje robocze
   loadDraftData();
+  
+  showNotification('Tryb roboczy włączony', 'info');
 }
 
 // Wyłącz tryb roboczy
-async function exitDraftMode() {
+function exitDraftMode() {
   console.log('🔄 [DRAFT] Wyłączam tryb roboczy...');
   isDraftMode = false;
   draftChanges.clear();
   
-  // Usuń zapisane zmiany draft z serwera (bez potwierdzenia)
-  await discardDraftChanges(false);
-  
   // Przywróć oficjalny grafik
-  await restoreOfficialSchedule();
+  restoreOfficialSchedule();
   
   updateDraftUI();
-}
-
-// Załaduj oficjalny grafik dla trybu draft (ustawia data-official-value)
-async function loadOfficialScheduleForDraft() {
-  console.log('🔄 [DRAFT] Ładuję oficjalny grafik jako punkt odniesienia...');
-  
-  // Pobierz parametry roku i miesiąca z tabeli
-  const grafikTable = document.getElementById('grafik');
-  const year = grafikTable.getAttribute('data-year');
-  const month = grafikTable.getAttribute('data-month');
-  
-  if (!year || !month) {
-    console.error('Brak parametrów roku/miesiąca w tabeli');
-    return Promise.resolve();
-  }
-  
-  // Załaduj oficjalny grafik z serwera dla całego miesiąca
-  return fetch(`/?year=${year}&month=${month}`, { credentials: 'include' })
-    .then(response => response.text())
-    .then(html => {
-      // Parsuj HTML aby wyciągnąć dane shifts_by_date
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const scriptTags = doc.querySelectorAll('script');
-      
-      let shiftsData = {};
-      let dataFound = false;
-      
-      for (const script of scriptTags) {
-        const content = script.textContent;
-        if (content.includes('shiftsData = ')) {
-          try {
-            // Wyciągnij dane z JavaScript
-            const match = content.match(/const shiftsData = (.*?);/s);
-            if (match) {
-              shiftsData = JSON.parse(match[1]);
-              dataFound = true;
-              break;
-            }
-          } catch (e) {
-            console.error('Błąd parsowania shiftsData:', e);
-          }
-        }
-      }
-      
-      if (!dataFound) {
-        console.error('Nie znaleziono danych shiftsData w HTML');
-        return;
-      }
-      
-      // Ustaw data-official-value na oficjalne wartości (bez zmiany wyświetlania)
-      Object.keys(shiftsData).forEach(date => {
-        if (date === '_timestamp') return; // Pomiń klucz timestamp
-        
-        Object.keys(shiftsData[date]).forEach(employeeName => {
-          const shiftType = shiftsData[date][employeeName];
-          
-          // Znajdź odpowiednią komórkę w tabeli
-          const cell = document.querySelector(`[data-date="${date}"][data-employee="${employeeName}"]`);
-          if (cell) {
-            // Ustaw tylko data-official-value (nie zmieniaj wyświetlania)
-            cell.dataset.officialValue = shiftType;
-            console.log(`🔄 [DRAFT] Ustawiono data-official-value: ${date} - ${employeeName} = ${shiftType}`);
-          }
-        });
-      });
-      
-      console.log('🔄 [DRAFT] Oficjalne wartości ustawione jako punkt odniesienia');
-    })
-    .catch(error => {
-      console.error('Błąd ładowania oficjalnego grafiku:', error);
-    });
+  showNotification('Tryb roboczy wyłączony - przywrócono oficjalny grafik', 'info');
 }
 
 // Przywróć oficjalny grafik
@@ -4742,7 +4733,6 @@ function restoreOfficialSchedule() {
   // Wyczyść wszystkie sloty
   document.querySelectorAll('.slot[data-date][data-employee]').forEach(slot => {
     slot.setAttribute('data-value', '');
-    slot.setAttribute('data-official-value', '');
     slot.textContent = '';
     slot.classList.remove('draft-slot');
   });
@@ -4754,11 +4744,11 @@ function restoreOfficialSchedule() {
   
   if (!year || !month) {
     console.error('Brak parametrów roku/miesiąca w tabeli');
-    return Promise.resolve();
+    return;
   }
   
   // Załaduj oficjalny grafik z serwera dla całego miesiąca
-  return fetch(`/?year=${year}&month=${month}`, { credentials: 'include' })
+  fetch(`/?year=${year}&month=${month}`, { credentials: 'include' })
     .then(response => response.text())
     .then(html => {
       // Parsuj HTML aby wyciągnąć dane shifts_by_date
@@ -4806,7 +4796,6 @@ function restoreOfficialSchedule() {
             const displayValue = shiftType === 'DNIOWKA' ? 'D' : shiftType === 'NOCKA' ? 'N' : shiftType;
             cell.textContent = displayValue;
             cell.dataset.value = shiftType;
-            cell.dataset.officialValue = shiftType; // Ustaw pełną nazwę jako oficjalną wartość
             
             // Dodaj odpowiednią klasę dla stylowania
             cell.classList.remove('dniowka', 'nocka', 'custom-shift', 'poludniowka');
@@ -4833,26 +4822,25 @@ function restoreOfficialSchedule() {
 // Aktualizuj interfejs trybu roboczego
 function updateDraftUI() {
   const toggleBtn = document.getElementById('toggle-draft-mode');
-  const draftModeControls = document.querySelector('.draft-mode-controls');
-  const exitDraftBtn = document.getElementById('exit-draft-mode');
   const saveBtn = document.getElementById('save-draft-version');
   const normalSaveBtn = document.getElementById('save-shifts');
   const cancelBtn = document.getElementById('cancel-shifts');
-  const publishBtn = document.getElementById('publish-draft-shifts');
   
   if (toggleBtn) {
     if (isDraftMode) {
-      toggleBtn.classList.add('hidden');
+      toggleBtn.textContent = 'Wyłącz tryb roboczy';
+      toggleBtn.classList.add('active');
     } else {
-      toggleBtn.classList.remove('hidden');
+      toggleBtn.textContent = 'Włącz tryb roboczy';
+      toggleBtn.classList.remove('active');
     }
   }
   
-  if (draftModeControls) {
+  if (saveBtn) {
     if (isDraftMode) {
-      draftModeControls.classList.remove('hidden');
+      saveBtn.classList.remove('hidden');
     } else {
-      draftModeControls.classList.add('hidden');
+      saveBtn.classList.add('hidden');
     }
   }
   
@@ -4873,12 +4861,6 @@ function updateDraftUI() {
     }
   }
   
-  // Przycisk publikacji będzie pokazywany/ukrywany przez checkDraftStatus
-  // Tutaj tylko ukryj jeśli nie jesteśmy w trybie draft
-  if (publishBtn && !isDraftMode) {
-    publishBtn.classList.add('hidden');
-  }
-  
   // Sprawdź czy istnieją zapisane wersje robocze
   checkDraftStatus();
 }
@@ -4890,7 +4872,6 @@ function saveDraftVersion() {
   // Zbierz wszystkie zmiany z interfejsu
   const changes = collectDraftChanges();
   console.log('💾 [DRAFT] Zebrano', changes.length, 'zmian do zapisania');
-  console.log('💾 [DRAFT] Szczegóły zmian:', changes);
   
   if (changes.length === 0) {
     showNotification('Brak zmian do zapisania', 'info');
@@ -4905,14 +4886,11 @@ function saveDraftVersion() {
   }
   
   // Wyślij dane do API
-  fetch('/api/draft/save', {
+  fetch('/api/save', {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-CSRFToken': window.csrfToken
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ changes })
+    body: JSON.stringify({ changes, is_draft: true })
   })
   .then(response => response.json())
   .then(data => {
@@ -4951,17 +4929,6 @@ function checkDraftStatus() {
       
       // Status draft jest teraz tylko w trybie edycji
       console.log('📊 [DRAFT] Status draft:', data);
-      
-      // Pokaż/ukryj przycisk publikacji w zależności od tego czy istnieją drafty
-      const publishBtn = document.getElementById('publish-draft-shifts');
-      if (publishBtn) {
-        if (data.has_draft && isDraftMode) {
-          publishBtn.classList.remove('hidden');
-          publishBtn.disabled = false;
-        } else {
-          publishBtn.classList.add('hidden');
-        }
-      }
     })
     .catch(error => {
       console.error('Błąd sprawdzania statusu draft:', error);
@@ -4976,10 +4943,7 @@ function publishDraftChanges() {
   
   fetch('/api/draft/publish', {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-CSRFToken': window.csrfToken
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include'
   })
   .then(response => response.json())
@@ -5006,16 +4970,16 @@ function publishDraftChanges() {
 }
 
 // Odrzuć wersję roboczą
-function discardDraftChanges(showConfirmation = true) {
+function discardDraftChanges() {
   console.log('🗑️ [DRAFT] Odrzucam wersję roboczą...');
   
-  if (showConfirmation && !confirm('Czy na pewno chcesz odrzucić wszystkie zmiany w wersji roboczej?')) {
-    return Promise.resolve();
+  if (!confirm('Czy na pewno chcesz odrzucić wszystkie zmiany w wersji roboczej?')) {
+    return;
   }
   
   // Przycisk odrzucania jest teraz w trybie edycji
   
-  return fetch('/api/draft/discard', {
+  fetch('/api/draft/discard', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include'
@@ -5023,24 +4987,19 @@ function discardDraftChanges(showConfirmation = true) {
   .then(response => response.json())
   .then(data => {
     if (data.error) {
-      if (showConfirmation) {
-        showNotification('Błąd odrzucania: ' + data.error, 'error');
-      }
-      console.error('Błąd odrzucania draft:', data.error);
+      showNotification('Błąd odrzucania: ' + data.error, 'error');
     } else {
-      if (showConfirmation) {
-        showNotification('Wersja robocza została odrzucona', 'success');
-        // Odśwież status draft
-        checkDraftStatus();
-      }
-      console.log('🗑️ [DRAFT] Wersja robocza została odrzucona');
+      showNotification('Wersja robocza została odrzucona', 'success');
+      // Odśwież status draft
+      checkDraftStatus();
     }
   })
   .catch(error => {
     console.error('Błąd odrzucania draft:', error);
-    if (showConfirmation) {
-      showNotification('Błąd odrzucania wersji roboczej', 'error');
-    }
+    showNotification('Błąd odrzucania wersji roboczej', 'error');
+  })
+  .finally(() => {
+    // Przycisk odrzucania jest teraz w trybie edycji
   });
 }
 
@@ -5076,7 +5035,6 @@ function applyDraftChanges(changes) {
   // NAJPIERW: Wyczyść wszystkie sloty (usuń oficjalny grafik)
   document.querySelectorAll('.slot[data-date][data-employee]').forEach(slot => {
     slot.setAttribute('data-value', '');
-    // NIE czyść data-official-value - to jest potrzebne do porównywania zmian
     slot.textContent = '';
     slot.classList.remove('draft-slot');
   });
@@ -5096,19 +5054,11 @@ function applyDraftChanges(changes) {
       // Mapuj pełną nazwę na skrót
       const displayValue = shiftTypeMapping[change.shift_type] || change.shift_type;
       
-      slot.setAttribute('data-value', displayValue || '');
-      slot.textContent = displayValue || '';
+      slot.setAttribute('data-value', displayValue);
+      slot.textContent = displayValue;
+      slot.classList.add('draft-slot');
       
-      // Dodaj klasę draft-slot tylko jeśli jest wartość
-      if (displayValue && displayValue.trim()) {
-        slot.classList.add('draft-slot');
-      } else {
-        slot.classList.remove('draft-slot');
-      }
-      
-      // NIE aktualizuj data-official-value - to powinno pozostać jako oryginalna wartość
-      
-      console.log('🎨 [DRAFT] Zastosowano:', change.date, change.employee, change.shift_type, '->', displayValue || 'PUSTE');
+      console.log('🎨 [DRAFT] Zastosowano:', change.date, change.employee, change.shift_type, '->', displayValue);
     }
   });
   
@@ -5117,10 +5067,8 @@ function applyDraftChanges(changes) {
 
 // Zbierz zmiany z interfejsu (TYLKO wersja robocza)
 function collectDraftChanges() {
-  console.log('🔍 [DRAFT] Zbieram zmiany z interfejsu...');
   const changes = [];
   const slots = document.querySelectorAll('.slot[data-date][data-employee]');
-  console.log(`🔍 [DRAFT] Znaleziono ${slots.length} slotów do sprawdzenia`);
   
   // Mapowanie skrótów na pełne nazwy
   const reverseShiftTypeMapping = {
@@ -5129,59 +5077,27 @@ function collectDraftChanges() {
     'P': 'POPOLUDNIOWKA'
   };
   
-  slots.forEach((slot, index) => {
+  slots.forEach(slot => {
     const date = slot.getAttribute('data-date');
     const employee = slot.getAttribute('data-employee');
-    const currentValue = slot.getAttribute('data-value') || '';
-    const officialValue = slot.getAttribute('data-official-value') || '';
-    
-    // Loguj pierwsze 5 slotów dla debugowania
-    if (index < 5) {
-      console.log(`🔍 [DRAFT] Slot ${index}: ${date} - ${employee} - current:"${currentValue}" official:"${officialValue}"`);
-    }
+    const value = slot.getAttribute('data-value') || '';
     
     if (date && employee) {
-      // Sprawdź czy jest różnica między oficjalną a aktualną wartością
-      if (currentValue !== officialValue) {
-        // Mapuj skrót na pełną nazwę przed zapisaniem
-        const fullShiftType = reverseShiftTypeMapping[currentValue] || currentValue;
-        
-        // Zapisuj zmianę (może być pusta jeśli usuwamy zmianę)
+      // Mapuj skrót na pełną nazwę przed zapisaniem
+      const fullShiftType = reverseShiftTypeMapping[value] || value;
+      
+      // Zapisuj TYLKO jeśli slot ma wartość (nie puste)
+      if (value && value.trim() !== '') {
         changes.push({ 
           date, 
           employee, 
-          shift_type: fullShiftType || '' // Upewnij się że puste wartości są zapisywane jako pusty string
+          shift_type: fullShiftType 
         });
-        
-        console.log(`💾 [DRAFT] Zmiana wykryta: ${date} - ${employee} - "${officialValue}" -> "${currentValue}" (${fullShiftType || 'PUSTE'})`);
       }
     }
   });
   
   console.log('💾 [DRAFT] Zebrano', changes.length, 'zmian z wersji roboczej');
-  
-  // Dodatkowe debugowanie - policz sloty z różnymi wartościami
-  let differentSlots = 0;
-  let emptySlots = 0;
-  let officialSlots = 0;
-  
-  slots.forEach(slot => {
-    const currentValue = slot.getAttribute('data-value') || '';
-    const officialValue = slot.getAttribute('data-official-value') || '';
-    
-    if (currentValue !== officialValue) {
-      differentSlots++;
-    }
-    if (currentValue === '') {
-      emptySlots++;
-    }
-    if (officialValue !== '') {
-      officialSlots++;
-    }
-  });
-  
-  console.log(`🔍 [DRAFT] Statystyki: ${differentSlots} różnych slotów, ${emptySlots} pustych slotów, ${officialSlots} slotów z oficjalnymi wartościami`);
-  
   return changes;
 }
 
@@ -5248,17 +5164,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Inicjalizuj system draft
   console.log('🚀 [APP] Inicjalizuję system draft...');
   initializeDraftSystem();
-  
-  // Uniwersalny event listener dla przycisków draft mode
-  document.addEventListener('click', function(e) {
-    if (e.target && e.target.id === 'toggle-draft-mode') {
-      console.log('🔄 [DRAFT] Kliknięto przycisk toggle-draft-mode');
-      toggleDraftMode();
-    } else if (e.target && e.target.id === 'exit-draft-mode') {
-      console.log('🔄 [DRAFT] Kliknięto przycisk exit-draft-mode');
-      exitDraftMode();
-    }
-  });
   
   // Poczekaj 2 sekundy po załadowaniu, żeby dane się załadowały
   setTimeout(checkStatusChanges, 2000);

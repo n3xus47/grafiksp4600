@@ -10,10 +10,27 @@ from flask import g, current_app
 logger = logging.getLogger(__name__)
 
 def get_db():
-    """Pobierz połączenie z bazą danych"""
+    """Pobierz połączenie z bazą danych z optymalizacjami"""
     if 'db' not in g:
-        g.db = sqlite3.connect(current_app.config['DATABASE_PATH'])
+        g.db = sqlite3.connect(
+            current_app.config['DATABASE_PATH'],
+            timeout=30.0,  # Increase timeout for better reliability
+            check_same_thread=False  # Allow multi-threading
+        )
         g.db.row_factory = sqlite3.Row
+        
+        # Enable WAL mode for better concurrency
+        g.db.execute("PRAGMA journal_mode=WAL")
+        
+        # Optimize SQLite settings for performance
+        g.db.execute("PRAGMA synchronous=NORMAL")
+        g.db.execute("PRAGMA cache_size=10000")
+        g.db.execute("PRAGMA temp_store=MEMORY")
+        g.db.execute("PRAGMA mmap_size=268435456")  # 256MB memory mapping
+        
+        # Enable foreign key constraints
+        g.db.execute("PRAGMA foreign_keys=ON")
+        
     return g.db
 
 def close_db(e=None):
@@ -69,6 +86,9 @@ def init_db():
         
         # Migruj tabelę users do nowej struktury
         migrate_users_table()
+        
+        # Dodaj indeksy dla wydajności
+        create_database_indexes()
         
         db.commit()
         logger.info("Baza danych zainicjalizowana pomyślnie")
@@ -356,6 +376,39 @@ def migrate_users_table():
     except Exception as e:
         logger.error(f"Błąd podczas migracji tabeli users: {e}")
         raise
+
+def create_database_indexes():
+    """Tworzy indeksy dla wydajności bazy danych"""
+    try:
+        db = get_db()
+        
+        # Indeksy dla tabeli users
+        db.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)")
+        
+        # Indeksy dla tabeli shifts
+        db.execute("CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(date)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_shifts_employee_id ON shifts(employee_id)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_shifts_date_employee ON shifts(date, employee_id)")
+        
+        # Indeksy dla tabeli employees
+        db.execute("CREATE INDEX IF NOT EXISTS idx_employees_name ON employees(name)")
+        
+        # Indeksy dla tabeli swap_requests
+        db.execute("CREATE INDEX IF NOT EXISTS idx_swap_requests_requester ON swap_requests(requester_user_id)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_swap_requests_from_employee ON swap_requests(from_employee)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_swap_requests_to_employee ON swap_requests(to_employee)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_swap_requests_status ON swap_requests(recipient_status, boss_status)")
+        
+        # Indeksy dla tabeli schedule_changes
+        db.execute("CREATE INDEX IF NOT EXISTS idx_schedule_changes_date ON schedule_changes(date)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_schedule_changes_employee ON schedule_changes(employee_name)")
+        
+        logger.info("Indeksy bazy danych utworzone pomyślnie")
+        
+    except Exception as e:
+        logger.error(f"Błąd podczas tworzenia indeksów: {e}")
+        # Nie rzucamy wyjątku - indeksy to optymalizacja, nie krytyczna funkcjonalność
 
 def init_app(app):
     """Inicjalizuj moduł bazy danych z aplikacją Flask"""

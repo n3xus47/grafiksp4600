@@ -199,8 +199,8 @@ button, .btn, .nav-btn, a, [role="button"] {
   font-size: 17px !important;
   border-radius: 500px !important;
   overflow: hidden !important;
-  background: #2a2a2a !important; /* Szary domyślnie */
-  color: #ffffff !important; /* Biały tekst */
+  background: var(--white) !important;
+  color: var(--black) !important;
   width: 100% !important;
   text-align: left !important;
   align-items: center !important;
@@ -236,7 +236,7 @@ button, .btn, .nav-btn, a, [role="button"] {
 
 .spotify-function-card::before {
   content: "" !important;
-  background: #2a2a2a !important; /* Szary domyślnie */
+  background: var(--red) !important;
   width: 120% !important;
   left: -10% !important;
   transform: skew(30deg) !important;
@@ -434,6 +434,11 @@ body.edit-mode .table-wrap {
   box-shadow: 0 0 10px rgba(220, 38, 38, 0.3) !important;
 }
 
+/* Tylko czerwona ramka tabeli w trybie edycji - bez innych zmian */
+body.edit-mode .main-panel {
+  background: var(--card) !important;
+  border: 2px solid var(--red) !important;
+}
 
 
 
@@ -767,21 +772,12 @@ body{
 
 /* ===== HEADER - SPOTIFY STYLE ===== */
 
-/* Kontener dla headera i panelu - pozwala na wysuwanie panelu */
-.header-container {
-  position: sticky;
-  top: 0;
-  z-index: 1001;
-  background: rgba(0, 0, 0, 0.9);
-  overflow: hidden; /* Ukrywa panel gdy jest ukryty */
-}
-
 /* Podstawowe style headera w stylu Spotify - OPTYMALIZOWANE */
 .site-header {
   background: rgba(0, 0, 0, 0.9); /* Lekko przezroczysty czarny header */
-  position: relative; /* Zmienione z sticky na relative dla panelu */
+  position: sticky;
   top: 0;
-  z-index: 1001; /* Wyższy niż panel */
+  z-index: 1000;
   height: var(--header-h);
   width: 100%;
   display: flex;
@@ -5259,17 +5255,19 @@ select {
    SPOTIFY-STYLE FUNCTION PANEL
    ============================================================================ */
 
-/* Główny panel w stylu Spotify - W NORMALNYM FLOW DOKUMENTU */
+/* Główny panel w stylu Spotify */
 .spotify-panel {
-  position: relative; /* Zmienione z absolute na relative */
-  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
   height: auto;
   max-height: 80vh;
   background: #121212 !important;
-  /* border-bottom: 1px solid #2a2a2a; - USUNIĘTE */
+  border-bottom: 1px solid #2a2a2a;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  transform: translateY(-100%); /* Ukryty powyżej swojej pozycji */
+  z-index: 10001;
+  transform: translate3d(0, -100%, 0);
   transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow-y: auto;
   overflow-x: hidden;
@@ -5296,7 +5294,8 @@ select {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 16px 60px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2a2a2a;
   background: #000 !important;
   flex-shrink: 0;
   min-height: auto;
@@ -5309,187 +5308,83 @@ select {
   flex: 1;
 }
 
-/* Kontener przycisków funkcji w headerze - 5 KOLUMN */
+/* Kontener przycisków funkcji w headerze - 2 KOLUMNY */
 .spotify-function-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
   margin-top: 8px;
   width: 100%;
 }
 
-/* Nowe style przycisków z animacją szarego tła i tylko ikonami */
+/* STYL SPOTIFY - PODOBNY DO .pE62MKOt7O7y8dGnTySw */
 .spotify-function-buttons .spotify-function-card {
-  outline: none;
-  cursor: pointer;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font-family: inherit;
-  font-size: inherit;
-  position: relative;
-  display: inline-block;
-  letter-spacing: 0.05rem;
-  font-weight: 700;
-  font-size: 17px;
-  border-radius: 500px;
-  overflow: hidden;
-  background: #2a2a2a !important; /* Szary domyślnie */
-  color: #ffffff !important; /* Biały tekst */
-  width: 80px; /* Szerokość żeby pomieścić ikonkę i tekst */
-  height: 44px; /* Wysokość jak przyciski nawigacji */
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUpButton 0.5s ease forwards;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Różne opóźnienia dla przycisków */
-.spotify-function-buttons .spotify-function-card:nth-child(1) {
-  animation-delay: 0.3s;
-}
-.spotify-function-buttons .spotify-function-card:nth-child(2) {
-  animation-delay: 0.4s;
-}
-.spotify-function-buttons .spotify-function-card:nth-child(3) {
-  animation-delay: 0.5s;
-}
-.spotify-function-buttons .spotify-function-card:nth-child(4) {
-  animation-delay: 0.6s;
-}
-.spotify-function-buttons .spotify-function-card:nth-child(5) {
-  animation-delay: 0.7s;
+  outline: none !important;
+  cursor: pointer !important;
+  border: none !important;
+  padding: 0.9rem 2rem !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  position: relative !important;
+  display: inline-block !important;
+  letter-spacing: 0.05rem !important;
+  font-weight: 700 !important;
+  font-size: 17px !important;
+  font-family: var(--font) !important;
+  border-radius: 500px !important;
+  overflow: hidden !important;
+  background: var(--black) !important;
+  color: var(--white) !important;
+  width: 100% !important;
 }
 
 .spotify-function-buttons .spotify-function-card span {
-  position: relative;
-  z-index: 10;
-  transition: color 0.4s;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  gap: 4px;
-  padding: 4px;
-}
-
-.spotify-function-buttons .spotify-function-icon {
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.spotify-function-buttons .spotify-function-text {
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
-  color: #ffffff !important;
-  text-align: center;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: visible;
-  max-width: 100%;
-  font-family: var(--font);
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 16px;
-  opacity: 1;
-}
-
-/* Hover effect - czerwony kolor */
-.spotify-function-buttons .spotify-function-card:hover {
-  background: #ff0000 !important; /* Czerwony po najechaniu */
-  color: #ffffff !important;
+  position: relative !important;
+  z-index: 10 !important;
+  transition: color 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
 }
 
 .spotify-function-buttons .spotify-function-card:hover span {
-  color: #ffffff !important;
+  color: var(--black) !important;
+}
+
+.spotify-function-buttons .spotify-function-card::before,
+.spotify-function-buttons .spotify-function-card::after {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0 !important;
 }
 
 .spotify-function-buttons .spotify-function-card::before {
-  content: "";
-  background: #000;
-  width: 120%;
-  left: -10%;
-  transform: skew(30deg);
-  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+  content: "" !important;
+  background: var(--red) !important;
+  width: 120% !important;
+  left: -10% !important;
+  transform: translate3d(-100%, 0, 0) !important;
+  transition: transform 0.2s ease !important;
 }
 
 .spotify-function-buttons .spotify-function-card:hover::before {
-  transform: translate3d(100%, 0, 0);
+  transform: translate3d(0%, 0, 0) !important;
 }
 
 .spotify-function-buttons .spotify-function-icon {
-  width: 30px;
-  height: 30px;
-  background: transparent;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 11;
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
 }
 
-.spotify-function-buttons .spotify-function-icon svg {
-  width: 24px;
-  height: 24px;
-  color: currentColor;
-}
-
-/* Animacja fadeInUp dla przycisków */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Nowe animacje dla tytułu i ikon */
-@keyframes fadeInUpTitle {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInUpIcon {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInUpButton {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.spotify-function-buttons .spotify-function-content {
+  flex: 1 !important;
+  text-align: left !important;
 }
 
 .spotify-function-buttons .spotify-function-title {
@@ -5515,9 +5410,6 @@ select {
   height: 24px;
   fill: #dc2626;
   flex-shrink: 0;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUpIcon 0.6s ease 0.1s forwards; /* Opóźnienie 0.1s */
 }
 
 .spotify-panel-title {
@@ -5527,9 +5419,6 @@ select {
   color: #ffffff !important;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUpTitle 0.6s ease 0.2s forwards; /* Opóźnienie 0.2s */
 }
 
 .spotify-panel-actions {
@@ -5641,7 +5530,7 @@ select {
 
 /* Karty funkcji w stylu Spotify */
 .spotify-function-card {
-  background: #2a2a2a !important; /* Szary domyślnie */
+  background: #1a1a1a !important;
   border: none;
   border-radius: 8px;
   padding: 20px;
@@ -5655,7 +5544,7 @@ select {
 }
 
 .spotify-function-card:hover {
-  background: #ff0000 !important; /* Czerwony po najechaniu */
+  background: #2a2a2a !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -5742,18 +5631,21 @@ select {
   }
   
   .spotify-function-buttons .spotify-function-card {
-    min-width: 50px;
-    height: 50px;
+    padding: 10px;
+    min-height: 44px;
+  }
+  
+  .spotify-function-buttons .spotify-function-title {
+    font-size: 13px;
+  }
+  
+  .spotify-function-buttons .spotify-function-description {
+    font-size: 10px;
   }
   
   .spotify-function-buttons .spotify-function-icon {
-    width: 24px;
-    height: 24px;
-  }
-  
-  .spotify-function-buttons .spotify-function-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -5775,23 +5667,30 @@ select {
     padding: 16px 12px 8px 12px;
   }
   
-  .spotify-function-buttons .spotify-function-card {
-    min-width: 45px;
-    height: 45px;
+  .spotify-function-card {
+    padding: 12px;
   }
   
-  .spotify-function-buttons .spotify-function-icon {
-    width: 20px;
-    height: 20px;
+  .spotify-function-title {
+    font-size: 14px;
   }
   
-  .spotify-function-buttons .spotify-function-icon svg {
-    width: 18px;
-    height: 18px;
+  .spotify-function-description {
+    font-size: 12px;
   }
 }
 
-/* Overlay dla panelu - USUNIĘTY (panel wysuwa się z headera) */
+/* Overlay dla panelu */
+.spotify-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
 
 /* Animacje */
 @keyframes slideInFromTop {
@@ -5809,29 +5708,28 @@ select {
   animation: slideInFromTop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Nowe style hamburger menu z czarnym tłem i animacją z góry */
+/* Stare klasy - zachowane dla kompatybilności */
 .hamburger-menu-panel {
+  /* Używa teraz stylów .spotify-panel */
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: auto;
   min-height: 200px;
-  max-height: 100vh; /* Pełna wysokość ekranu */
-  background: #000000; /* Czarny background */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-height: 80vh;
+  background: #121212 !important;
+  border-bottom: 1px solid #2a2a2a;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   z-index: 10001;
-  transform: translateY(-140%); /* Zaczyna się znacznie wyżej poza ekranem - zaczyna się renderować poza stroną */
-  opacity: 0;
-  transition: transform 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-              opacity 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform: translateY(-100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .hamburger-menu-panel:not(.hidden) {
-  transform: translateY(0); /* Wysuwa się do pełnej pozycji */
-  opacity: 1;
+  transform: translateY(0);
 }
 
 .hamburger-menu-content {
@@ -6158,140 +6056,75 @@ select {
 
 
 /* ============================================================================
-   PANEL AKCJI ZMIAN - W STYLU DAILY-SHIFTS-BAR
+   PANEL TRYBU EDYCJI Z TRYBEM ROBOCZYM
    ============================================================================ */
 
 .shifts-actions {
-  width: 20%;
-  margin: 0 auto;
-  background: #000000;
-  border: 1px solid #808080;
-  border-radius: 8px;
-  transform: translateY(-100%);
-  transition: transform 0.3s ease;
-}
-
-.shifts-actions:not(.hidden) {
-  transform: translateY(0);
-}
-
-.horizontal-container {
   display: flex;
-  flex-direction: column;
-  min-height: 200px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid #ddd;
 }
 
-.section {
-  flex: 1;
+.edit-mode-info {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-
-.top-section {
-  justify-content: center;
+  gap: 12px;
 }
 
 #edit-mode-status {
-  font-size: 16px;
   font-weight: 600;
-  color: #fff;
-  margin: 0;
-  text-align: center;
+  color: #333;
+  font-size: 0.9em;
 }
 
-.draft-controls {
+#toggle-draft-mode {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  justify-content: center;
   align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.85em;
 }
 
-.draft-mode-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
+#toggle-draft-mode svg {
+  width: 14px;
+  height: 14px;
 }
+
 
 .edit-actions {
   display: flex;
   gap: 8px;
-  justify-content: center;
 }
 
-.shifts-actions .btn {
-  padding: 10px 20px;
-  font-size: 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
+
+/* Dark mode dla panelu edycji */
+.dark-mode .shifts-actions {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.dark-mode #edit-mode-status {
+  color: #e0e0e0;
+}
+
+/* Style dla przycisków trybu roboczego w trybie edycji */
+#toggle-draft-mode {
+  background: #ff9800;
+  color: white;
+  border: 2px solid #f57c00;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
   transition: all 0.2s ease;
-  font-weight: bold;
-  font-family: 'Arial', sans-serif;
-  min-width: 160px;
-  text-align: center;
 }
 
-.shifts-actions .btn-secondary {
-  background: #808080 !important;
-  color: #fff !important;
-  min-width: 160px !important;
-  max-width: 160px !important;
-  width: 160px !important;
-}
-
-.shifts-actions .btn-secondary:hover {
-  background: #ff0000 !important;
-  color: #000 !important;
-  transform: translateY(-1px);
-}
-
-.shifts-actions .btn-warning {
-  background: #808080 !important;
-  color: #fff !important;
-  min-width: 160px !important;
-  max-width: 160px !important;
-  width: 160px !important;
-}
-
-.shifts-actions .btn-warning:hover {
-  background: #ff0000 !important;
-  color: #000 !important;
-  transform: translateY(-1px);
-}
-
-.shifts-actions .btn-success {
-  background: #808080;
-  color: #fff;
-  min-width: 160px;
-  max-width: 160px;
-  width: 160px;
-}
-
-.shifts-actions .btn-success:hover {
-  background: #ff0000;
-  color: #000;
-  transform: translateY(-1px);
-}
-
-.shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success) {
-  background: #4caf50;
-  color: #fff;
-  font-weight: bold;
-  font-family: 'Arial', sans-serif;
-  min-width: 160px;
-  max-width: 160px;
-  width: 160px;
-}
-
-.shifts-actions .btn:not(.btn-secondary):not(.btn-warning):not(.btn-success):hover {
-  background: #45a049;
-  color: #fff;
-  transform: translateY(-1px);
+#toggle-draft-mode:hover {
+  background: #f57c00;
 }
 
 #toggle-draft-mode.active {
@@ -6302,10 +6135,12 @@ select {
 #save-draft-version {
   background: #ffc107;
   color: #212529;
+  border: 2px solid #ffb300;
   padding: 8px 16px;
   border-radius: 4px;
   font-weight: 600;
   transition: all 0.2s ease;
+  margin-left: 8px;
 }
 
 #save-draft-version:hover {
