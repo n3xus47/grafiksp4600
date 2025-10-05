@@ -1,10 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
     <!-- Podstawowe meta tagi -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Offline - Grafik SP4600</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.ico">
     
     <!-- Arkusz stylów i manifest PWA -->
     <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}">
@@ -24,7 +27,7 @@
         <p class="offline-message">
             Nie można połączyć się z serwerem. Sprawdź swoje połączenie internetowe i spróbuj ponownie.
         </p>
-        <button class="retry-btn" onclick="window.location.reload()">
+        <button class="retry-btn" id="retry-btn">
             Spróbuj ponownie
         </button>
     </div>

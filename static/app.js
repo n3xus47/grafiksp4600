@@ -186,22 +186,28 @@
     installBannerShown = true;
 
     // Event listeners
-    document.getElementById('pwa-install-button').addEventListener('click', () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('Użytkownik zaakceptował instalację PWA');
-          }
-          deferredPrompt = null;
-          banner.remove();
-        });
-      }
-    });
+    const installButton = document.getElementById('pwa-install-button');
+    if (installButton) {
+      installButton.addEventListener('click', () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('Użytkownik zaakceptował instalację PWA');
+            }
+            deferredPrompt = null;
+            banner.remove();
+          });
+        }
+      });
+    }
 
-    document.getElementById('pwa-install-dismiss').addEventListener('click', () => {
-      banner.remove();
-    });
+    const dismissButton = document.getElementById('pwa-install-dismiss');
+    if (dismissButton) {
+      dismissButton.addEventListener('click', () => {
+        banner.remove();
+      });
+    }
 
     // Auto-hide po 10 sekundach
     setTimeout(() => {
@@ -2067,38 +2073,47 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Event listeners dla edytora
-  editor.addEventListener('click', (e) => {
-    const b = e.target.closest('button.opt');
-    if (b) {
-      const value = b.dataset.value;
-      if (value === 'P') {
-        // Pokaż panel wyboru godzin dla międzyzmiany
-        pHoursPanel.classList.remove('hidden');
-        pStartHour.focus();
-      } else {
-        choose(value);
+  if (editor) {
+    editor.addEventListener('click', (e) => {
+      const b = e.target.closest('button.opt');
+      if (b) {
+        const value = b.dataset.value;
+        if (value === 'P') {
+          // Pokaż panel wyboru godzin dla międzyzmiany
+          if (pHoursPanel) pHoursPanel.classList.remove('hidden');
+          if (pStartHour) pStartHour.focus();
+        } else {
+          choose(value);
+        }
       }
-    }
-  });
+    });
+  }
   
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      choose(input.value.trim());
-    }
-  });
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        choose(input.value.trim());
+      }
+    });
+  }
 
   // Walidacja pól godzin - tylko cyfry
-  pStartHour.addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-  });
+  if (pStartHour) {
+    pStartHour.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+    });
+  }
   
-  pEndHour.addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-  });
+  if (pEndHour) {
+    pEndHour.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9]/g, '');
+    });
+  }
 
   // Obsługa potwierdzenia godzin międzyzmiany
-  pConfirm.addEventListener('click', () => {
+  if (pConfirm) {
+    pConfirm.addEventListener('click', () => {
     const startHour = parseInt(pStartHour.value);
     const endHour = parseInt(pEndHour.value);
     
@@ -2120,7 +2135,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Utwórz wartość międzyzmiany w formacie "P 10-22"
     const pValue = `P ${startHour}-${endHour}`;
     choose(pValue);
-  });
+    });
+  }
 
   // Funkcje trybu edycji - synchronizuj z globalnymi zmiennymi
   function toggleEdit() {
@@ -2266,7 +2282,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnPublishDraft) btnPublishDraft.addEventListener('click', publishDraftChanges);
   
   document.addEventListener('click', (e) => {
-    if (!editor.classList.contains('show')) return;
+    if (!editor || !editor.classList.contains('show')) return;
     if (!e.target.closest('#slot-editor') && !e.target.closest('.slot')) hideEditor();
   });
 
@@ -4384,14 +4400,14 @@ function showEditEmployeeDialog(emp) {
     dialog.remove();
   }
   
-  closeBtn.addEventListener('click', closeDialog);
-  cancelBtn.addEventListener('click', closeDialog);
+  if (closeBtn) closeBtn.addEventListener('click', closeDialog);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeDialog);
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) closeDialog();
   });
   
   // Zapisz zmiany
-  saveBtn.addEventListener('click', () => {
+  if (saveBtn) saveBtn.addEventListener('click', () => {
     const newName = nameInput.value.trim();
     const newCode = codeInput.value.trim();
     const newEmail = emailInput.value.trim();
@@ -4446,15 +4462,21 @@ function showEditEmployeeDialog(emp) {
   });
   
   // Enter w polach
-  nameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveBtn.click();
-  });
-  codeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveBtn.click();
-  });
-  emailInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveBtn.click();
-  });
+  if (nameInput) {
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && saveBtn) saveBtn.click();
+    });
+  }
+  if (codeInput) {
+    codeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && saveBtn) saveBtn.click();
+    });
+  }
+  if (emailInput) {
+    emailInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && saveBtn) saveBtn.click();
+    });
+  }
 }
 
 // ===== SYSTEM POWIADOMIEŃ PWA =====
@@ -4891,9 +4913,11 @@ function showHistoryModal(historyItems) {
   
   // Event listeners
   const closeBtn = document.getElementById('history-close');
-  closeBtn.addEventListener('click', () => {
-    modal.remove();
-  });
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      modal.remove();
+    });
+  }
   
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
@@ -6167,5 +6191,130 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Poczekaj 2 sekundy po załadowaniu, żeby dane się załadowały
   setTimeout(checkStatusChanges, 2000);
+});
+
+// Signin page functions - moved from inline scripts to avoid CSP violations
+function switchTab(tabName) {
+  // Ukryj wszystkie taby
+  document.querySelectorAll('.spotify-tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Usuń aktywną klasę z wszystkich przycisków głównych
+  document.querySelectorAll('.spotify-tab-buttons .spotify-tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Pokaż wybrany tab
+  document.getElementById(tabName + '-tab').classList.add('active');
+  
+  // Pokaż/ukryj taby email
+  const emailTabs = document.getElementById('email-tabs');
+  if (tabName === 'email') {
+    emailTabs.style.display = 'flex';
+  } else {
+    emailTabs.style.display = 'none';
+  }
+  
+  // Dodaj aktywną klasę do wybranego przycisku
+  event.target.classList.add('active');
+}
+
+function switchEmailTab(tabName) {
+  // Ukryj wszystkie taby email
+  document.querySelectorAll('.spotify-email-tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Usuń aktywną klasę z wszystkich przycisków email
+  document.querySelectorAll('.spotify-email-tabs .spotify-tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Pokaż wybrany tab
+  document.getElementById('email-' + tabName + '-tab').classList.add('active');
+  
+  // Dodaj aktywną klasę do wybranego przycisku
+  event.target.classList.add('active');
+}
+
+function togglePassword(fieldId) {
+  const field = document.getElementById(fieldId);
+  const button = field.nextElementSibling;
+  const icon = button.querySelector('svg');
+  
+  if (field.type === 'password') {
+    field.type = 'text';
+    icon.innerHTML = '<path fill="currentColor" d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.76,7.13 11.37,7 12,7Z"/>';
+  } else {
+    field.type = 'password';
+    icon.innerHTML = '<path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>';
+  }
+}
+
+// Initialize signin page event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Add event listeners for tab switching buttons
+  document.querySelectorAll('.spotify-tab-button[data-tab]').forEach(button => {
+    button.addEventListener('click', function(e) {
+      const tabName = this.getAttribute('data-tab');
+      switchTab(tabName);
+    });
+  });
+  
+  // Add event listeners for email tab switching buttons
+  document.querySelectorAll('.spotify-tab-button[data-email-tab]').forEach(button => {
+    button.addEventListener('click', function(e) {
+      const tabName = this.getAttribute('data-email-tab');
+      switchEmailTab(tabName);
+    });
+  });
+  
+  // Add event listeners for password toggle buttons
+  document.querySelectorAll('.spotify-password-toggle[data-password-field]').forEach(button => {
+    button.addEventListener('click', function(e) {
+      const fieldId = this.getAttribute('data-password-field');
+      togglePassword(fieldId);
+    });
+  });
+  
+  // Form validation for registration
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.addEventListener('submit', function(e) {
+      const form = e.target;
+      const password = form.querySelector('input[name="password"]').value;
+      const confirmPassword = form.querySelector('input[name="confirm_password"]').value;
+      
+      if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Hasła nie są identyczne!');
+        return false;
+      }
+      
+      if (password.length < 8) {
+        e.preventDefault();
+        alert('Hasło musi mieć co najmniej 8 znaków!');
+        return false;
+      }
+    });
+  }
+  
+  // PWA install button
+  const installPwaBtn = document.getElementById('install-pwa-btn');
+  if (installPwaBtn) {
+    installPwaBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      installPWA();
+    });
+  }
+  
+  // Retry button for offline page
+  const retryBtn = document.getElementById('retry-btn');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', function(e) {
+      window.location.reload();
+    });
+  }
 });
 

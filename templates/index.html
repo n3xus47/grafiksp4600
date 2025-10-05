@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
@@ -7,6 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Grafik zmian pracowników</title>
+  <link rel="icon" type="image/png" href="/static/favicon.ico">
   <link rel="stylesheet" href="/static/style.css?v={{ range(1000000, 9999999) | random }}&t={{ range(1000000, 9999999) | random }}">
   <link rel="manifest" href="/static/manifest.json?v={{ range(1000000, 9999999) | random }}">
   <meta name="theme-color" content="#d32f2f">
@@ -43,7 +44,7 @@
         
         <div class="header-right">
           
-          <a draggable="false" class="spotify-download-btn" href="/download" onclick="installPWA(); return false;">
+          <a draggable="false" class="spotify-download-btn" href="/download" id="install-pwa-btn">
             <span aria-hidden="true" class="spotify-btn-icon">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M4.995 8.745a.75.75 0 0 1 1.06 0L7.25 9.939V4a.75.75 0 0 1 1.5 0v5.94l1.195-1.195a.75.75 0 1 1 1.06 1.06L8 12.811l-.528-.528-.005-.005-2.472-2.473a.75.75 0 0 1 0-1.06"></path>

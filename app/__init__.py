@@ -6,6 +6,7 @@ Modularna struktura z zachowaniem pełnej kompatybilności
 import os
 import logging
 import gzip
+import secrets
 from flask import Flask, request, Response
 from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
@@ -80,6 +81,15 @@ def create_app():
                 if os.path.exists(os.path.join(app.static_folder, compressed_path.lstrip('/'))):
                     response.headers['Content-Encoding'] = 'gzip'
                     response.headers['Content-Type'] = response.headers.get('Content-Type', '')
+        
+        # Dodaj nagłówki bezpieczeństwa
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        
+        # Content Security Policy with unsafe-inline for Google OAuth compatibility
+        csp_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://ssl.gstatic.com https://play.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://apis.google.com https://accounts.google.com https://play.google.com; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';"
+        response.headers["Content-Security-Policy"] = csp_policy
         
         return response
     
